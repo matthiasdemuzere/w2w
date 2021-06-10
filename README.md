@@ -1,4 +1,8 @@
-WUDAPT-to-WRF (w2w.py)
-=============
-A python tool that ingests WUDAPT information into WRF.
+w2w.py
+======
+A python tool that translates and ingests WUDAPT Local Climate Zone information into WRF.
+
+
+## Context
+
 
