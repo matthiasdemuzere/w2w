@@ -16,18 +16,18 @@ def main():
     ''' Add WUDAPT info to WRF's '''
 
     parser = argparse.ArgumentParser(
-        description="PURPOSE: Add LCZ-based info to WRF geo_em*.nc\n \n"
+        description="PURPOSE: Add LCZ-based info to WRF geo_em.d0X.nc\n \n"
                     "OUTPUT:\n"
                     "- *_NoUrban.nc: MODIS Urban replaced by surrounding natural LC\n"
                     "- *_LCZ_extent.nc: LCZ urban extent implemented, no LCZ UCPs yet\n"
                     "- *_LCZ_params.nc: LCZ urban extent + UPC parameter values\n"
-                    "- *_dXX_41.nc: Parent domain files reflecting 41 Land categories",
+                    "- *_d0X_41.nc: Parent domain files reflecting 41 Land categories",
         formatter_class=RawTextHelpFormatter
     )
 
     # Required arguments
     parser.add_argument(type=str, dest='io_dir',
-                        help='Directory that contains geo_em*.nc and LCZ.tif file',
+                        help='Directory that contains geo_em.d0X.nc and LCZ.tif file',
                         )
     parser.add_argument(type=str, dest='lcz_file',
                         help='LCZ map file name',
@@ -43,10 +43,9 @@ def main():
                         default=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
     parser.add_argument('-lcz_band', type=int,
                         dest='LCZ_BAND',
-                        help='Band to use from LCZ file. '
-                             '(DEFAULT: 1, referring to the Gaussian filtered map '
-                             'in case LCZ map is obtained via http://lcz-generator.rub.de)',
-                        default=1)
+                        help='Band to use from LCZ file (DEFAULT: 0). '
+                             'For maps produced with LCZ Generator, use 1.',
+                        default=0)
     parser.add_argument('-frc', type=float,
                         dest='FRC_THRESHOLD',
                         help='FRC_URB2D treshold value to assign pixel as urban (DEFAULT: 0.2)',
@@ -90,7 +89,7 @@ def main():
     }
 
     # Execute the functions
-    print("Check if LCZ domain extends WRF domain in all directions")
+    print("Check if LCZ domain extends WRF domain in all directions?")
     check_lcz_wrf_extent(
         info=info,
     )
@@ -143,7 +142,7 @@ def main():
     print("******************************")
     print("")
 
-    print("Sanity check and clean-up")
+    print("Start sanity check and clean-up ...")
     checks_and_cleaning(
         info=info,
     )
@@ -284,8 +283,8 @@ def _ucp_resampler(
 
     # Read the look-up table
     ucp_table = pd.read_csv(
-        './LCZ_UCP_default.csv',
-        sep=';', index_col=0
+        './LCZ_UCP_lookup.csv',
+        sep=',', index_col=0
     ).iloc[:17, :]
 
     # Read gridded data: LCZ and WRF grid
@@ -310,6 +309,9 @@ def _ucp_resampler(
         elif ucp_key == 'LF_URB2D':
             lookup = LAMBDA_F.loc[info['BUILT_LCZ']]
 
+    elif ucp_key == 'STDH_URB2D':
+        lookup = ((ucp_table['MH_URB2D_MAX']-
+                  ucp_table['MH_URB2D_MIN'])/4).loc[info['BUILT_LCZ']]
     else:
         lookup = ucp_table[ucp_key].loc[info['BUILT_LCZ']]
 
@@ -370,8 +372,8 @@ def _hgt_resampler(
 
     # Read the look-up table
     ucp_table = pd.read_csv(
-        './LCZ_UCP_default.csv',
-        sep=';', index_col=0
+        './LCZ_UCP_lookup.csv',
+        sep=',', index_col=0
     ).iloc[:17, :]
 
     # Read gridded data: LCZ and WRF grid
@@ -475,8 +477,8 @@ def _compute_hi_distribution(
 
     # Read the look-up table
     ucp_table = pd.read_csv(
-        './LCZ_UCP_default.csv',
-        sep=';', index_col=0
+        './LCZ_UCP_lookup.csv',
+        sep=',', index_col=0
     ).iloc[:17, :]
 
     # Initialize dataframe that stores building height distributions
@@ -496,7 +498,8 @@ def _compute_hi_distribution(
             # Create instance of a truncated normal distribution
             hi_inst = _get_truncated_normal(
                 mean=ucp_table['MH_URB2D'].loc[i],
-                sd=ucp_table['STDH_URB2D'].loc[i],
+                sd=(ucp_table['MH_URB2D_MAX'].loc[i]-
+                    ucp_table['MH_URB2D_MIN'].loc[i])/4,
                 low=ucp_table['MH_URB2D_MIN'].loc[i],
                 upp=ucp_table['MH_URB2D_MAX'].loc[i]
             )
@@ -536,25 +539,9 @@ def _compute_hi_distribution(
                       f"expected: [{(ucp_table[hi_metric].loc[i] * (1-DIST_MARGIN)).round(2)} - "
                       f"{(ucp_table[hi_metric].loc[i] * (1+DIST_MARGIN)).round(2)}]")
 
-            hi_metric = 'STDH_URB2D'
-            if not ucp_table[hi_metric].loc[i] * (1-DIST_MARGIN) < \
-                hi_sample.std() < \
-                ucp_table[hi_metric].loc[i] * (1+DIST_MARGIN):
-                print("WARNING: STD of HI_URB2D distribution not in "
-                      f"expected range ({DIST_MARGIN}% marging) for LCZ class {i}: "
-                      f"modelled: {np.round(hi_sample.std(),2)} | "
-                      f"expected: [{(ucp_table[hi_metric].loc[i] * (1-DIST_MARGIN)).round(2)} - "
-                      f"{(ucp_table[hi_metric].loc[i] * (1+DIST_MARGIN)).round(2)}]")
-
             # Count the values within pre-set bins
             cnt = np.histogram(hi_sample, bins=np.arange(0,76,5))[0]
             cnt = cnt/(SAMPLE_SIZE/100) # Convert to %
-
-            # WRONG POSITION, spatial aggregation leads to values still below 5%
-            # For computational efficiency/storage, set values lower than
-            # 5% (HI_THRES_MIN) to 0, scale remaining to 100%
-            #cnt[cnt < HI_THRES_MIN] = 0
-            #cnt = cnt * 100 / sum(cnt)
 
             # Add to dataframe
             df_hi.loc[i,:] = cnt
@@ -1111,8 +1098,8 @@ def checks_and_cleaning(
     # Take expected ranges from the look-up table,
     # add some margin for changes due to interpolation.
     ucp_table = pd.read_csv(
-        './LCZ_UCP_default.csv',
-        sep=';', index_col=0
+        './LCZ_UCP_lookup.csv',
+        sep=',', index_col=0
     ).iloc[:17, :]
 
     ucp_dict = {
@@ -1123,10 +1110,6 @@ def checks_and_cleaning(
         'MH_URB2D'  : {
             'index': 92,
             'range': [0, ucp_table['MH_URB2D'].max() + ucp_table['MH_URB2D'].std()]
-        },
-        'STDH_URB2D': {
-            'index': 93,
-            'range': [0, ucp_table['STDH_URB2D'].max() + ucp_table['STDH_URB2D'].std()]
         },
         'HGT_URB2D' : {
             'index': 94,
