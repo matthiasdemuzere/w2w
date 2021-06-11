@@ -24,7 +24,7 @@ Create a virtual python environment, for example with anaconda:
 
 3. Then, create the virtual environment from within this repository:
 ```sh   
-> conda env create -f w2w_environment.yml
+> conda env create -f w2w.yml
 ```
 4. Activate this new environment:
 ```sh   
