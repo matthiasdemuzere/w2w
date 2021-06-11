@@ -11,6 +11,8 @@ Since the work of [Brousse et al. (2016)](10.1016/j.uclim.2016.04.001), the leve
 
 As of spring 2021, [WRF v4.3.x](https://github.com/wrf-model/WRF/releases/tag/v4.3) is able to ingest LCZ information by default (previous versions required manual WRF code changes by the user). See more details on "*Updates of WRF-urban in WRF 4.3: Local Climate Zones, Mitigation Strategies, building materials permeability and new buildings drag coefficient*" [here](https://ral.ucar.edu/sites/default/files/public/product-tool/urban-canopy-model/WRF_urban_update_Readme_file_WRF4.3.pdf). Because of this, we decided to simultaneously built an improved WUDAPT-to-WRF routine, to make the translation of LCZ-based parameters better and more simple. As before, the LCZ-based urban canopy parameters generally follow the values provided by [Stewart and Oke (2012)](http://doi.org/10.1175/BAMS-D-11-00019.1) and [Stewart et al. (2014)](http://doi.org/10.1002/joc.3746).
 
+The new tool provides, besides a LCZ map at the resolution of the WRF domains, an aggregation of the morphological features of LCZ, whose are interpolated to WRF cells, providing averaged features of the urban morphology. In this way, the method produces a unique value of the different urban morphology parameters for each model cell. The method proposed here resulted to be more efficient in reproducing urban boundary layer features, expecially in the outskirts of the city [Zonato et al., 2020](https://reader.elsevier.com/reader/sd/pii/S221209551930183X?token=2451D3807B2A79485C47ACCD0A186EE517545A6EA5EA04305DF13C687D5C481277764476A961F86BF4C8DF4544601B22&originRegion=eu-west-1&originCreation=20210611083535).
+
 
 Python environment
 -------
