@@ -9,15 +9,27 @@ An	important	objective	of	WUDAPT, the World Urban Database and Acces Portals Too
 
 Since the work of [Brousse et al. (2016)](10.1016/j.uclim.2016.04.001), the level-0 WUDAPT information, the Local Climate Zone maps, have been used increasingly in [WRF](https://github.com/wrf-model/WRF), the community “Weather Research and Forecasting” model. Their original guide and code on how to use WUDAPT information into WRF (originally designed for WRF v3.2) is available [here](https://www.wudapt.org/wudapt-to-wrf/).
 
-As of spring 2021, [WRF v4.3.x](https://github.com/wrf-model/WRF/releases/tag/v4.3) is able to ingest LCZ information by default (previous versions required manual WRF code changes by the user). Because of this, we decided to simultaneously build an improved WUDAPT-to-WRF routine, to make the translation of LCZ-based parameters better and more simple. As before, the LCZ-based urban canopy parameters generally follow the values provided by [Stewart and Oke (2012)](http://doi.org/10.1175/BAMS-D-11-00019.1) and [Stewart et al. (2014)](http://doi.org/10.1002/joc.3746).
+As of spring 2021, [WRF v4.3.x](https://github.com/wrf-model/WRF/releases/tag/v4.3) is able to ingest LCZ information by default (previous versions required manual WRF code changes by the user). See more details on "*Updates of WRF-urban in WRF 4.3: Local Climate Zones, Mitigation Strategies, building materials permeability and new buildings drag coefficient*" [here](https://ral.ucar.edu/sites/default/files/public/product-tool/urban-canopy-model/WRF_urban_update_Readme_file_WRF4.3.pdf). Because of this, we decided to simultaneously built an improved WUDAPT-to-WRF routine, to make the translation of LCZ-based parameters better and more simple. As before, the LCZ-based urban canopy parameters generally follow the values provided by [Stewart and Oke (2012)](http://doi.org/10.1175/BAMS-D-11-00019.1) and [Stewart et al. (2014)](http://doi.org/10.1002/joc.3746).
 
 
 Python environment
 -------
 Create a virtual python environment, for example with anaconda: 
-1. If you not have anaconda on your system yet, please install it first (information [here](https://docs.conda.io/en/latest/miniconda.html))
-2. Then, create the virtual environment from within this repository: `conda env create -f w2w.yml`
-3. Activate this new environment: `conda activate w2w`
+1. If you do not have anaconda on your system yet, please install it first (information [here](https://docs.conda.io/en/latest/miniconda.html))
+2. Clone the w2w repository in your folder of choice, and enter it:
+```sh   
+> git clone https://github.com/matthiasdemuzere/w2w.git
+> cd w2w 
+```
+
+3. Then, create the virtual environment from within this repository:
+```sh   
+> conda env create -f w2w_environment.yml
+```
+4. Activate this new environment:
+```sh   
+> conda activate w2w
+```
 
 Requirements
 -------
@@ -40,16 +52,16 @@ Run the tool
 -------
 
 1. Check out its help:
-```python
+```sh
 python w2w.py -h 
 ```
 2. Try with the provided sample:
-```
+```sh
 python w2w.py ./sample_data lcz_zaragoza.tif geo_em.d04.nc       
 ```
 
 3. Deploy using your own data:
-```
+```sh
 python w2w.py INPUT_DIRECTORY YOUR_LCZ.TIF YOUR_GEO_EM.d0X.NC       
 ```
 
@@ -82,5 +94,6 @@ Artists
 
 Credits
 -------
-* Thanks to [Alberto Martilli](https://github.com/albertomartilli) and Alejandro Rodriguez Sanchez for allowing the use of their Zaragazo case-study files as sample data. 
+* We appreciate the feedback and suggestions provided by [Alberto Martilli](https://github.com/albertomartilli) and [Oscar Brousse](https://github.com/oscarbrousse), lead developers of the original Wudapt-to-wrf fortran package. 
+* Thanks to [Alberto Martilli](https://github.com/albertomartilli) and Alejandro Rodriguez Sanchez for allowing us to use of their Zaragazo case-study files as sample data. 
 
