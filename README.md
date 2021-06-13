@@ -17,7 +17,7 @@ The procedure in this new `w2w` tool is different from the former tool. Morpholo
 Python environment
 -------
 Create a virtual python environment, for example with anaconda: 
-1. If you do not have anaconda on your system yet, please install it first (information [here](https://docs.conda.io/en/latest/miniconda.html))
+1. If you do not have anaconda on your system yet, please install it first (information [here](https://docs.conda.io/en/latest/miniconda.html)). This repository has been tested with python 3.8.
 2. Clone the w2w repository in your folder of choice, and enter it:
 ```sh   
 > git clone https://github.com/matthiasdemuzere/w2w.git
