@@ -2,6 +2,10 @@ w2w.py
 ======
 A WUDAPT-to-WRF python tool that translates [WUDAPT's](www.wudapt.org) Local Climate Zone information into [WRF](https://github.com/wrf-model/WRF).
 
+Important Notes
+-------
+- This is a beta version of the tool, that is currently still being tested. So please use with caution, and file an issue in case something does not work for you.
+- The outputs of this tool have only been tested with the most recent [WRF version 4.3.x](https://github.com/wrf-model/WRF/releases/tag/v4.3). So we advise you to work with this version as well, which is now able to ingest the urban LCZ classes by default.
 
 Context
 -------
