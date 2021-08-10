@@ -1,6 +1,5 @@
 ---
-title: 'W2W: A Python package that translates Local Climate Zone maps into urban canopy parameters for WRF
-
+title: 'W2W: A Python package that translates Local Climate Zone maps into urban canopy parameters for WRF'
 tags:
   - Python
   - Local Climate Zones
@@ -8,7 +7,6 @@ tags:
   - WUDAPT
   - Urban canopy parameters
   - Climate modelling
-  - 
 authors:
   - name: Matthias Demuzere^[corresponding author] # note this makes a footnote saying 'co-first author'
     orcid: 0000-0003-3237-4077
@@ -30,8 +28,8 @@ bibliography: paper.bib
 
 # Optional fields if submitting to a AAS journal too, see this blog post:
 # https://blog.joss.theoj.org/2018/12/a-new-collaboration-with-aas-publishing
-#aas-doi: 10.3847/xxxxx <- update this with the DOI from AAS once you know it.
-#aas-journal: Astrophysical Journal <- The name of the AAS journal.
+aas-doi: 10.3847/xxxxx <- update this with the DOI from AAS once you know it.
+aas-journal: Astrophysical Journal <- The name of the AAS journal.
 ---
 
 # Summary
