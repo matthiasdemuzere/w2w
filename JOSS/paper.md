@@ -1,5 +1,3 @@
-# Test compilation here: https://whedon.theoj.org/
-
 ---
 title: 'W2W: A Python package that makes WUDAPT's Local Climate Zone information available in WRF'
 tags:
@@ -8,7 +6,7 @@ tags:
   - WRF
   - WUDAPT
   - Urban canopy parameters
-  - Climate modelling
+  - Climate modelling 
 authors:
   - name: Matthias Demuzere^[corresponding author] # note this makes a footnote saying 'co-first author'
     orcid: 0000-0003-3237-4077
@@ -24,7 +22,7 @@ affiliations:
   - name: Physics Department, University of the Balearic Islands, Palma, Spain
     index: 2
   - name: Atmospheric Physics Group, Department of Civil, Environmental and Mechanical Engineering, University of Trento, Trento, Italy
-    index: 3
+    index: 3 
 date: 10 August 2021
 bibliography: paper.bib
 
@@ -32,11 +30,13 @@ bibliography: paper.bib
 # https://blog.joss.theoj.org/2018/12/a-new-collaboration-with-aas-publishing
 #aas-doi: 10.3847/xxxxx <- update this with the DOI from AAS once you know it.
 #aas-journal: Astrophysical Journal <- The name of the AAS journal.
+# Test compilation here: https://whedon.theoj.org/
+
 ---
 
 # Summary
 
-An important objective of the WUDAPT (World Urban Database and Acces Portals Tools) community project, is to generate urban canopy information and provide the (open-source) tools to facilitate urban-focused modelling studies [@Ching2018]. As a part of that, @Brousse2016 pioneered the integration of Local Climate Zone maps and their corresponding urban canopy parameters into WRF, the community "Weather Research and Forecasting" model. 
+An important objective of the WUDAPT (World Urban Database and Acces Portals Tools) community project, is to generate urban canopy information and provide the (open-source) tools to facilitate urban-focused modelling studies [@Ching:2018]. As a part of that, @Brousse:2016 pioneered the integration of Local Climate Zone maps and their corresponding urban canopy parameters into WRF, the community "Weather Research and Forecasting" model. 
 
 As of spring 2021, WRF v4.3.x is able to ingest LCZ information by default (previous versions required manual WRF code changes by the user). See more details on "Updates of WRF-urban in WRF 4.3: Local Climate Zones, Mitigation Strategies, building materials permeability and new buildings drag coefficient" here. Because of this, we decided to simultaneously built an improved WUDAPT-to-WRF routine, to make the translation of LCZ-based parameters better and more simple.
 
