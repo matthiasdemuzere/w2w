@@ -1,33 +1,37 @@
 ---
-title: 'Gala: A Python package for galactic dynamics'
+title: 'W2W: A Python package that translates Local Climate Zone maps into urban canopy parameters for WRF
+
 tags:
   - Python
-  - astronomy
-  - dynamics
-  - galactic dynamics
-  - milky way
+  - Local Climate Zones
+  - WRF
+  - WUDAPT
+  - Urban canopy parameters
+  - Climate modelling
+  - 
 authors:
-  - name: Adrian M. Price-Whelan^[co-first author] # note this makes a footnote saying 'co-first author'
-    orcid: 0000-0003-0872-7098
-    affiliation: "1, 2" # (Multiple affiliations must be quoted)
-  - name: Author Without ORCID^[co-first author] # note this makes a footnote saying 'co-first author'
+  - name: Matthias Demuzere^[corresponding author] # note this makes a footnote saying 'co-first author'
+    orcid: 0000-0003-3237-4077
+    affiliation: 1 # (Multiple affiliations must be quoted)
+  - name: Daniel Argüeso # note this makes a footnote saying 'co-first author'
+    orcid: 0000-0002-4792-162X
     affiliation: 2
-  - name: Author with no affiliation^[corresponding author]
+  - name: Andrea Zonato
     affiliation: 3
 affiliations:
- - name: Lyman Spitzer, Jr. Fellow, Princeton University
-   index: 1
- - name: Institution Name
-   index: 2
- - name: Independent Researcher
-   index: 3
-date: 13 August 2017
+  - name: Urban Climatology Group, Department of Geography, Ruhr-University Bochum, Bochum, Germany
+    index: 1
+  - name: Physics Department, University of the Balearic Islands, Palma, Spain
+    index: 2
+  - name: Atmospheric Physics Group, Department of Civil, Environmental and Mechanical Engineering, University of Trento, Trento, Italy
+    index: 3
+date: 10 August 2021
 bibliography: paper.bib
 
 # Optional fields if submitting to a AAS journal too, see this blog post:
 # https://blog.joss.theoj.org/2018/12/a-new-collaboration-with-aas-publishing
-aas-doi: 10.3847/xxxxx <- update this with the DOI from AAS once you know it.
-aas-journal: Astrophysical Journal <- The name of the AAS journal.
+#aas-doi: 10.3847/xxxxx <- update this with the DOI from AAS once you know it.
+#aas-journal: Astrophysical Journal <- The name of the AAS journal.
 ---
 
 # Summary
