@@ -36,7 +36,7 @@ bibliography: paper.bib
 
 # Summary
 
-An important objective of the WUDAPT (World Urban Database and Acces Portals Tools) community project, is to generate urban canopy information and provide the (open-source) tools to facilitate urban-focused modelling studies [@Ching:2018]. As a part of that, @Brousse:2016 pioneered the integration of Local Climate Zone maps and their corresponding urban canopy parameters into WRF, the community "Weather Research and Forecasting" model. 
+An important objective of the WUDAPT (World Urban Database and Acces Portals Tools) community project, is to generate urban canopy information and provide the (open-source) tools to facilitate urban-focused modelling studies [@Ching2018]. As a part of that, @Brousse2016 pioneered the integration of Local Climate Zone maps and their corresponding urban canopy parameters into WRF, the community "Weather Research and Forecasting" model. 
 
 As of spring 2021, WRF v4.3.x is able to ingest LCZ information by default (previous versions required manual WRF code changes by the user). See more details on "Updates of WRF-urban in WRF 4.3: Local Climate Zones, Mitigation Strategies, building materials permeability and new buildings drag coefficient" here. Because of this, we decided to simultaneously built an improved WUDAPT-to-WRF routine, to make the translation of LCZ-based parameters better and more simple.
 
