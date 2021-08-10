@@ -25,15 +25,8 @@ affiliations:
     index: 3 
 date: 10 August 2021
 bibliography: paper.bib
-
-# Optional fields if submitting to a AAS journal too, see this blog post:
-# https://blog.joss.theoj.org/2018/12/a-new-collaboration-with-aas-publishing
-#aas-doi: 10.3847/xxxxx <- update this with the DOI from AAS once you know it.
-#aas-journal: Astrophysical Journal <- The name of the AAS journal.
-# Test compilation here: https://whedon.theoj.org/
-
 ---
-
+  
 # Summary
 
 An important objective of the WUDAPT (World Urban Database and Acces Portals Tools) community project, is to generate urban canopy information and provide the (open-source) tools to facilitate urban-focused modelling studies CHING2018. As a part of that, BROUSSE2016 pioneered the integration of Local Climate Zone maps and their corresponding urban canopy parameters into WRF, the community "Weather Research and Forecasting" model. 
