@@ -1,5 +1,7 @@
+# Test compilation here: https://whedon.theoj.org/
+
 ---
-title: 'W2W: A Python package that translates Local Climate Zone maps into urban canopy parameters for WRF'
+title: 'W2W: A Python package that makes WUDAPT's Local Climate Zone information available in WRF'
 tags:
   - Python
   - Local Climate Zones
@@ -28,23 +30,19 @@ bibliography: paper.bib
 
 # Optional fields if submitting to a AAS journal too, see this blog post:
 # https://blog.joss.theoj.org/2018/12/a-new-collaboration-with-aas-publishing
-aas-doi: 10.3847/xxxxx <- update this with the DOI from AAS once you know it.
-aas-journal: Astrophysical Journal <- The name of the AAS journal.
+#aas-doi: 10.3847/xxxxx <- update this with the DOI from AAS once you know it.
+#aas-journal: Astrophysical Journal <- The name of the AAS journal.
 ---
 
 # Summary
 
-The forces on stars, galaxies, and dark matter under external gravitational
-fields lead to the dynamical evolution of structures in the universe. The orbits
-of these bodies are therefore key to understanding the formation, history, and
-future state of galaxies. The field of "galactic dynamics," which aims to model
-the gravitating components of galaxies to study their structure and evolution,
-is now well-established, commonly taught, and frequently used in astronomy.
-Aside from toy problems and demonstrations, the majority of problems require
-efficient numerical tools, many of which require the same base code (e.g., for
-performing numerical orbit integration).
+An important objective of the WUDAPT (World Urban Database and Acces Portals Tools) community project, is to generate urban canopy information and provide the (open-source) tools to facilitate urban-focused modelling studies [@Ching2018]. As a part of that, @Brousse2016 pioneered the integration of Local Climate Zone maps and their corresponding urban canopy parameters into WRF, the community "Weather Research and Forecasting" model. 
+
+As of spring 2021, WRF v4.3.x is able to ingest LCZ information by default (previous versions required manual WRF code changes by the user). See more details on "Updates of WRF-urban in WRF 4.3: Local Climate Zones, Mitigation Strategies, building materials permeability and new buildings drag coefficient" here. Because of this, we decided to simultaneously built an improved WUDAPT-to-WRF routine, to make the translation of LCZ-based parameters better and more simple.
 
 # Statement of need
+Their original guide and code on how to use WUDAPT information into WRF (originally designed for WRF v3.2) is available here. Note that this tool was first assigning the LCZ mode to each WRF grid cell, and only afterwards assigning corresponding morphological, radiative and thermal properties to this modal LCZ class. This is done differently in w2w, see below.
+
 
 `Gala` is an Astropy-affiliated Python package for galactic dynamics. Python
 enables wrapping low-level languages (e.g., C) for speed without losing
@@ -107,8 +105,6 @@ Figure sizes can be customized by adding an optional second parameter:
 ![Caption for example figure.](figure.png){ width=20% }
 
 # Acknowledgements
-
-We acknowledge contributions from Brigitta Sipocz, Syrtis Major, and Semyeong
-Oh, and support from Kathryn Johnston during the genesis of this project.
+We acknowledge contributions and support from Alberto Martilli, Alejandro Rodriguez Sanchez and Oscar Brousse.
 
 # References
