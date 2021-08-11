@@ -76,13 +76,16 @@ Two pathways are followed when assigning the various urban canopy parameters to 
 
   * Pathway 1: **Morphological** parameters are assigned directly to the high-resolution LCZ map, and are afterwards aggregated to the lower-resolution WRF grid. In this way, the method produces a unique value of the different urban morphology parameters for each WRF grid cell. This was found to be more efficient in reproducing urban boundary layer features, especially in the outskirts of the city [@Zonato2020], and is in line with the [WUDAPT-to-COSMO](https://github.com/matthiasdemuzere/WUDAPT-to-COSMO) routine [@Varentsov2020].
 
-    TEST
-  
-  TEST
+    Morphological urban canopy parameter values are provided in LCZ_UCP_default.csv (available in the github repository), and are generally based on @Stewart2012 and @Stewart2014. Building width (BW) is taken from URBPARM_LCZ.TBL (available in WRF's run/ folder). And while URBPARM_LCZ.TBL also has values on street width, W2W derives street width from the mean building height (MH_URB2D) and the Height-to-Width ratio (H2W), to have these fields consistent.
+
+    In addition:
+    * Plan (LP_), frontal (LF_) and total (LB_) area indices are based on formulas in @Zonato2020.
+    * HI_URB2D is obtained by fitting a bounded normal distribution to min, mean, max and std of the building height in LCZ_UCP_default.csv. Note that some default BH (max and std) values were altered a bit, as otherwise it was impossible to fit a proper bounded distribution. In addition, for computational efficiency, values lower than 5% were set to 0 after resampling, the remaining HI_URB2D percentages are re-scaled to 100%.
+    * NBUI_MAX is added as a global attribute, reflecting the maximum amount of HI_URB2D classes that are not 0 across the model domain. This paramater can be used during compilation to optimize memory storage.
 
   * Pathway 2: In line with the former Fortran-based W2W procedure, **radiative and thermal parameters** are assigned to the modal LCZ class that is assigned to each WRF grid cell. 
 
-As before, the LCZ-based urban canopy parameters generally follow the values provided by [Stewart and Oke (2012)](http://doi.org/10.1175/BAMS-D-11-00019.1) and [Stewart et al. (2014)](http://doi.org/10.1002/joc.3746).
+    Radiative and thermal values are not stored in the netcdf output, but are read from URBPARM_LCZ.TBL and assigned automatically to the modal LCZ class when running the model. 
 
 Resulting output: **geo_em.d0X_LCZ_params.nc**
 
