@@ -41,6 +41,7 @@ In order to use the tool, two datasets are required: 1) a **geo_em.d0X.nc file**
 MORE INFO NEEDED ON HOW TO MAKE THE geo_em.d0X.nc file ???
 
 There are a number of ways to obtain an LCZ map for your region of interest: 
+
    * Extract your domain from the continental-scale LCZ maps for Europe [@Demuzere2019] or the United States [@Demuzere2020] (see [here](https://www.wudapt.org/lcz-maps/) for more info).
    * Check if your region of interest is already covered by the many LCZ maps available in the [submission table](https://lcz-generator.rub.de/submissions) of the LCZ Generator.
    * Use the [LCZ Generator](https://lcz-generator.rub.de/) to make an LCZ map for your region of interest. 
