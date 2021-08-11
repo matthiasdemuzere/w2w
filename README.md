@@ -71,13 +71,16 @@ python w2w.py ./sample_data lcz_zaragoza.tif geo_em.d04.nc
 python w2w.py INPUT_DIRECTORY YOUR_LCZ.TIF YOUR_GEO_EM.d0X.NC       
 ```
 
+Documentation & citation
+-------
+A citable documentation is currently being prepared. A draft version can be accessed [here](). 
 
 License
 -------
 The project is licensed under the MIT license.
 
 
-How to cite
+Documentation & citation
 -------
 Not available yet. 
 
@@ -100,6 +103,6 @@ Artists
 
 Credits
 -------
-* We appreciate the feedback and suggestions provided by [Alberto Martilli](https://github.com/albertomartilli) and [Oscar Brousse](https://github.com/oscarbrousse), lead developers of the original Wudapt-to-wrf fortran package. 
+* We appreciate the feedback and suggestions provided by [Alberto Martilli](https://github.com/albertomartilli) and [Oscar Brousse](https://github.com/oscarbrousse), lead developers of the original Fortran-based WUDAPT-to-WRF fortran package. 
 * Thanks to [Alberto Martilli](https://github.com/albertomartilli) and Alejandro Rodriguez Sanchez for allowing us to use of their Zaragoza case-study files as sample data. 
 
