@@ -747,7 +747,7 @@ def add_frc_lu_index_2_wrf(
 ):
 
     '''
-    Add FRC_URB2D and ajdusted LCZ-based LU_INDEX to WRF file
+    Add FRC_URB2D and adjusted LCZ-based LU_INDEX to WRF file
     Also alters LANDUSEF and GREENFRAC in line with LU_INDEX
     '''
 
@@ -1025,8 +1025,6 @@ def expand_land_cat_parents(
         else:
             print(f"Parent domain {info['dst_file'][:-5]}{i:02d}.nc "
                   f"already contains 41 LC classes")
-
-
 
 
 def checks_and_cleaning(
