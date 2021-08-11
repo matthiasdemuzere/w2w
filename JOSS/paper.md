@@ -55,22 +55,28 @@ MAKE A TABLE WITH ALL PARAMETERS, including abbrevation, long name, unit, type, 
 To get to that point, a number of sequential steps are followed:
 
 * _Step 1: Remove the default urban land cover_
+
 The default urban land cover from MODIS is replaced with the dominant surrounding vegetation category, as is done in @Li2020. This procedure affects WRF's variables LU_INDEX (land use index), LANDUSEF (land use fraction) and GREENFRAC (vegetation fraction). LU_INDEX is selected as the dominant category from the $nlus$ (default = 45) nearest grid points (excluding ocean, urban and lakes). LANDUSEF and GREENFRAC are calculated as the mean over all grid points with that category among the $nlus$ nearest points. @DANIEL: CORRECT??
 
 Resulting output: **geo_em.d0X_NoUrban.nc**
 
 * _Step 2: Define the LCZ-based urban extent_
+
 LCZ-based impervious fraction (FRC_URB2D) values are assigned to the original 100 m resolution LCZ map, and are aggregated to the WRF resolution. Areas with FRC_URB2D < .2 ($frc$) are currently considered non-urban @ANDREA - ADD SMALL SENTENCE TO STATE WHY THAT IS. The FRC_URB2D field is also used to mask all other urban fields, so that they are consistent.
 
 Resulting output: **geo_em.d0X_LCZ_extent.nc**
 
 * _Step 3: Introduce modal built LCZ classes_
+
 For each WRF grid cell, the mode of the underlying built LCZ classes is added to LU_INDEX, numbered from 31-41. See [here](https://ral.ucar.edu/sites/default/files/public/product-tool/urban-canopy-model/WRF_urban_update_Readme_file_WRF4.3.pdf) for more info. Note that the W2W routine by default considers LCZ classes 1-10 as built classes ($bc$). Sometimes, also LCZ E (or 15 - Bare rock or paved) can be considered as a built LCZ classes, as it might reflect large asphalt surfaces such as big parking lots or airstrips. In that case, make sure to set argument $bc$ appropriately.
 
 * Step 4: Assign urban canopy parameters
+
 Two pathways are followed when assigning the various urban canopy parameters to the Local Climate Zone Map:
 
   * Pathway 1: **Morphological** parameters are assigned directly to the high-resolution LCZ map, and are afterwards aggregated to the lower-resolution WRF grid. In this way, the method produces a unique value of the different urban morphology parameters for each WRF grid cell. This was found to be more efficient in reproducing urban boundary layer features, especially in the outskirts of the city [@Zonato2020], and is in line with the [WUDAPT-to-COSMO](https://github.com/matthiasdemuzere/WUDAPT-to-COSMO) routine [@Varentsov2020].
+
+    TEST
   
   TEST
 
