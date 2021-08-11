@@ -38,19 +38,23 @@ Since the pioneering work of @Brousse2016 and @Martilli2016, the level-0 WUDAPT 
 # Initial data requirements
 In order to use the tool, two input files are required: 
 
-1. A **geo_em.d0X.nc file** for the inner WRF model domain in which you would like to use the LCZ-based information. This file can be produced by WRF's geogrid.exe tool as part of the WRF Preprocessing System (WPS). ** @ANDREA: does a user needs to use specific settings here to create this file?? Please extend this section if needed.** 
+1. A **geo_em.d0X** (.nc) file for the inner WRF model domain in which you would like to use the LCZ-based information. This file can be produced by WRF's geogrid.exe tool as part of the WRF Preprocessing System (WPS). ** @ANDREA: does a user needs to use specific settings here to create this file?? Please extend this section if needed.** 
 
-2.  A **Local Climate Zone map** that is slightly bigger than the domain of the geo_em.d0X.nc file. There are a number of ways to obtain an LCZ map for your region of interest: 
+2.  A **Local Climate Zone map** (.tif) file that is slightly bigger than the domain of the geo_em.d0X.nc file. There are a number of ways to obtain an LCZ map for your region of interest: 
 
    * Extract your domain from the continental-scale LCZ maps for Europe [@Demuzere2019] or the United States [@Demuzere2020] (see [here](https://www.wudapt.org/lcz-maps/) for more info).
    * Check if your region of interest is already covered by the many LCZ maps available in the [submission table](https://lcz-generator.rub.de/submissions) of the LCZ Generator.
-   * Use the [LCZ Generator](https://lcz-generator.rub.de/) to make an LCZ map for your region of interest. 
+   * Use the [LCZ Generator](https://lcz-generator.rub.de/) to make an LCZ map for your region of interest. See also [here](https://www.wudapt.org/create-lcz-classification/) for more information.
 
 
 # General workflow
-The goal of the Python-based W2W tool is to obtain a WRF domain file (*geo_em.d0X.nc*) that contains the urban LCZ classes and their corresponding urban canopy parameters relevant for all urban parameterizations embedded in WRF: the single layer urban canopy model Noah/SLUCM (@Kusaka2001), the Building Environment Parameterization (BEP, @Martilli2002), and BEP+BEM (Building Energy Model, @Salamanca2010). To get to that point, the following three general steps are followed, which are partly inspired by the work of @Li2020:
+The goal of the Python-based W2W tool is to obtain a WRF domain file (*geo_em.d0X.nc*) that contains the urban LCZ classes and their corresponding urban canopy parameters relevant for all urban parameterizations embedded in WRF: the single layer urban canopy model Noah/SLUCM (@Kusaka2001), the Building Environment Parameterization (BEP, @Martilli2002), and BEP+BEM (Building Energy Model, @Salamanca2010). 
 
-* Step 1: 
+To get to that point, the following three general steps are followed, which are partly inspired by the work of @Li2020:
+
+* Step 1: Replace the default urban land cover
+The default urban land cover from MODIS is replaced with the dominant surrounding vegetation category, as is done in @Li2020. This procedure affects WRF's variables LU_INDEX (land use index), LANDUSEF (land use fraction) and GREENFRAC (vegetation fraction). LU_INDEX is selected as the dominant category from the $nlus$ (default = 45) nearest grid points (excluding ocean, urban and lakes). GREENFRAC is calculated as the mean over all grid points with that category among the $nlus$ nearest points.
+
 * Step 2: 
 * Step 3:
 
