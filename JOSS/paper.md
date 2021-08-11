@@ -70,7 +70,10 @@ For each WRF grid cell, the mode of the underlying built LCZ classes is added to
 * Step 4: Assign urban canopy parameters
 Two pathways are followed when assigning the various urban canopy parameters to the Local Climate Zone Map:
 
-  * Pathway 1: **Morphological** parameters are assigned directly to the high-resolution LCZ map, and are only afterwards aggregated to the lower-resolution WRF grid. In this way, the method produces a unique value of the different urban morphology parameters for each WRF grid cell. This was found to be more efficient in reproducing urban boundary layer features, especially in the outskirts of the city [@Zonato2020], and is in line with the [WUDAPT-to-COSMO](https://github.com/matthiasdemuzere/WUDAPT-to-COSMO) routine [@Varentsov2020]. 
+  * Pathway 1: **Morphological** parameters are assigned directly to the high-resolution LCZ map, and are afterwards aggregated to the lower-resolution WRF grid. In this way, the method produces a unique value of the different urban morphology parameters for each WRF grid cell. This was found to be more efficient in reproducing urban boundary layer features, especially in the outskirts of the city [@Zonato2020], and is in line with the [WUDAPT-to-COSMO](https://github.com/matthiasdemuzere/WUDAPT-to-COSMO) routine [@Varentsov2020].
+  
+  TEST
+
   * Pathway 2: In line with the former Fortran-based W2W procedure, **radiative and thermal parameters** are assigned to the modal LCZ class that is assigned to each WRF grid cell. 
 
 As before, the LCZ-based urban canopy parameters generally follow the values provided by [Stewart and Oke (2012)](http://doi.org/10.1175/BAMS-D-11-00019.1) and [Stewart et al. (2014)](http://doi.org/10.1002/joc.3746).
