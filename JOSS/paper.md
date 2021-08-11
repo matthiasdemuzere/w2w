@@ -36,10 +36,13 @@ This python WUDAPT-to-WRF (W2W) package is developed in this context, and transl
 Since the pioneering work of @Brousse2016 and Martilli2016, the level-0 WUDAPT information, the Local Climate Zone maps, have been used increasingly in WRF. We expect this trend to continue, because of two recent developments: 1) the creation of city-wide LCZ maps is now easier than ever with the online LCZ Generator [@Demuzere2021], and 2) as of spring 2021, the new version 4.3 of WRF [@Skamarock2021] is able to ingest 11 urban classses (corresponding to WUDAPT's LCZs) by default, whereas previous versions required manual WRF code changes by the user (see @Martilli2016, @Zonato2021a and @Zonato2021b for more information). Because of these developments, we decided to simultaneously built an improved, python-based, WUDAPT-to-WRF (W2W) routine, to make the translation of LCZ-based parameters better and more simple. 
 
 # Initial data requirements
-In order to use the tool, two datasets are required: 1) a geo_em.d0X.nc file (produced by WRF's WPS geoegrid.exe), for the inner WRF model domain in which you would like to use the LCZ-based information, and 2) a **Local Climate Zone map** that is slightly bigger than the domain of the geo_em.d0X.nc file. There are a number of ways to obtain an LCZ map for your region of interest:
-   
-   * Extract your domain from the continental-scale LCZ maps for Europe [@Demuzere2019] or the United States ([Demuzere et al., 2020][@Demuzere2020].
-   * Check if your region of interest is already covered by the many LCZ maps available in the submission table of the LCZ Generator (https://lcz-generator.rub.de/submissions).
+In order to use the tool, two datasets are required: 1) a **geo_em.d0X.nc file** (produced by WRF's WPS geoegrid.exe), for the inner WRF model domain in which you would like to use the LCZ-based information, and 2) a **Local Climate Zone map** that is slightly bigger than the domain of the geo_em.d0X.nc file. 
+
+MORE INFO NEEDED ON HOW TO MAKE THE geo_em.d0X.nc file ???
+
+There are a number of ways to obtain an LCZ map for your region of interest: 
+   * Extract your domain from the continental-scale LCZ maps for Europe [@Demuzere2019] or the United States [@Demuzere2020] (see [here](https://www.wudapt.org/lcz-maps/) for more info).
+   * Check if your region of interest is already covered by the many LCZ maps available in the [submission table](https://lcz-generator.rub.de/submissions) of the LCZ Generator.
    * Use the [LCZ Generator](https://lcz-generator.rub.de/) to make an LCZ map for your region of interest. 
 
 # Workflow
