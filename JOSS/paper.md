@@ -86,7 +86,6 @@ Two pathways are followed when assigning the various urban canopy parameters to 
 
   * Pathway 2: In line with the former Fortran-based `W2W` procedure, **radiative and thermal parameters** are assigned to the modal LCZ class that is assigned to each WRF grid cell. These parameter values are not stored in the netcdf output, but are read from URBPARM_LCZ.TBL and assigned automatically to the modal LCZ class when running the model. 
 
-
 * Step 5: Adjust global attributes
 
   * NBUI_MAX is added as a global attribute in the netcdf file, reflecting the maximum amount of HI_URB2D classes that are not 0 across the model domain. This paramater can be used when compiling WRF, to optimize memory storage.
