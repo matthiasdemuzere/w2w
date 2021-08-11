@@ -28,8 +28,11 @@ bibliography: paper.bib
 ---
 
 # Summary
+An important objective of WUDAPT, the World Urban Database and Acces Portals Tools community project, is to 1) to acquire and make accessible coherent and consistent information on form and function of urban morphology relevant to climate weather, and environment studies on a worldwide basis, and 2) to provide tools that extract relevant urban parameters and properties for models and for model applications at appropriate scales for various climate, weather, environment, and urban planning purposes [@Ching2018]. 
 
-An important objective of the WUDAPT (World Urban Database and Acces Portals Tools) community project, is to generate urban canopy information and provide the (open-source) tools to facilitate urban-focused modelling studies [@Ching2018]. As a part of that, @Brousse2016 pioneered the integration of Local Climate Zone maps and their corresponding urban canopy parameters into WRF, the community "Weather Research and Forecasting" model. 
+This python WUDAPT-to-WRF (W2W) package is developed in this context, and translates Local Climate Zone maps into urban canopy parameters readable by WRF, the community "Weather Research and Forecasting" model. It is the successor of the Fortran-based W2W package developed by @Brousse2016 and @Martilli2016, 
+
+.  WUDAPT, the World Urban Database and Acces Portals Tools community project, supports the generation of fit-for-purpose urban canopy information and provide the (open-source) tools to facilitate urban-focused modelling studies [@Ching2018]. As a part of that, @Brousse2016 pioneered the integration of Local Climate Zone maps and their corresponding urban canopy parameters into WRF, the community "Weather Research and Forecasting" model. 
 
 As of spring 2021, WRF v4.3.x is able to ingest LCZ information by default (previous versions required manual WRF code changes by the user). See more details on "Updates of WRF-urban in WRF 4.3: Local Climate Zones, Mitigation Strategies, building materials permeability and new buildings drag coefficient" here. Because of this, we decided to simultaneously built an improved WUDAPT-to-WRF routine, to make the translation of LCZ-based parameters better and more simple.
 
