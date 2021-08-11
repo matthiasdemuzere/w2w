@@ -67,13 +67,16 @@ python w2w.py ./sample_data lcz_zaragoza.tif geo_em.d04.nc
 python w2w.py INPUT_DIRECTORY YOUR_LCZ.TIF YOUR_GEO_EM.d0X.NC       
 ```
 
+Documentation & citation
+-------
+A citable documentation is currently being prepared. A draft version can be accessed [here](). 
 
 License
 -------
 The project is licensed under the MIT license.
 
 
-How to cite
+Documentation & citation
 -------
 Not available yet. 
 

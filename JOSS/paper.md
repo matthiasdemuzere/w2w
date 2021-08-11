@@ -1,5 +1,5 @@
 ---
-title: "W2W: A Python package that makes WUDAPT's Local Climate Zone information available in WRF"
+title: "W2W: A Python package that injects WUDAPT's Local Climate Zone information in WRF"
 tags:
   - Python
   - Local Climate Zones
@@ -35,12 +35,24 @@ The Python-based WUDAPT-to-WRF (W2W) package is developed in this context, and t
 # Statement of need
 Since the pioneering work of @Brousse2016 and @Martilli2016, the level-0 WUDAPT information, the Local Climate Zone maps, have been used increasingly in WRF. We expect this trend to continue, because of two recent developments: 1) the creation of city-wide LCZ maps is now easier than ever with the online LCZ Generator [@Demuzere2021], and 2) as of spring 2021, the new version 4.3 of WRF [@Skamarock2021] is able to ingest 11 urban classses (corresponding to WUDAPT's LCZs) by default, whereas previous versions required manual WRF code changes by the user (see @Martilli2016, @Zonato2021a and @Zonato2021b for more information). Because of these developments, we decided to simultaneously built an improved, Python-based, WUDAPT-to-WRF (W2W) routine, to make the translation of LCZ-based parameters better and more simple. 
 
-# General workflow
-The goal of the procedure is to obtain a WRF domain file (*geo_em.d0X.nc*) that contains the urban LCZ classes and their corresponding urban canopy parameters relevant for all urban parameterizations embedded in WRF: the single layer urban canopy model Noah/SLUCM (@Kusaka2001), the Building Environment Parameterization (BEP, @Martilli2002), and BEP+BEM (Building Energy Model, @Salamanca2010). To get to that point, the following three general steps are followed, which is partly inspired by the work of @Li2020:
+# Initial data requirements
+In order to use the tool, two input files are required: 
 
-* STEP 1: 
-* STEP 2: 
-* STEP 3:
+1. A **geo_em.d0X.nc file** for the inner WRF model domain in which you would like to use the LCZ-based information. This file can be produced by WRF's geogrid.exe tool as part of the WRF Preprocessing System (WPS). ** @ANDREA: does a user needs to use specific settings here to create this file?? Please extend this section if needed.** 
+
+2.  A **Local Climate Zone map** that is slightly bigger than the domain of the geo_em.d0X.nc file. There are a number of ways to obtain an LCZ map for your region of interest: 
+
+   * Extract your domain from the continental-scale LCZ maps for Europe [@Demuzere2019] or the United States [@Demuzere2020] (see [here](https://www.wudapt.org/lcz-maps/) for more info).
+   * Check if your region of interest is already covered by the many LCZ maps available in the [submission table](https://lcz-generator.rub.de/submissions) of the LCZ Generator.
+   * Use the [LCZ Generator](https://lcz-generator.rub.de/) to make an LCZ map for your region of interest. 
+
+
+# General workflow
+The goal of the Python-based W2W tool is to obtain a WRF domain file (*geo_em.d0X.nc*) that contains the urban LCZ classes and their corresponding urban canopy parameters relevant for all urban parameterizations embedded in WRF: the single layer urban canopy model Noah/SLUCM (@Kusaka2001), the Building Environment Parameterization (BEP, @Martilli2002), and BEP+BEM (Building Energy Model, @Salamanca2010). To get to that point, the following three general steps are followed, which are partly inspired by the work of @Li2020:
+
+* Step 1: 
+* Step 2: 
+* Step 3:
 
 
 # Urban canopy parameter assignment
@@ -57,16 +69,7 @@ Two pathways are followed when assigning the various urban canopy parameters to 
 As before, the LCZ-based urban canopy parameters generally follow the values provided by [Stewart and Oke (2012)](http://doi.org/10.1175/BAMS-D-11-00019.1) and [Stewart et al. (2014)](http://doi.org/10.1002/joc.3746).
 
 
-# Initial data requirements
-In order to use the tool, two datasets are required: 1) a **geo_em.d0X.nc file** (produced by WRF's geogrid.exe tool as part of the WRF Preprocessing System (WPS)), for the inner WRF model domain in which you would like to use the LCZ-based information, and 2) a **Local Climate Zone map** that is slightly bigger than the domain of the geo_em.d0X.nc file. 
-
-**MORE INFO NEEDED ON HOW TO MAKE THE geo_em.d0X.nc file ??? ANDREA?**
-
-There are a number of ways to obtain an LCZ map for your region of interest: 
-
-   * Extract your domain from the continental-scale LCZ maps for Europe [@Demuzere2019] or the United States [@Demuzere2020] (see [here](https://www.wudapt.org/lcz-maps/) for more info).
-   * Check if your region of interest is already covered by the many LCZ maps available in the [submission table](https://lcz-generator.rub.de/submissions) of the LCZ Generator.
-   * Use the [LCZ Generator](https://lcz-generator.rub.de/) to make an LCZ map for your region of interest. 
+# Potential use case
 
 
 # Things to keep in mind (come up with better section title!!)
