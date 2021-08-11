@@ -73,20 +73,16 @@ python w2w.py INPUT_DIRECTORY YOUR_LCZ.TIF YOUR_GEO_EM.d0X.NC
 
 Documentation & citation
 -------
-A citable documentation is currently being prepared. A draft version can be accessed [here](). 
+A citable documentation is currently being prepared. A draft version can be accessed [here](https://github.com/matthiasdemuzere/w2w/blob/main/JOSS/paper.pdf). 
+
 
 License
 -------
 The project is licensed under the MIT license.
 
 
-Documentation & citation
--------
-Not available yet. 
-
 Contributing
 -------
-
 Contributions to `w2w` are welcome! This is how:
 
 - **Bugs:** If you find a bug, please report it by opening an issue. if possible, please attach the error, code, version, and other details. 
@@ -95,11 +91,13 @@ Contributions to `w2w` are welcome! This is how:
 
 - **Enhancement:** New features and modules are welcome! You can check the issues: contributions are welcome for open issues with labels :code:`enhancement` and :code:`help wanted`.
 
+
 Artists
 -------
 * [Matthias Demuzere](https://github.com/matthiasdemuzere): Lead developer
 * [Daniel Argueso](https://github.com/dargueso): WRF expert 
 * [Andrea Zonato](https://github.com/andreazonato): WUDAPT-WRF expert and liaison
+
 
 Credits
 -------
