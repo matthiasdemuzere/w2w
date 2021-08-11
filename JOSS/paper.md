@@ -33,7 +33,7 @@ An important objective of WUDAPT, the World Urban Database and Acces Portals Too
 The Python-based WUDAPT-to-WRF (W2W) package is developed in this context, and translates Local Climate Zone (LCZ) maps into urban canopy parameters readable by WRF, the community "Weather Research and Forecasting" model. It is the successor of the Fortran-based W2W package developed by @Brousse2016 and @Martilli2016, and provides a more simple, efficient and improved procedure to use LCZ information in WRF.   
 
 # Statement of need
-Since the pioneering work of @Brousse2016 and @Martilli2016, the level-0 WUDAPT information, the Local Climate Zone maps, have been used increasingly in WRF. We expect this trend to continue, because of two recent developments: 1) the creation of city-wide LCZ maps is now easier than ever with the online LCZ Generator [@Demuzere2021], and 2) as of spring 2021, the new version 4.3 of WRF [@Skamarock2021] is able to ingest 11 urban classses (corresponding to WUDAPT's LCZs) by default, whereas previous versions required manual WRF code changes by the user (see @Martilli2016, @Zonato2021a and @Zonato2021b for more information). Because of these developments, we decided to simultaneously built an improved, Python-based, WUDAPT-to-WRF (W2W) routine, to make the translation of LCZ-based parameters better and more simple. 
+Since the pioneering work of @Brousse2016 and @Martilli2016, the level-0 WUDAPT information, the Local Climate Zone maps, have been used increasingly in WRF. We expect this trend to continue, because of two recent developments: 1) the creation of city-wide LCZ maps is now easier than ever with the online LCZ Generator [@Demuzere2021], and 2) as of spring 2021, the new version 4.3 of WRF [@Skamarock2021] is able to ingest 10 or 11 built classses (corresponding to WUDAPT's LCZs) by default, whereas previous versions required manual WRF code changes by the user (see @Martilli2016, @Zonato2021a and @Zonato2021b for more information). Because of these developments, we decided to simultaneously built an improved, Python-based, WUDAPT-to-WRF (W2W) routine, to make the translation of LCZ-based parameters better and more simple. 
 
 # Initial data requirements
 In order to use the tool, two input files are required: 
@@ -47,83 +47,48 @@ In order to use the tool, two input files are required:
    * Use the [LCZ Generator](https://lcz-generator.rub.de/) to make an LCZ map for your region of interest. See also [here](https://www.wudapt.org/create-lcz-classification/) for more information.
 
 
-# General workflow
-The goal of the Python-based W2W tool is to obtain a WRF domain file (*geo_em.d0X.nc*) that contains the urban LCZ classes and their corresponding urban canopy parameters relevant for all urban parameterizations embedded in WRF: the single layer urban canopy model Noah/SLUCM (@Kusaka2001), the Building Environment Parameterization (BEP, @Martilli2002), and BEP+BEM (Building Energy Model, @Salamanca2010). 
+# Workflow
+The goal of the Python-based W2W tool is to obtain a WRF domain file (*geo_em.d0X.nc*) that contains the built LCZ classes and their corresponding urban canopy parameters (see TABLE XX) relevant for all urban parameterizations embedded in WRF: the single layer urban canopy model Noah/SLUCM (@Kusaka2001), the Building Environment Parameterization (BEP, @Martilli2002), and BEP+BEM (Building Energy Model, @Salamanca2010). 
 
-To get to that point, the following three general steps are followed, which are partly inspired by the work of @Li2020:
-
-* Step 1: Replace the default urban land cover
-The default urban land cover from MODIS is replaced with the dominant surrounding vegetation category, as is done in @Li2020. This procedure affects WRF's variables LU_INDEX (land use index), LANDUSEF (land use fraction) and GREENFRAC (vegetation fraction). LU_INDEX is selected as the dominant category from the $nlus$ (default = 45) nearest grid points (excluding ocean, urban and lakes). GREENFRAC is calculated as the mean over all grid points with that category among the $nlus$ nearest points.
-
-* Step 2: 
-* Step 3:
-
-
-# Urban canopy parameter assignment
 MAKE A TABLE WITH ALL PARAMETERS, including abbrevation, long name, unit, type, source, etc ...
 
+To get to that point, a number of sequential steps are followed:
 
-Two pathways are followed when assigning the various urban canopy parameters to the Local Climate Zone Map (\autoref{fig:workflow}):
+* _Step 1: Remove the default urban land cover_
+The default urban land cover from MODIS is replaced with the dominant surrounding vegetation category, as is done in @Li2020. This procedure affects WRF's variables LU_INDEX (land use index), LANDUSEF (land use fraction) and GREENFRAC (vegetation fraction). LU_INDEX is selected as the dominant category from the $nlus$ (default = 45) nearest grid points (excluding ocean, urban and lakes). LANDUSEF and GREENFRAC are calculated as the mean over all grid points with that category among the $nlus$ nearest points. @DANIEL: CORRECT??
 
-* Pathway 1: **Morphological** parameters are assigned directly to the high-resolution LCZ map, and are only afterwards aggregated to the lower-resolution WRF grid. In this way, the method produces a unique value of the different urban morphology parameters for each WRF grid cell. This was found to be more efficient in reproducing urban boundary layer features, especially in the outskirts of the city [@Zonato2020], and is in line with the [WUDAPT-to-COSMO](https://github.com/matthiasdemuzere/WUDAPT-to-COSMO) routine [@Varentsov2020]. 
-* Pathway 2: In line with the former Fortran-based W2W procedure, **radiative and thermal parameters** are assigned to the modal LCZ class that is assigned to each WRF grid cell. 
+Resulting output: **geo_em.d0X_NoUrban.nc**
 
-![General workflow. The example maps are derived from the sample data for Zaragoza (Spain), available in the github repository \label{fig:workflow}](workflow.png){ width=100% }
+* _Step 2: Define the LCZ-based urban extent_
+LCZ-based impervious fraction (FRC_URB2D) values are assigned to the original 100 m resolution LCZ map, and are aggregated to the WRF resolution. Areas with FRC_URB2D < .2 ($frc$) are currently considered non-urban @ANDREA - ADD SMALL SENTENCE TO STATE WHY THAT IS. The FRC_URB2D field is also used to mask all other urban fields, so that they are consistent.
+
+Resulting output: **geo_em.d0X_LCZ_extent.nc**
+
+* _Step 3: Introduce modal built LCZ classes_
+For each WRF grid cell, the mode of the underlying built LCZ classes is added to LU_INDEX, numbered from 31-41. See [here](https://ral.ucar.edu/sites/default/files/public/product-tool/urban-canopy-model/WRF_urban_update_Readme_file_WRF4.3.pdf) for more info. Note that the W2W routine by default considers LCZ classes 1-10 as built classes ($bc$). Sometimes, also LCZ E (or 15 - Bare rock or paved) can be considered as a built LCZ classes, as it might reflect large asphalt surfaces such as big parking lots or airstrips. In that case, make sure to set argument $bc$ appropriately.
+
+* Step 4: Assign urban canopy parameters
+Two pathways are followed when assigning the various urban canopy parameters to the Local Climate Zone Map:
+
+  * Pathway 1: **Morphological** parameters are assigned directly to the high-resolution LCZ map, and are only afterwards aggregated to the lower-resolution WRF grid. In this way, the method produces a unique value of the different urban morphology parameters for each WRF grid cell. This was found to be more efficient in reproducing urban boundary layer features, especially in the outskirts of the city [@Zonato2020], and is in line with the [WUDAPT-to-COSMO](https://github.com/matthiasdemuzere/WUDAPT-to-COSMO) routine [@Varentsov2020]. 
+  * Pathway 2: In line with the former Fortran-based W2W procedure, **radiative and thermal parameters** are assigned to the modal LCZ class that is assigned to each WRF grid cell. 
 
 As before, the LCZ-based urban canopy parameters generally follow the values provided by [Stewart and Oke (2012)](http://doi.org/10.1175/BAMS-D-11-00019.1) and [Stewart et al. (2014)](http://doi.org/10.1002/joc.3746).
 
+Resulting output: **geo_em.d0X_LCZ_params.nc**
 
-# Potential use case
+# Run the tool
+With respect to the WRF pre-processing chain?
+
+
+# Potential use cases
 
 
 # Things to keep in mind (come up with better section title!!)
 * best to use with BEP or BEP+BEM, because of the building heights / lowest model layer
 * replace generic LCZ-based UCP values with site-specific ones when available
 * Important to have good quality LCZ map, if not: garbage in, garbage out.
-
-
-
-
-
-# Mathematics
-
-Single dollars ($) are required for inline mathematics e.g. $f(x) = e^{\pi/x}$
-
-Double dollars make self-standing equations:
-
-$$\Theta(x) = \left\{\begin{array}{l}
-0\textrm{ if } x < 0\cr
-1\textrm{ else}
-\end{array}\right.$$
-
-You can also use plain \LaTeX for equations
-\begin{equation}\label{eq:fourier}
-\hat f(\omega) = \int_{-\infty}^{\infty} f(x) e^{i\omega x} dx
-\end{equation}
-and refer to \autoref{eq:fourier} from text.
-
-# Citations
-
-Citations to entries in paper.bib should be in
-[rMarkdown](http://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html)
-format.
-
-If you want to cite a software repository URL (e.g. something on GitHub without a preferred
-citation) then you can do it with the example BibTeX entry below for @fidgit.
-
-For a quick reference, the following citation commands can be used:
-- `@author:2001`  ->  "Author et al. (2001)"
-- `[@author:2001]` -> "(Author et al., 2001)"
-- `[@author1:2001; @author2:2001]` -> "(Author1 et al., 2001; Author2 et al., 2002)"
-
-# Figures
-
-Figures can be included like this:
-![Caption for example figure.\label{fig:example}](wudapt_logo.png)
-and referenced from text using \autoref{fig:example}.
-
-Figure sizes can be customized by adding an optional second parameter:
-![Caption for example figure.](wudapt_logo.png){ width=20% }
+* netcdf4/hdf5 compilation?
 
 # Acknowledgements
 We acknowledge contributions and support from Alberto Martilli, Alejandro Rodriguez Sanchez and Oscar Brousse.
