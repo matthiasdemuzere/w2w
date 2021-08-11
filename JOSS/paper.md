@@ -35,8 +35,30 @@ The Python-based WUDAPT-to-WRF (W2W) package is developed in this context, and t
 # Statement of need
 Since the pioneering work of @Brousse2016 and @Martilli2016, the level-0 WUDAPT information, the Local Climate Zone maps, have been used increasingly in WRF. We expect this trend to continue, because of two recent developments: 1) the creation of city-wide LCZ maps is now easier than ever with the online LCZ Generator [@Demuzere2021], and 2) as of spring 2021, the new version 4.3 of WRF [@Skamarock2021] is able to ingest 11 urban classses (corresponding to WUDAPT's LCZs) by default, whereas previous versions required manual WRF code changes by the user (see @Martilli2016, @Zonato2021a and @Zonato2021b for more information). Because of these developments, we decided to simultaneously built an improved, Python-based, WUDAPT-to-WRF (W2W) routine, to make the translation of LCZ-based parameters better and more simple. 
 
+# General workflow
+The goal of the procedure is to obtain a WRF domain file (*geo_em.d0X.nc*) that contains the urban LCZ classes and their corresponding urban canopy parameters relevant for all urban parameterizations embedded in WRF: the single layer urban canopy model Noah/SLUCM (@Kusaka2001), the Building Environment Parameterization (BEP, @Martilli2002), and BEP+BEM (Building Energy Model, @Salamanca2010). To get to that point, the following three general steps are followed, which is partly inspired by the work of @Li2020:
+
+* STEP 1: 
+* STEP 2: 
+* STEP 3:
+
+
+# Urban canopy parameter assignment
+MAKE A TABLE WITH ALL PARAMETERS, including abbrevation, long name, unit, type, source, etc ...
+
+
+Two pathways are followed when assigning the various urban canopy parameters to the Local Climate Zone Map (\autoref{fig:workflow}):
+
+* Pathway 1: **Morphological** parameters are assigned directly to the high-resolution LCZ map, and are only afterwards aggregated to the lower-resolution WRF grid. In this way, the method produces a unique value of the different urban morphology parameters for each WRF grid cell. This was found to be more efficient in reproducing urban boundary layer features, especially in the outskirts of the city [@Zonato2020], and is in line with the [WUDAPT-to-COSMO](https://github.com/matthiasdemuzere/WUDAPT-to-COSMO) routine [@Varentsov2020]. 
+* Pathway 2: In line with the former Fortran-based W2W procedure, **radiative and thermal parameters** are assigned to the modal LCZ class that is assigned to each WRF grid cell. 
+
+![General workflow. The example maps are derived from the sample data for Zaragoza (Spain), available in the github repository \label{fig:workflow}](workflow.png){ width=100% }
+
+As before, the LCZ-based urban canopy parameters generally follow the values provided by [Stewart and Oke (2012)](http://doi.org/10.1175/BAMS-D-11-00019.1) and [Stewart et al. (2014)](http://doi.org/10.1002/joc.3746).
+
+
 # Initial data requirements
-In order to use the tool, two datasets are required: 1) a **geo_em.d0X.nc file** (produced by WRF's WPS geoegrid.exe), for the inner WRF model domain in which you would like to use the LCZ-based information, and 2) a **Local Climate Zone map** that is slightly bigger than the domain of the geo_em.d0X.nc file. 
+In order to use the tool, two datasets are required: 1) a **geo_em.d0X.nc file** (produced by WRF's geogrid.exe tool as part of the WRF Preprocessing System (WPS)), for the inner WRF model domain in which you would like to use the LCZ-based information, and 2) a **Local Climate Zone map** that is slightly bigger than the domain of the geo_em.d0X.nc file. 
 
 **MORE INFO NEEDED ON HOW TO MAKE THE geo_em.d0X.nc file ??? ANDREA?**
 
@@ -47,15 +69,12 @@ There are a number of ways to obtain an LCZ map for your region of interest:
    * Use the [LCZ Generator](https://lcz-generator.rub.de/) to make an LCZ map for your region of interest. 
 
 
-# Workflow
-Two pathways are followed when assigning urban canopy parameters to the Local Climate Zone Map (\autoref{fig:workflow}):
+# Things to keep in mind (come up with better section title!!)
+* best to use with BEP or BEP+BEM, because of the building heights / lowest model layer
+* replace generic LCZ-based UCP values with site-specific ones when available
+* Important to have good quality LCZ map, if not: garbage in, garbage out.
 
-* **Morphological** parameters are assigned directly to the high-resolution LCZ map, and only afterwards aggregated to the lower-resolution WRF grid. In this way, the method produces a unique value of the different urban morphology parameters for each model cell. This was found to be more efficient in reproducing urban boundary layer features, especially in the outskirts of the city [@Zonato2020], and is in line with the [WUDAPT-to-COSMO](https://github.com/matthiasdemuzere/WUDAPT-to-COSMO) routine [@Varentsov2020]. 
-* In line with the former Fortran-based W2W procedure, **radiative and thermal parameters** are assigned to the modal LCZ class that is assigned to each WRF grid cell. 
 
-![The W2W workflow.\label{fig:workflow}](workflow.png)
-
-As before, the LCZ-based urban canopy parameters generally follow the values provided by [Stewart and Oke (2012)](http://doi.org/10.1175/BAMS-D-11-00019.1) and [Stewart et al. (2014)](http://doi.org/10.1002/joc.3746).
 
 
 
