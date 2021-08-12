@@ -28,7 +28,7 @@ bibliography: paper.bib
 ---
 
 # Summary
-An important objective of WUDAPT, the World Urban Database and Acces Portals Tools community project, is to 1) to acquire and make accessible coherent and consistent information on form and function of urban morphology relevant to climate weather, and environment studies, and 2) to provide tools that extract relevant urban parameters and properties for models and model applications at appropriate scales for various climate, weather, environment, and urban planning purposes [@Ching2018, @Ching2019]. 
+An important objective of WUDAPT, the World Urban Database and Acces Portals Tools community project, is to 1) to acquire and make accessible coherent and consistent information on form and function of urban morphology relevant to climate weather, and environment studies, and 2) to provide tools that extract relevant urban parameters and properties for models and model applications at appropriate scales for various climate, weather, environment, and urban planning purposes [@Ching2018; @Ching2019]. 
 
 The Python-based WUDAPT-to-WRF (`W2W`) package is developed in this context, and translates Local Climate Zone (LCZ) maps into urban canopy parameters readable by WRF, the community "Weather Research and Forecasting" model. It is the successor of the Fortran-based `W2W` package developed by @Brousse2016 and @Martilli2016, and provides a more simple, efficient and improved procedure to use LCZ information in WRF.   
 
@@ -40,7 +40,7 @@ Because of these developments, we decided to design an improved, Python-based, W
 # Initial data requirements
 In order to use the tool, two input files are required: 
 
-1. A **geo_em.d0X** (.nc) file for the inner WRF model domain in which one would like to use the LCZ-based information. This file can be produced by WRF's geogrid.exe tool as part of the WRF Preprocessing System (WPS). **@ANDREA: does a user needs to use specific settings here to create this file?? Please extend this section if needed.** 
+1. A **geo_em.d0X** (.nc) file for the inner WRF model domain in which one would like to use the LCZ-based information. This file can be produced by WRF's geogrid.exe tool as part of the WRF Preprocessing System (WPS). **@ ANDREA: does a user needs to use specific settings here to create this file?? Please extend this section if needed.** 
 
 2.  A **Local Climate Zone map** (.tif) file that is slightly bigger than the domain extent of the geo_em.d0X.nc file. There are a number of ways to obtain an LCZ map for your region of interest (ROI): 
 
@@ -56,13 +56,13 @@ To get to that point, a number of sequential steps are followed:
 
 * _Step 1: Remove the default urban land cover_
 
-The default urban land cover from MODIS is replaced with the dominant surrounding vegetation category, as is done in @Li2020. This procedure affects WRF's parameters LU_INDEX, LANDUSEF and GREENFRAC. LU_INDEX is selected as the dominant category from the $nlus$ (default = 45) nearest grid points (excluding ocean, urban and lakes). LANDUSEF and GREENFRAC are calculated as the mean over all grid points with that category among the $nlus$ nearest points. **@DANIEL: CORRECT??**
+The default urban land cover from MODIS is replaced with the dominant surrounding vegetation category, as is done in @Li2020. This procedure affects WRF's parameters LU_INDEX, LANDUSEF and GREENFRAC. LU_INDEX is selected as the dominant category from the $nlus$ (default = 45) nearest grid points (excluding ocean, urban and lakes). LANDUSEF and GREENFRAC are calculated as the mean over all grid points with that category among the $nlus$ nearest points. **@ DANIEL: CORRECT??**
 
 Resulting output: **geo_em.d0X_NoUrban.nc**
 
 * _Step 2: Define the LCZ-based urban extent_
 
-LCZ-based impervious fraction values (FRC_URB2D, available from `LCZ_UCP_default.csv`) are assigned to the original 100 m resolution LCZ map, and are aggregated to the WRF resolution. Areas with FRC_URB2D < 0.2 ($frc$) are currently considered non-urban **@ANDREA - ADD SMALL SENTENCE TO STATE WHY THAT IS**. The FRC_URB2D field is also used to mask all other urban parameter fields, so that their extent is consistent.
+LCZ-based impervious fraction values (FRC_URB2D, available from `LCZ_UCP_default.csv`) are assigned to the original 100 m resolution LCZ map, and are aggregated to the WRF resolution. Areas with FRC_URB2D < 0.2 ($frc$) are currently considered non-urban **@ ANDREA - ADD SMALL SENTENCE TO STATE WHY THAT IS**. The FRC_URB2D field is also used to mask all other urban parameter fields, so that their extent is consistent.
 
 Resulting output: **geo_em.d0X_LCZ_extent.nc**
 
@@ -99,9 +99,9 @@ Resulting output: **geo_em.d0X_LCZ_params.nc**
 
 
 # Integration in WRF's preprocessing
-@ANDREA: Can you write a small text where this tool sits within WRF's typical workflow? Thereby indicating:
+**@ ANDREA**: Can you write a small text where this tool sits within WRF's typical workflow? Thereby indicating:
 
-* what a user needs to do after running the tool (eg. renaming netcdf outputs)
+* what a user needs to do after running the tool (eg. renaming netcdf outputs, what WRF tools to launch etc ...)
 * indicate what namelist settings are required?
 
 Perhaps it would make sense to have a schematic, similar to the first half of this Figure \autoref{fig:wrf_workflow}, available from [Meyer and Riechert (2019)](https://doi.org/10.1016/j.envsoft.2018.10.018)? 
@@ -114,7 +114,7 @@ Perhaps it would make sense to have a schematic, similar to the first half of th
 
 # Important notes
 * The LCZ-based urban canopy parameter values provided in `LCZ_UCP_default.csv` and `URBPARM_LCZ.TBL` are universal and generic, and might not be appropriate for your ROI. If available, please adjust the values according to the characteristics of your ROI.
-* It is advised to use this tool with urban parameterization options BEP or BEP+BEM (`sf_urban_physics = 2 or 3`). In case you use this tool with the SLUCM model (`sf_urban_physics = 1`), make sure your lowest model level is above the highest building height. If not, real.exe will provide the following error message: `ZDC + Z0C + 2m is larger than the 1st WRF level - Stop in subroutine urban - change ZDC and Z0C` **@ANDREA: Correct??**
+* It is advised to use this tool with urban parameterization options BEP or BEP+BEM (`sf_urban_physics = 2 or 3`). In case you use this tool with the SLUCM model (`sf_urban_physics = 1`), make sure your lowest model level is above the highest building height. If not, real.exe will provide the following error message: `ZDC + Z0C + 2m is larger than the 1st WRF level - Stop in subroutine urban - change ZDC and Z0C` **@ ANDREA: Correct??**
 
 
 # Acknowledgements
