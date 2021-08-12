@@ -74,13 +74,16 @@ For each WRF grid cell, the mode of the underlying built LCZ classes is added to
 
 Two pathways are followed when assigning the various urban canopy parameters to the Local Climate Zone Map:
 
-**Pathway 1**: **Morphological** parameters are assigned directly to the high-resolution LCZ map, and are afterwards aggregated to the lower-resolution WRF grid. In this way, the method produces a unique value of the different urban morphology parameters for each WRF grid cell. This was found to be more efficient in reproducing urban boundary layer features, especially in the outskirts of the city [@Zonato2020], and is in line with the [WUDAPT-to-COSMO](https://github.com/matthiasdemuzere/WUDAPT-to-COSMO) routine [@Varentsov2020].
+**Pathway 1**: **Morphological parameters** are assigned directly to the high-resolution LCZ map, and are afterwards aggregated to the lower-resolution WRF grid. In this way, the method produces a unique urban morphology parameter value for each WRF grid cell. This was found to be more efficient in reproducing urban boundary layer features, especially in the outskirts of the city [@Zonato2020], and is in line with the [WUDAPT-to-COSMO](https://github.com/matthiasdemuzere/WUDAPT-to-COSMO) routine [@Varentsov2020].
 
-Morphological urban canopy parameter values are provided in `LCZ_UCP_default.csv`, and are generally based on @Stewart2012 and @Stewart2014. Building width (BW) is taken from `URBPARM_LCZ.TBL` (available in WRF's run/ folder). And while `URBPARM_LCZ.TBL` also has values on street width, `W2W` derives street width from the mean building height (MH_URB2D) and the Height-to-Width ratio (H2W), to have these fields consistent.
+Morphological urban canopy parameter values are provided in `LCZ_UCP_default.csv`, and are generally based on values provided in @Stewart2012 and @Stewart2014. Some additional details:
 
-In addition:
+* Building width (BW) is taken from `URBPARM_LCZ.TBL` (available in WRF's run/ folder). 
+* While `URBPARM_LCZ.TBL` also has values on street width, `W2W` derives street width from the mean building height (MH_URB2D) and the Height-to-Width ratio (H2W), to have these fields consistent.
 * Plan (LP_URB2D), frontal (LF_URB2D) and total (LB_URB2D) area indices are based on formulas in @Zonato2020.
-    * HI_URB2D is obtained by fitting a bounded normal distribution to the minimum, mean, maximum and standard deviation of the building heights (BH), as provided in `LCZ_UCP_default.csv`. In addition, for computational efficiency, values lower than 5% were set to 0 after resampling, the remaining HI_URB2D percentages are re-scaled to 100%.
+* HI_URB2D is obtained by fitting a bounded normal distribution to the minimum (MH_URB2D_MIN), mean (MH_URB2D), and maximum (MH_URB2D_MAX) of the building heights, as provided in `LCZ_UCP_default.csv`. The building height standard deviation () is also required, and is approximated as $(MH_URB2D_MAX - MH_URB2D_MIN) / 4$. 
+* For computational efficiency, HI_URB2D values lower than 5% were set to 0 after resampling, the remaining HI_URB2D percentages are re-scaled to 100%.
+
 
 **Pathway 2**: In line with the former Fortran-based `W2W` procedure, **radiative and thermal parameters** are assigned to the modal LCZ class that is assigned to each WRF grid cell. These parameter values are not stored in the netcdf output, but are read from URBPARM_LCZ.TBL and assigned automatically to the modal LCZ class when running the model. 
 
