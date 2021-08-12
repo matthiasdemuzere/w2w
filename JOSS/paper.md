@@ -85,25 +85,36 @@ Morphological urban canopy parameter values are provided in `LCZ_UCP_default.csv
 * For computational efficiency, HI_URB2D values lower than 5% were set to 0 after resampling, the remaining HI_URB2D percentages are re-scaled to 100%.
 
 
-**Pathway 2**: In line with the former Fortran-based `W2W` procedure, **radiative and thermal parameters** are assigned to the modal LCZ class that is assigned to each WRF grid cell. These parameter values are not stored in the netcdf output, but are read from `URBPARM_LCZ.TBL` and assigned automatically to the modal LCZ class when running the model. 
+**Pathway 2**: In line with the former Fortran-based `W2W` procedure, **radiative and thermal parameters** are assigned to the modal LCZ class that is assigned to each WRF grid cell (see _Step 3_). These parameter values are not stored in the netcdf output, but are read from `URBPARM_LCZ.TBL` and assigned automatically to the modal LCZ class when running the model. 
 
 
 * _Step 5: Adjust global attributes_
 
 In a final step, some global attributes are adjusted in the resulting netcdf files:
 
-* NBUI_MAX is added as a global attribute in the netcdf file, reflecting the maximum amount of HI_URB2D classes that are not 0 across the model domain. This paramater can be used when compiling WRF, to optimize memory storage.
+* NBUI_MAX is added as a global attribute, reflecting the maximum amount of HI_URB2D classes that are not 0 across the model domain. This paramater can be used when compiling WRF, to optimize memory storage.
 * NUM_LAND_CAT is set to 41, to reflect the addition of 10 (or 11) built LCZ classes. This is not only done for the highest resolution domain file, but also for **all of its parent domain files**. As such, make sure these files are also available in the input data directory. 
 
 Resulting output: **geo_em.d0X_LCZ_params.nc**
+
+
+# Integration in WRF's preprocessing
+@ANDREA: Can you write a small text where this tool sits within WRF's typical workflow? Thereby indicating:
+
+* what a user needs to do after running the tool (eg. renaming netcdf outputs)
+* indicate what namelist settings are required?
+
+Perhaps it would make sense to have a schematic, similar to the first half of this Figure \autoref{fig:wrf_workflow}, available from [Meyer and Riechert (2019)](https://doi.org/10.1016/j.envsoft.2018.10.018)? 
+
+![WRF workflow example.\label{fig:wrf_workflow}](meyer2019.png)
 
 
 # Potential use cases
 
 
 # Important notes
-* The LCZ-based urban canopy parameter values provided in `LCZ_UCP_default.csv` and `URBPARM_LCZ.TBL` are universal and generic, and might not be appropriate for your region of interest (ROI). If available, please adjust the values according to the characteristics of your ROI.
-* It is advised to use this tool with urban parameterization options BEP or BEP+BEM (`sf_urban_physics = 2 or 3`). In case you use this tool with the SLUCM model (`sf_urban_physics = 1`), make sure your lowest model level is above the highest building height. If not, real.exe will provide the following error message: `ZDC + Z0C + 2m is larger than the 1st WRF level - Stop in subroutine urban - change ZDC and Z0C`
+* The LCZ-based urban canopy parameter values provided in `LCZ_UCP_default.csv` and `URBPARM_LCZ.TBL` are universal and generic, and might not be appropriate for your ROI. If available, please adjust the values according to the characteristics of your ROI.
+* It is advised to use this tool with urban parameterization options BEP or BEP+BEM (`sf_urban_physics = 2 or 3`). In case you use this tool with the SLUCM model (`sf_urban_physics = 1`), make sure your lowest model level is above the highest building height. If not, real.exe will provide the following error message: `ZDC + Z0C + 2m is larger than the 1st WRF level - Stop in subroutine urban - change ZDC and Z0C` **@ANDREA: Correct??**
 
 
 # Acknowledgements
