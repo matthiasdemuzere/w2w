@@ -28,14 +28,16 @@ bibliography: paper.bib
 ---
 
 # Summary
-An important objective of WUDAPT, the World Urban Database and Acces Portals Tools community project, is to 1) to acquire and make accessible coherent and consistent information on form and function of urban morphology relevant to climate weather, and environment studies, and 2) to provide tools that extract relevant urban parameters and properties for models and model applications at appropriate scales for various climate, weather, environment, and urban planning purposes [@Ching2018; @Ching2019]. 
+An important objective of WUDAPT, the World Urban Database and Acces Portals Tools community project, is to 1) to acquire and make accessible coherent and consistent information on form and function of urban morphology relevant to climate weather, and environment studies, and 2) to provide tools that extract relevant urban parameters and properties for models and model applications at appropriate scales for various climate, weather, environment, and urban planning purposes [@Ching2018]. 
 
 The Python-based WUDAPT-to-WRF (`W2W`) package is developed in this context, and translates Local Climate Zone (LCZ) maps into urban canopy parameters readable by WRF, the community "Weather Research and Forecasting" model. It is the successor of the Fortran-based `W2W` package developed by @Brousse2016 and @Martilli2016, and provides a more simple, efficient and improved procedure to use LCZ information in WRF.   
 
 # Statement of need
-Since the pioneering work of @Brousse2016 and @Martilli2016, the level-0 WUDAPT information, the Local Climate Zone maps, have been used increasingly in WRF. We expect this trend to continue, because of two recent developments: 1) the creation of city-wide LCZ maps is now easier than ever with the launch of the online LCZ Generator [@Demuzere2021], and 2) the new version 4.3 of WRF [@Skamarock2021] is able to ingest 10 or 11 built classses (corresponding to WUDAPT's LCZs) by default, whereas previous versions required manual WRF code changes (see @Martilli2016, @Zonato2021a and @Zonato2021b for more information). 
+Since the pioneering work of @Brousse2016 and @Martilli2016, the level-0 WUDAPT information, the Local Climate Zone maps, have been used increasingly in WRF. 
 
-Because of these developments, we decided to design an improved, Python-based, WUDAPT-to-WRF (`W2W`) routine, to make the translation of LCZ-based parameters better and more simple. 
+We expect this trend to continue, because of two recent developments: 1) the creation of city-wide LCZ maps is now easier than ever with the launch of the online LCZ Generator [@Demuzere2021], and 2) WRF versions > 4.x [@Skamarock2021] are able to ingest 10 or 11 built classses (corresponding to WUDAPT's LCZs) by default, whereas previous WRF versions required manual code changes (see @Martilli2016, @Zonato2021a and @Zonato2021b for more information). 
+
+Because of these developments, an improved, Python-based, WUDAPT-to-WRF (`W2W`) routine is presented here, so as to make the translation of LCZ-based parameters better and more simple. 
 
 # Initial data requirements
 In order to use the tool, two input files are required: 
@@ -72,7 +74,7 @@ For each WRF grid cell, the mode of the underlying built LCZ classes is added to
 
 * _Step 4: Assign urban canopy parameters_
 
-Two pathways are followed when assigning the various urban canopy parameters to the LCZ Map, and translating this information onto WRF's grid:
+Two pathways are followed when assigning the various urban canopy parameters to the LCZ map, and translating this information onto WRF's grid:
 
 **Pathway 1**: **Morphological parameters** are assigned directly to the high-resolution LCZ map, and are afterwards aggregated to the lower-resolution WRF grid. In this way, the method produces a unique urban morphology parameter value for each WRF grid cell. This was found to be more efficient in reproducing urban boundary layer features, especially in the outskirts of the city [@Zonato2020], and is in line with the [WUDAPT-to-COSMO](https://github.com/matthiasdemuzere/WUDAPT-to-COSMO) routine [@Varentsov2020].
 
@@ -81,7 +83,7 @@ Morphological urban canopy parameter values are provided in `LCZ_UCP_default.csv
 * Building width (BW), available in `LCZ_UCP_default.csv`, is taken from `URBPARM_LCZ.TBL` (stored in WRF's run/ folder). 
 * While `URBPARM_LCZ.TBL` also has values on street width, `W2W` derives street width from the mean building height (MH_URB2D) and the Height-to-Width ratio (H2W), to have these fields consistent.
 * Plan (LP_URB2D), frontal (LF_URB2D) and total (LB_URB2D) area indices are based on formulas in @Zonato2020.
-* HI_URB2D is obtained by fitting a bounded normal distribution to the minimum (MH_URB2D_MIN), mean (MH_URB2D), and maximum (MH_URB2D_MAX) of the building heights, as provided in `LCZ_UCP_default.csv`. The building height standard deviation is also required, and is approximated as (MH_URB2D_MAX - MH_URB2D_MIN) / 4. 
+* HI_URB2D is obtained by fitting a bounded normal distribution to the minimum (MH_URB2D_MIN), mean (MH_URB2D), and maximum (MH_URB2D_MAX) building height, as provided in `LCZ_UCP_default.csv`. The building height standard deviation is also required, and is approximated as (MH_URB2D_MAX - MH_URB2D_MIN) / 4. 
 * For computational efficiency, HI_URB2D values lower than 5% were set to 0 after resampling, the remaining HI_URB2D percentages are re-scaled to 100%.
 
 
@@ -93,13 +95,13 @@ Morphological urban canopy parameter values are provided in `LCZ_UCP_default.csv
 In a final step, some global attributes are adjusted in the resulting netcdf files:
 
 * NBUI_MAX is added as a global attribute, reflecting the maximum amount of HI_URB2D classes that are not 0 across the model domain. This paramater can be used when compiling WRF, to optimize memory storage.
-* NUM_LAND_CAT is set to 41, to reflect the addition of 10 (or 11) built LCZ classes. This is not only done for the highest resolution domain file, but also for **all of its parent domain files**. As such, make sure these files are also available in the input data directory. 
+* NUM_LAND_CAT is set to 41, to reflect the addition of 10 (or 11) built LCZ classes. This is not only done for the highest resolution domain file (e.g. d04), but also for **all of its parent domain files (e.g. d01, d02, d03)**. As such, make sure these files are also available in the input data directory. 
 
 Resulting output: **geo_em.d0X_LCZ_params.nc**
 
 
 # Integration in WRF's preprocessing
-**@ ANDREA**: Can you write a small text where this tool sits within WRF's typical workflow? Thereby indicating:
+**@ ANDREA**: Can you write a small text to describe 1) where this tool sits within WRF's typical workflow and 2) what needs to be done afterwards? E.g.:
 
 * what a user needs to do after running the tool (eg. renaming netcdf outputs, what WRF tools to launch etc ...)
 * indicate what namelist settings are required?
