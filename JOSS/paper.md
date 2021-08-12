@@ -81,7 +81,7 @@ Morphological urban canopy parameter values are provided in `LCZ_UCP_default.csv
 * Building width (BW), available in `LCZ_UCP_default.csv`, is taken from `URBPARM_LCZ.TBL` (stored in WRF's run/ folder). 
 * While `URBPARM_LCZ.TBL` also has values on street width, `W2W` derives street width from the mean building height (MH_URB2D) and the Height-to-Width ratio (H2W), to have these fields consistent.
 * Plan (LP_URB2D), frontal (LF_URB2D) and total (LB_URB2D) area indices are based on formulas in @Zonato2020.
-* HI_URB2D is obtained by fitting a bounded normal distribution to the minimum (MH_URB2D_MIN), mean (MH_URB2D), and maximum (MH_URB2D_MAX) of the building heights, as provided in `LCZ_UCP_default.csv`. The building height standard deviation is also required, and is approximated as ${(MH\_URB2D\_MAX - MH\_URB2D\_MIN) / 4}$. 
+* HI_URB2D is obtained by fitting a bounded normal distribution to the minimum (MH_URB2D_MIN), mean (MH_URB2D), and maximum (MH_URB2D_MAX) of the building heights, as provided in `LCZ_UCP_default.csv`. The building height standard deviation is also required, and is approximated as (MH_URB2D_MAX - MH_URB2D_MIN) / 4. 
 * For computational efficiency, HI_URB2D values lower than 5% were set to 0 after resampling, the remaining HI_URB2D percentages are re-scaled to 100%.
 
 
