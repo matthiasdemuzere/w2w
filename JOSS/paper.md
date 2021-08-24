@@ -108,7 +108,8 @@ Resulting output: **geo_em.d0X_LCZ_params.nc**
 
 Perhaps it would make sense to have a schematic, similar to the first half of this Figure \autoref{fig:wrf_workflow}, available from [Meyer and Riechert (2019)](https://doi.org/10.1016/j.envsoft.2018.10.018)? 
 
-![WRF workflow example.\label{fig:wrf_workflow}](meyer2019.png)
+![WRF workflow example.\label{fig:wrf_workflow}]![W2W](https://user-images.githubusercontent.com/49075918/130662574-fe4cccde-a300-4671-9fa5-5820a79017da.jpg)
+
 
 
 # Potential use cases
@@ -121,7 +122,7 @@ The files provided as output by `W2W` allow a wide range of applications, includ
 
 # Important notes
 * The LCZ-based urban canopy parameter values provided in `LCZ_UCP_default.csv` and `URBPARM_LCZ.TBL` are universal and generic, and might not be appropriate for your ROI. If available, please adjust the values according to the characteristics of your ROI.
-* It is advised to use this tool with urban parameterization options BEP or BEP+BEM (`sf_urban_physics = 2 or 3`). In case you use this tool with the SLUCM model (`sf_urban_physics = 1`), make sure your lowest model level is above the highest building height. If not, real.exe will provide the following error message: `ZDC + Z0C + 2m is larger than the 1st WRF level - Stop in subroutine urban - change ZDC and Z0C` **@ ANDREA: Correct??**
+* It is advised to use this tool with urban parameterization options BEP or BEP+BEM (`sf_urban_physics = 2 or 3`). In case you use this tool with the SLUCM model (`sf_urban_physics = 1`), make sure your lowest model level is above the highest building height. If not, real.exe will provide the following error message: `ZDC + Z0C + 2m is larger than the 1st WRF level - Stop in subroutine urban - change ZDC and Z0C`
 
 
 # Acknowledgements
