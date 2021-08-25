@@ -15,6 +15,7 @@ authors:
       orcid: 0000-0002-4792-162X
       affiliation: 2
     - name: Andrea Zonato
+      orcid: 0000-0002-9174-1618
       affiliation: 3
 affiliations:
     - name: Urban Climatology Group, Department of Geography, Ruhr-University Bochum, Bochum, Germany
@@ -30,7 +31,7 @@ bibliography: paper.bib
 # Summary
 An important objective of WUDAPT, the World Urban Database and Acces Portals Tools community project, is to 1) to acquire and make accessible coherent and consistent information on form and function of urban morphology relevant to climate weather, and environment studies, and 2) to provide tools that extract relevant urban parameters and properties for models and model applications at appropriate scales for various climate, weather, environment, and urban planning purposes [@Ching2018]. 
 
-The Python-based WUDAPT-to-WRF (`W2W`) package is developed in this context, and translates Local Climate Zone (LCZ) maps into urban canopy parameters readable by WRF, the community "Weather Research and Forecasting" model. It is the successor of the Fortran-based `W2W` package developed by @Brousse2016 and @Martilli2016, and provides a more simple, efficient and improved procedure to use LCZ information in WRF.   **@MATTHIAS: here i suggesst to add that this tool is not the simple tool developed before, but now LCZ are used to assign urban parameter that are averaged, instead of assigning LCZ and subsequently the urban parameters**
+The Python-based WUDAPT-to-WRF (`W2W`) package is developed in this context, and translates Local Climate Zone (LCZ) maps into urban canopy parameters readable by WRF, the community "Weather Research and Forecasting" model. It is the successor of the Fortran-based `W2W` package developed by @Brousse2016 and @Martilli2016, and provides a more simple, efficient and improved procedure to use LCZ information in WRF. Some important changes include a direct manipulation of the geogrid files (without the creation of temporary files), and the use of average LCZ-based urban morphological parameters instead of assigning them to the modal LCZ class.
 
 # Statement of need
 Since the pioneering work of @Brousse2016 and @Martilli2016, the level-0 WUDAPT information, the Local Climate Zone maps, have been used increasingly in WRF. 
