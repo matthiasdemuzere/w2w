@@ -30,12 +30,12 @@ bibliography: paper.bib
 # Summary
 An important objective of WUDAPT, the World Urban Database and Acces Portals Tools community project, is to 1) to acquire and make accessible coherent and consistent information on form and function of urban morphology relevant to climate weather, and environment studies, and 2) to provide tools that extract relevant urban parameters and properties for models and model applications at appropriate scales for various climate, weather, environment, and urban planning purposes [@Ching2018]. 
 
-The Python-based WUDAPT-to-WRF (`W2W`) package is developed in this context, and translates Local Climate Zone (LCZ) maps into urban canopy parameters readable by WRF, the community "Weather Research and Forecasting" model. It is the successor of the Fortran-based `W2W` package developed by @Brousse2016 and @Martilli2016, and provides a more simple, efficient and improved procedure to use LCZ information in WRF.   
+The Python-based WUDAPT-to-WRF (`W2W`) package is developed in this context, and translates Local Climate Zone (LCZ) maps into urban canopy parameters readable by WRF, the community "Weather Research and Forecasting" model. It is the successor of the Fortran-based `W2W` package developed by @Brousse2016 and @Martilli2016, and provides a more simple, efficient and improved procedure to use LCZ information in WRF.   **@MATTHIAS: here i suggesst to add that this tool is not the simple tool developed before, but now LCZ are used to assign urban parameter that are averaged, instead of assigning LCZ and subsequently the urban parameters**
 
 # Statement of need
 Since the pioneering work of @Brousse2016 and @Martilli2016, the level-0 WUDAPT information, the Local Climate Zone maps, have been used increasingly in WRF. 
 
-We expect this trend to continue, because of two recent developments: 1) the creation of city-wide LCZ maps is now easier than ever with the launch of the online LCZ Generator [@Demuzere2021], and 2) WRF versions > 4.x [@Skamarock2021] are able to ingest 10 or 11 built classses (corresponding to WUDAPT's LCZs) by default, whereas previous WRF versions required manual code changes (see @Martilli2016, @Zonato2021a and @Zonato2021b for more information). 
+We expect this trend to continue, because of two recent developments: 1) the creation of city-wide LCZ maps is now easier than ever with the launch of the online LCZ Generator [@Demuzere2021], and 2) WRF versions > 4.3 [@Skamarock2021] are able to ingest 10 or 11 built classses (corresponding to WUDAPT's LCZs) by default, whereas previous WRF versions required manual code changes (see @Martilli2016, @Zonato2021a and @Zonato2021b for more information). 
 
 Because of these developments, an improved, Python-based, WUDAPT-to-WRF (`W2W`) routine is presented here, so as to make the translation of LCZ-based parameters better and more simple. 
 
@@ -64,7 +64,7 @@ Resulting output: **geo_em.d0X_NoUrban.nc**
 
 * _Step 2: Define the LCZ-based urban extent_
 
-LCZ-based impervious fraction values (FRC_URB2D, available from `LCZ_UCP_default.csv`) are assigned to the original 100 m resolution LCZ map, and are aggregated to the WRF resolution. Areas with FRC_URB2D < 0.2 ($frc$) are currently considered non-urban **@ ANDREA - ADD SMALL SENTENCE TO STATE WHY THAT IS**. The FRC_URB2D field is also used to mask all other urban parameter fields, so that their extent is consistent.
+LCZ-based impervious fraction values (FRC_URB2D, available from `LCZ_UCP_default.csv`) are assigned to the original 100 m resolution LCZ map, and are aggregated to the WRF resolution. Areas with FRC_URB2D < 0.2 ($frc$) are currently considered non-urban. This choice has been made to avoid to employ the urban schemes in areas where the majority of the landuse is vegetated, since the impact of the impervious surfaces is low.   The FRC_URB2D field is also used to mask all other urban parameter fields, so that their extent is consistent.
 
 Resulting output: **geo_em.d0X_LCZ_extent.nc**
 
@@ -108,7 +108,7 @@ Resulting output: **geo_em.d0X_LCZ_params.nc**
 
 Perhaps it would make sense to have a schematic, similar to the first half of this Figure \autoref{fig:wrf_workflow}, available from [Meyer and Riechert (2019)](https://doi.org/10.1016/j.envsoft.2018.10.018)? 
 
-![WRF workflow example.\label{fig:wrf_workflow}]![W2W](https://user-images.githubusercontent.com/49075918/130662574-fe4cccde-a300-4671-9fa5-5820a79017da.jpg)
+![W2W](https://user-images.githubusercontent.com/49075918/130761893-5a9f9102-da90-4739-a93e-92dc2c57037d.jpg)
 
 
 
