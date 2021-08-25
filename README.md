@@ -20,22 +20,41 @@ The procedure in this new `w2w` tool is different from the former tool. Morpholo
 
 Python environment
 -------
-Create a virtual python environment, for example with anaconda: 
-1. If you do not have anaconda on your system yet, please install it first (information [here](https://docs.conda.io/en/latest/miniconda.html)). This repository has been tested with python 3.8.
-2. Clone the w2w repository in your folder of choice, and enter it:
+
+First, clone the w2w repository in your folder of choice, and enter it:
 ```sh   
 > git clone https://github.com/matthiasdemuzere/w2w.git
 > cd w2w 
 ```
 
-3. Then, create the virtual environment from within this repository:
+Then, it's advised to create a python3.8 virtual environment, either with A) Anaconda or B) python's venv tool.
+
+#### A. Anaconda: 
+1. If you do not have anaconda on your system yet, please install it first (information [here](https://docs.conda.io/en/latest/miniconda.html)). This repository has been tested with python 3.8.
+
+2. Then, create the virtual environment from within this repository:
 ```sh   
 > conda env create -f w2w.yml
 ```
-4. Activate this new environment:
+3. Activate this new environment:
 ```sh   
 > conda activate w2w
 ```
+
+#### B. Python's venv:
+1. Create the virtual environment from within this repository:
+```sh
+> python3.8 -m venv w2wenv
+```
+2. Activate this new environment:
+```sh
+> source w2wenv/bin/activate
+```
+3. Install the requirements
+```sh
+> pip install w2w_requirements.txt
+```
+
 
 Requirements
 -------
