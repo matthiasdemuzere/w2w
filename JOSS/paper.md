@@ -102,7 +102,7 @@ Resulting output: **geo_em.d0X_LCZ_params.nc**
 
 
 # Integration in WRF's preprocessing
- The current tool is designed to work with the geo_em.d0X files produced by geogrid.exe (Figure \autoref{fig:w2w_workflow}), which is available in the WRF Preprocessing System (WPS). The user should run geogrid.exe using its default settings, which will provide the various geo_em.d0X.nc files containing the static data fields. No additional variable are required, neither in the namelist.wps nor within the GEOGRID.TBL table. The `W2W` tool reads the standard geo_em.d0X.nc files (for all the domains) and produces the aforementioned **geo_em.d0X_LCZ_params.nc** files. The user should then simply rename these files to the standard names for each of the domains.
+ The current tool is designed to work with the geo_em.d0X files produced by geogrid.exe, which is available in the WRF Preprocessing System (WPS). The user should run geogrid.exe using its default settings, which will provide the various geo_em.d0X.nc files containing the static data fields. No additional variable are required, neither in the namelist.wps nor within the GEOGRID.TBL table. The `W2W` tool (\autoref{fig:w2w_workflow}) reads the standard geo_em.d0X.nc files (for all the domains) and produces the aforementioned **geo_em.d0X_LCZ_params.nc** files. The user should then simply rename these files to the standard name for each of the domains.
 
 ![Modified workflow to set-up and run a WRF simulations including urban parameters derived from LCZs using W2W.\label{fig:w2w_workflow}](w2w_workflow.jpg)
 
@@ -117,8 +117,8 @@ The files provided as output by `W2W` allow a wide range of applications, includ
 
 
 # Important notes
-* The LCZ-based urban canopy parameter values provided in `LCZ_UCP_default.csv` and `URBPARM_LCZ.TBL` are universal and generic, and might not be appropriate for your ROI. If available, please adjust the values according to the characteristics of your ROI.
-* It is advised to use this tool with urban parameterization options BEP or BEP+BEM (`sf_urban_physics = 2 or 3`). In case you use this tool with the SLUCM model (`sf_urban_physics = 1`), make sure your lowest model level is above the highest building height. If not, real.exe will provide the following error message: `ZDC + Z0C + 2m is larger than the 1st WRF level - Stop in subroutine urban - change ZDC and Z0C`
+* The LCZ-based urban canopy parameter values provided in `LCZ_UCP_default.csv` and `URBPARM_LCZ.TBL` are universal and generic, and might not be appropriate for your ROI. If available, please adjust the urban canopy parameters values according to the characteristics of your ROI.
+* It is advised to use this tool with urban parameterization options BEP or BEP+BEM (`sf_urban_physics = 2 or 3`, respectively). In case you use this tool with the SLUCM model (`sf_urban_physics = 1`), make sure your lowest model level is above the highest building height. If not, real.exe will provide the following error message: `ZDC + Z0C + 2m is larger than the 1st WRF level - Stop in subroutine urban - change ZDC and Z0C`
 
 
 # Acknowledgements
