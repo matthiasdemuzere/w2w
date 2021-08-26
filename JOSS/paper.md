@@ -43,7 +43,7 @@ Because of these developments, an improved, Python-based, WUDAPT-to-WRF (`W2W`) 
 # Initial data requirements
 In order to use the tool, two input files are required: 
 
-1. A **geo_em.d0X** (.nc) file for the inner WRF model domain in which one would like to use the LCZ-based information. This file can be produced by WRF's geogrid.exe tool as part of the WRF Preprocessing System (WPS). **@ ANDREA: does a user needs to use specific settings here to create this file?? Please extend this section if needed.** 
+1. A **geo_em.d0X** (.nc) file for the inner WRF model domain in which one would like to use the LCZ-based information. This file can be produced by WRF's geogrid.exe tool as part of the WRF Preprocessing System (WPS), without additional modifications of the standard procedure. 
 
 2.  A **Local Climate Zone map** (.tif) file that is slightly bigger than the domain extent of the geo_em.d0X.nc file. There are a number of ways to obtain an LCZ map for your region of interest (ROI): 
 
@@ -102,13 +102,7 @@ Resulting output: **geo_em.d0X_LCZ_params.nc**
 
 
 # Integration in WRF's preprocessing
-**@ ANDREA**: Can you write a small text to describe 1) where this tool sits within WRF's typical workflow and 2) what needs to be done afterwards? E.g.:
-
-* what a user needs to do after running the tool (eg. renaming netcdf outputs, what WRF tools to launch etc ...)
-* indicate what namelist settings are required?
-
-Perhaps it would make sense to have a schematic, similar to the first half of this Figure \autoref{fig:wrf_workflow}, available from [Meyer and Riechert (2019)](https://doi.org/10.1016/j.envsoft.2018.10.018)? 
-
+ The current tool is designed to work with the geo_em.d0X files produced by the geogrid.exe, in the context of the WRF Preprocessing System (WPS). The user should standardly run the geogrid.exe, which provide the various geo_em.d0X.nc containing the  static data fields. No additional variable are required, neither in the namelist.wps nor within the GEOGRID.TBL. The w2w tool reads the standard geo_em.d0X.nc files (for all the domains) and produces the aforementioned **geo_em.d0X_LCZ_params.nc**. The user should then simply rename those files with its standard name for each domain, respectively. Figure (**i don't know hoy to ref in github**) shows the modified workflow to set-up and run a WRF simulations including urban parameters derived from LCZs.
 ![W2W](https://user-images.githubusercontent.com/49075918/130761893-5a9f9102-da90-4739-a93e-92dc2c57037d.jpg)
 
 
