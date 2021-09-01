@@ -75,7 +75,7 @@ For each WRF grid cell, the mode of the underlying built LCZ classes is added to
 
 * _Step 4: Assign urban canopy parameters_
 
-Two pathways are followed when assigning the various urban canopy parameters to the LCZ map, and translating this information onto WRF's grid:
+Two pathways **THIS COULD BE UNDERSTOOD AS EXCLUDING PATHWAYS, BUT BOTH ARE ACTUALLY HAPPENING. PERHAPS CLARIFY** are followed when assigning the various urban canopy parameters to the LCZ map, and translating this information onto WRF's grid:
 
 **Pathway 1**: **Morphological parameters** are assigned directly to the high-resolution LCZ map, and are afterwards aggregated to the lower-resolution WRF grid. In this way, the method produces a unique urban morphology parameter value for each WRF grid cell. This was found to be more efficient in reproducing urban boundary layer features, especially in the outskirts of the city [@Zonato2020], and is in line with the [WUDAPT-to-COSMO](https://github.com/matthiasdemuzere/WUDAPT-to-COSMO) routine [@Varentsov2020].
 
