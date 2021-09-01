@@ -236,7 +236,7 @@ def wrf_remove_urban(
                 aux = luse.where(dis<disflat.sortby(disflat)
                                  .isel(gridpoints=NPIX_NLC),drop=True)
                 newlu = int(mode(aux.values.flatten())[0])-1
-                newluf[newlu,i,j]=luf.isel(south_north=i,west_east=j,land_cat=12).values
+                newluf[newlu,i,j]+=luf.isel(south_north=i,west_east=j,land_cat=12).values
                 newluf[12,i,j]=0.
 
 
