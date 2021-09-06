@@ -2,14 +2,19 @@ w2w.py
 ======
 A WUDAPT-to-WRF python tool that translates [WUDAPT's](www.wudapt.org) Local Climate Zone information into [WRF](https://github.com/wrf-model/WRF).
 
+Documentation & citation
+-------
+A citable documentation is submitted to [The Journal of Open Source Software](https://joss.theoj.org/). the submitted version can be accessed [here](https://github.com/matthiasdemuzere/w2w/blob/main/JOSS/paper.pdf). 
+
 Important Notes
 -------
 - This is a beta version of the tool, that is currently still being tested. So please use with caution, and file an issue in case something does not work for you.
 - The outputs of this tool have only been tested with the most recent [WRF version 4.3.x](https://github.com/wrf-model/WRF/releases/tag/v4.3). So we advise you to work with this version as well, which is now able to ingest the urban LCZ classes by default.
+- Once the adjusted **geo_em.d0X.nc files** are created (geo_em.d0X_NoUrban.nc, geo_em.d0X_LCZ_extent.nc, geo_em.d0X_LCZ_params.nc), make sure to rename them (e.g. rename geo_em.d04_LCZ_params.nc to geo_em.d04.nc) before using them as input to the metgrid.exe module. See citable documentation for more info.
 
 Context
 -------
-An	important	objective	of	WUDAPT, the World Urban Database and Acces Portals Tools community project, is to generate urban canopy information and provide the (open-source) tools to facilitate urban-focused modelling studies ([Ching et al., 2018](http://journals.ametsoc.org/doi/10.1175/BAMS-D-16-0236.1)). 
+An	important objective	of WUDAPT, the World Urban Database and Acces Portals Tools community project, is to generate urban canopy information and provide the (open-source) tools to facilitate urban-focused modelling studies ([Ching et al., 2018](http://journals.ametsoc.org/doi/10.1175/BAMS-D-16-0236.1)). 
 
 Since the work of [Brousse et al. (2016)](10.1016/j.uclim.2016.04.001), the level-0 WUDAPT information, the Local Climate Zone maps, have been used increasingly in [WRF](https://github.com/wrf-model/WRF), the community “Weather Research and Forecasting” model. Their original guide and code on how to use WUDAPT information into WRF (originally designed for WRF v3.2) is available [here](https://www.wudapt.org/wudapt-to-wrf/). Note that this tool was first assigning the LCZ mode to each WRF grid cell, and only afterwards assigning corresponding morphological, radiative and thermal properties to this modal LCZ class. This is done differently in w2w, see below. 
 
@@ -96,11 +101,6 @@ Additional arguments to be used:
 -lcz_band = Band to use from LCZ file (DEFAULT: 0). For maps produced with LCZ Generator, use 1.
 -nlus = Number of pixels to use for sampling neighbouring natural land cover (DEFAULT: 45)            
 ```
-
-Documentation & citation
--------
-A citable documentation is currently being prepared. A draft version can be accessed [here](https://github.com/matthiasdemuzere/w2w/blob/main/JOSS/paper.pdf). 
-
 
 License
 -------
