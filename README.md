@@ -4,7 +4,7 @@ A WUDAPT-to-WRF python tool that translates [WUDAPT's](www.wudapt.org) Local Cli
 
 Documentation & citation
 -------
-A citable documentation is submitted to [The Journal of Open Source Software](https://joss.theoj.org/). the submitted version can be accessed [here](https://github.com/matthiasdemuzere/w2w/blob/main/JOSS/paper.pdf). 
+A citable documentation is submitted to [The Journal of Open Source Software](https://joss.theoj.org/). The submitted version can be accessed [here](https://github.com/matthiasdemuzere/w2w/blob/main/JOSS/paper.pdf). 
 
 Important Notes
 -------
