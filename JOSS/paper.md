@@ -119,7 +119,7 @@ The files provided as output by `W2W` allow a wide range of applications, includ
 # Important notes
 * The LCZ-based urban canopy parameter values provided in `LCZ_UCP_default.csv` and `URBPARM_LCZ.TBL` are universal and generic, and might not be appropriate for your ROI. If available, please adjust the urban canopy parameters values according to the characteristics of your ROI.
 * It is advised to use this tool with urban parameterization options BEP or BEP+BEM (`sf_urban_physics = 2 or 3`, respectively). In case you use this tool with the SLUCM model (`sf_urban_physics = 1`), make sure your lowest model level is above the highest building height. If not, real.exe will provide the following error message: `ZDC + Z0C + 2m is larger than the 1st WRF level - Stop in subroutine urban - change ZDC and Z0C`.
-* It is advised to use WRF versions > 4.3, that is able to ingest 10 or 11 built classses (corresponding to WUDAPT's LCZs) by default [@Skamarock2021], and WPS version > 3.8, in order to incorporate the urban geometrical parameters in the `URB_PARAM` matrix [@Glotfelty2013].  
+* It is advised to use WRF versions > 4.3, that are able to ingest 10 or 11 built classses (corresponding to WUDAPT's LCZs) by default [@Skamarock2021], and WPS versions > 3.8, in order to incorporate the urban geometrical parameters in the `URB_PARAM` matrix [@Glotfelty2013].  
 
 
 # Acknowledgements
