@@ -18,7 +18,7 @@ else:  # pragma: no cover (<py38)
     import importlib.metadata as importlib_metadata
     import importlib.resources as importlib_resources
 
-def main():
+def main(argv):
 
     ''' Add WUDAPT info to WRF's '''
 
@@ -63,7 +63,7 @@ def main():
                              'natural land cover (DEFAULT: 45)',
                         default=45)
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     # Define output and tmp file(s), the latter is removed when done.
     dst_nu_file = os.path.join(
