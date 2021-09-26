@@ -1,3 +1,5 @@
+[![ci](https://github.com/theendlessriver13/w2w/actions/workflows/ci.yml/badge.svg)](https://github.com/theendlessriver13/w2w/actions/workflows/ci.yml)
+
 w2w.py
 ======
 A WUDAPT-to-WRF python tool that translates [WUDAPT's](www.wudapt.org) Local Climate Zone information into [WRF](https://github.com/wrf-model/WRF).
