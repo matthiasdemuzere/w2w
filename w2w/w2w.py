@@ -11,6 +11,13 @@ import argparse
 from argparse import RawTextHelpFormatter
 import traceback
 
+if sys.version_info < (3, 8):  # pragma: no cover (>=py38)
+    import importlib_metadata
+    import importlib_resources
+else:  # pragma: no cover (<py38)
+    import importlib.metadata as importlib_metadata
+    import importlib.resources as importlib_resources
+
 def main():
 
     ''' Add WUDAPT info to WRF's '''
@@ -283,7 +290,7 @@ def _ucp_resampler(
 
     # Read the look-up table
     ucp_table = pd.read_csv(
-        './LCZ_UCP_lookup.csv',
+        importlib_resources.open_text('w2w.resources', 'LCZ_UCP_lookup.csv'),
         sep=',', index_col=0
     ).iloc[:17, :]
 
@@ -372,7 +379,7 @@ def _hgt_resampler(
 
     # Read the look-up table
     ucp_table = pd.read_csv(
-        './LCZ_UCP_lookup.csv',
+        importlib_resources.open_text('w2w.resources', 'LCZ_UCP_lookup.csv'),
         sep=',', index_col=0
     ).iloc[:17, :]
 
