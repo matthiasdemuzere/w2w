@@ -10,6 +10,7 @@ import os, sys
 import argparse
 from argparse import RawTextHelpFormatter
 import traceback
+from typing import Dict
 
 if sys.version_info < (3, 8):  # pragma: no cover (>=py38)
     import importlib_metadata
@@ -161,7 +162,7 @@ def main(argv=None):
     print("********* All done ***********")
 
 
-def check_lcz_wrf_extent(info):
+def check_lcz_wrf_extent(info: Dict[str, str]) -> None:
 
     # Read the data
     lcz = rasterio.open(info['src_file'])
