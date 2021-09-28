@@ -18,7 +18,7 @@ else:  # pragma: no cover (<py38)
     import importlib.metadata as importlib_metadata
     import importlib.resources as importlib_resources
 
-def main(argv):
+def main(argv=None):
 
     ''' Add WUDAPT info to WRF's '''
 
@@ -44,6 +44,11 @@ def main(argv):
                         )
 
     # Additional arguments
+    parser.add_argument(
+        '-V', '--version',
+        action='version',
+        version=f'%(prog)s {importlib_metadata.version("w2w")}',
+    )
     parser.add_argument('-bc', nargs='+', type=int,
                         dest='built_lcz',
                         help='LCZ classes considered as urban (DEFAULT: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])',
@@ -62,7 +67,6 @@ def main(argv):
                         help='Number of pixels to use for sampling neighbouring '
                              'natural land cover (DEFAULT: 45)',
                         default=45)
-
     args = parser.parse_args(argv)
 
     # Define output and tmp file(s), the latter is removed when done.
