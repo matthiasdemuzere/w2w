@@ -50,20 +50,20 @@ def main(argv=None):
         action='version',
         version=f'%(prog)s {importlib_metadata.version("w2w")}',
     )
-    parser.add_argument('-bc', nargs='+', type=int,
+    parser.add_argument('--built_lcz', '-b', nargs='+', type=int,
                         dest='built_lcz',
                         help='LCZ classes considered as urban (DEFAULT: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])',
                         default=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-    parser.add_argument('-lcz_band', type=int,
+    parser.add_argument('--lcz_band', '-l', type=int,
                         dest='LCZ_BAND',
                         help='Band to use from LCZ file (DEFAULT: 0). '
                              'For maps produced with LCZ Generator, use 1.',
                         default=0)
-    parser.add_argument('-frc', type=float,
+    parser.add_argument('--frc_threshold', '-f', type=float,
                         dest='FRC_THRESHOLD',
                         help='FRC_URB2D treshold value to assign pixel as urban (DEFAULT: 0.2)',
                         default=0.2)
-    parser.add_argument('-nlus', type=int,
+    parser.add_argument('--npix_nlc', '-n', type=int,
                         dest='NPIX_NLC',
                         help='Number of pixels to use for sampling neighbouring '
                              'natural land cover (DEFAULT: 45)',
