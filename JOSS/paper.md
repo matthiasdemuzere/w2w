@@ -17,6 +17,9 @@ authors:
     - name: Andrea Zonato
       orcid: 0000-0002-9174-1618
       affiliation: 3
+    - name: Jonas Kittner
+      orcid: 0000-0003-1881-7716
+      affiliation: 1
 affiliations:
     - name: Urban Climatology Group, Department of Geography, Ruhr-University Bochum, Bochum, Germany
       index: 1
