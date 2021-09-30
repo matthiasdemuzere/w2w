@@ -11,6 +11,7 @@ import argparse
 from argparse import RawTextHelpFormatter
 import traceback
 from typing import Dict
+from scipy import stats
 
 if sys.version_info < (3, 8):  # pragma: no cover (>=py38)
     import importlib_metadata
@@ -234,10 +235,11 @@ def wrf_remove_urban(
                                  )-lon.isel(south_north=i,west_east=j))**2
 
                 disflat = dis.stack(gridpoints=('south_north','west_east'))\
-                    .reset_index('gridpoints').drop(['south_north','west_east'])
+                    .reset_index('gridpoints').drop_vars(['south_north','west_east'])
                 aux = luse.where(dis<disflat.sortby(disflat)
                                  .isel(gridpoints=NPIX_NLC),drop=True)
-                newluse[i,j]=int(mode(aux.values.flatten())[0])
+                m = stats.mode(aux.values.flatten(), nan_policy="omit")[0]
+                newluse[i, j] = int(m)
 
                 auxg = greenf.where(dis<disflat.sortby(disflat)
                                     .isel(gridpoints=NPIX_NLC),drop=True)\
@@ -255,10 +257,12 @@ def wrf_remove_urban(
                                  )-lon.isel(south_north=i,west_east=j))**2
 
                 disflat = dis.stack(gridpoints=('south_north','west_east'))\
-                    .reset_index('gridpoints').drop(['south_north','west_east'])
+                    .reset_index('gridpoints').drop_vars(['south_north','west_east'])
                 aux = luse.where(dis<disflat.sortby(disflat)
                                  .isel(gridpoints=NPIX_NLC),drop=True)
-                newlu = int(mode(aux.values.flatten())[0])-1
+                m = stats.mode(aux.values.flatten(), nan_policy="omit")[0]
+                newlu = int(m) - 1
+                #newlu = int(mode(aux.values.flatten())[0])-1
                 newluf[newlu,i,j]+=luf.isel(south_north=i,west_east=j,land_cat=12).values
                 newluf[12,i,j]=0.
 
