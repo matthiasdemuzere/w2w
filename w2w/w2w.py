@@ -504,7 +504,7 @@ def _compute_hi_distribution(
 
     # Read the look-up table
     ucp_table = pd.read_csv(
-        './LCZ_UCP_lookup.csv',
+        importlib_resources.open_text('w2w.resources', 'LCZ_UCP_lookup.csv'),
         sep=',', index_col=0
     ).iloc[:17, :]
 
@@ -1123,7 +1123,7 @@ def checks_and_cleaning(
     # Take expected ranges from the look-up table,
     # add some margin for changes due to interpolation.
     ucp_table = pd.read_csv(
-        './LCZ_UCP_lookup.csv',
+        importlib_resources.open_text('w2w.resources', 'LCZ_UCP_lookup.csv'),
         sep=',', index_col=0
     ).iloc[:17, :]
 
