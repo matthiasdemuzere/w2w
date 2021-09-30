@@ -747,7 +747,7 @@ def _adjust_greenfrac_landusef(
 
     # First store orginal attributes, then drop variable
     luf_attrs = dst_data.LANDUSEF.attrs
-    dst_data = dst_data.drop('LANDUSEF')
+    dst_data = dst_data.drop_vars('LANDUSEF')
 
     # Expand axis to take shape (1,41,x,y)
     landusef_new = np.expand_dims(landusef_new, axis=0)
@@ -797,7 +797,7 @@ def add_frc_lu_index_2_wrf(
     dst_data[ucp_key] = dst_data['LU_INDEX'].copy()
     dst_data[ucp_key] = (
                     ('Time', 'south_north', 'west_east'),
-                    frc_urb
+                    frc_urb.data
                 )
 
     # Add proper attributes to the FRC_URB2D field
@@ -964,12 +964,12 @@ def create_extent_file(
     dst_extent.LU_INDEX.values = lu_index
 
     # Remove some unnecesary variables to reduce file size
-    dst_extent = dst_extent.drop(['FRC_URB2D','URB_PARAM'])
+    dst_extent = dst_extent.drop_vars(['FRC_URB2D','URB_PARAM'])
 
     # Reset LANDUSEF again to 21 classes.
     luf_attrs = dst_extent.LANDUSEF.attrs
     luf_values = dst_extent.LANDUSEF.values
-    dst_extent = dst_extent.drop('LANDUSEF')
+    dst_extent = dst_extent.drop_vars('LANDUSEF')
 
     # Add back to data-array, including (altered) attributes
     dst_extent['LANDUSEF'] =     (
@@ -1029,7 +1029,7 @@ def expand_land_cat_parents(
 
                 # First store orginal attributes, then drop variable
                 luf_attrs = da.LANDUSEF.attrs
-                da = da.drop('LANDUSEF')
+                da = da.drop_vars('LANDUSEF')
 
                 # Add back to data-array, including (altered) attributes
                 da['LANDUSEF'] = (
