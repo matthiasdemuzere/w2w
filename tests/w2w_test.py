@@ -1,6 +1,7 @@
 import pytest
 from w2w.w2w import main
 from w2w.w2w import check_lcz_wrf_extent
+from w2w.w2w import main
 
 
 def test_argparse_shows_help():
@@ -36,3 +37,7 @@ def test_check_lcz_wrf_extent_ok(capsys):
     check_lcz_wrf_extent(info=info)
     out, _ = capsys.readouterr()
     assert 'OK - LCZ domain is covering WRF domain' in out
+
+
+def test_full_run():
+    main(['sample_data', 'lcz_zaragoza.tif', 'geo_em.d04.nc'])
