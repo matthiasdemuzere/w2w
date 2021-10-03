@@ -269,7 +269,7 @@ def wrf_remove_urban(
 
     dst_data.LU_INDEX.values[0,:]=newluse[:]
     dst_data.LANDUSEF.values[0,:]=newluf[:]
-    dst_data.GREENFRAC.values[0,:]=greenf[:]
+    dst_data.GREENFRAC.values[0,:]=newgreenf[:]
 
     # Save to final _lcz_params file
     if os.path.exists(info['dst_nu_file']):
