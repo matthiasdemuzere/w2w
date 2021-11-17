@@ -51,23 +51,23 @@ Run the tool
 
 1. Check out its help:
 ```sh
-python w2w.py -h
+w2w --help
 ```
 2. Try with the provided sample:
 ```sh
-python w2w.py ./sample_data lcz_zaragoza.tif geo_em.d04.nc
+w2w ./sample_data lcz_zaragoza.tif geo_em.d04.nc
 ```
 
 3. Deploy using your own data:
 ```sh
-python w2w.py INPUT_DIRECTORY YOUR_LCZ.TIF YOUR_GEO_EM.d0X.NC
+w2w INPUT_DIRECTORY YOUR_LCZ.TIF YOUR_GEO_EM.d0X.NC
 ```
 
 Additional arguments to be used:
 ```
--bc = LCZ classes considered as urban (DEFAULT: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
--lcz_band = Band to use from LCZ file (DEFAULT: 0). For maps produced with LCZ Generator, use 1.
--nlus = Number of pixels to use for sampling neighbouring natural land cover (DEFAULT: 45)
+-b --built-lcz = LCZ classes considered as urban (DEFAULT: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+-l --lcz-band = Band to use from LCZ file (DEFAULT: 0). For maps produced with LCZ Generator, use 1.
+-n --npix-nlc = Number of pixels to use for sampling neighbouring natural land cover (DEFAULT: 45)
 ```
 
 License
