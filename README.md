@@ -4,6 +4,10 @@ w2w.py
 ======
 A WUDAPT-to-WRF python tool that translates [WUDAPT's](www.wudapt.org) Local Climate Zone information into [WRF](https://github.com/wrf-model/WRF).
 
+Installation
+------------
+`pip install git+https://github.com/matthiasdemuzere/w2w`
+
 Documentation & citation
 -------
 A citable documentation is submitted to [The Journal of Open Source Software](https://joss.theoj.org/). The submitted version can be accessed [here](https://github.com/matthiasdemuzere/w2w/blob/main/JOSS/paper.pdf).
@@ -23,44 +27,6 @@ Since the work of [Brousse et al. (2016)](10.1016/j.uclim.2016.04.001), the leve
 As of spring 2021, [WRF v4.3.x](https://github.com/wrf-model/WRF/releases/tag/v4.3) is able to ingest LCZ information by default (previous versions required manual WRF code changes by the user). See more details on "*Updates of WRF-urban in WRF 4.3: Local Climate Zones, Mitigation Strategies, building materials permeability and new buildings drag coefficient*" [here](https://ral.ucar.edu/sites/default/files/public/product-tool/urban-canopy-model/WRF_urban_update_Readme_file_WRF4.3.pdf). Because of this, we decided to simultaneously built an improved WUDAPT-to-WRF routine, to make the translation of LCZ-based parameters better and more simple. As before, the LCZ-based urban canopy parameters generally follow the values provided by [Stewart and Oke (2012)](http://doi.org/10.1175/BAMS-D-11-00019.1) and [Stewart et al. (2014)](http://doi.org/10.1002/joc.3746).
 
 The procedure in this new `w2w` tool is different from the former tool. Morphological parameters are assigned directly to the high-resolution LCZ map, and only afterwards aggregated to the WRF grid. In this way, the method produces a unique value of the different urban morphology parameters for each model cell. This was found to be more efficient in reproducing urban boundary layer features, especially in the outskirts of the city [(Zonato et al., 2020)](https://doi.org/10.1016/j.uclim.2020.100584), and is in line with the [WUDAPT-to-COSMO](https://github.com/matthiasdemuzere/WUDAPT-to-COSMO) routine [(Varentsov et al., 2020)](https://www.mdpi.com/2073-4433/11/12/1349). Other radiative and thermal parameters are for now still assigned to the modal LCZ class. More details on the procedure and its assumptions will soon be available [here](https://github.com/matthiasdemuzere/w2w#how-to-cite).
-
-
-Python environment
--------
-
-First, clone the w2w repository in your folder of choice, and enter it:
-```sh
-> git clone https://github.com/matthiasdemuzere/w2w.git
-> cd w2w
-```
-
-Then, it's advised to create a python3.8 virtual environment, either with A) Anaconda or B) python's venv tool.
-
-#### A. Anaconda:
-1. If you do not have anaconda on your system yet, please install it first (information [here](https://docs.conda.io/en/latest/miniconda.html)). This repository has been tested with python 3.8.
-
-2. Then, create the virtual environment from within this repository:
-```sh
-> conda env create -f w2w.yml
-```
-3. Activate this new environment:
-```sh
-> conda activate w2w
-```
-
-#### B. Python's venv:
-1. Create the virtual environment from within this repository:
-```sh
-> python3.8 -m venv w2wenv
-```
-2. Activate this new environment:
-```sh
-> source w2wenv/bin/activate
-```
-3. Install the requirements
-```sh
-> pip install w2w_requirements.txt
-```
 
 
 Requirements
