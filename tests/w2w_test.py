@@ -1,5 +1,6 @@
 import os
 import pytest
+import shutil
 from w2w.w2w import main
 from w2w.w2w import check_lcz_wrf_extent
 from w2w.w2w import wrf_remove_urban
@@ -103,5 +104,19 @@ def test_create_wrf_gridinfo(tmpdir):
     )
 
 
-def test_full_run_with_example_data():
-    main(['sample_data', 'lcz_zaragoza.tif', 'geo_em.d04.nc'])
+def test_full_run_with_example_data(tmpdir):
+    input_files = (
+        'geo_em.d01.nc', 'geo_em.d03.nc', 'geo_em.d03.nc','geo_em.d04.nc',
+        'lcz_zaragoza.tif',
+    )
+    input_dir = tmpdir.mkdir('input')
+    for f in input_files:
+        shutil.copy(os.path.join('sample_data', f), input_dir)
+
+    with tmpdir.as_cwd():
+        main(['input', 'lcz_zaragoza.tif', 'geo_em.d04.nc'])
+
+        contents = os.listdir(input_dir)
+        assert 'geo_em.d04_LCZ_params.nc' in contents
+        assert 'geo_em.d04_NoUrban.nc' in contents
+        assert 'geo_em.d04_LCZ_extent.nc' in contents
