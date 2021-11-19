@@ -91,6 +91,7 @@ Artists
 * [Matthias Demuzere](https://github.com/matthiasdemuzere): Lead developer
 * [Daniel Argueso](https://github.com/dargueso): WRF expert
 * [Andrea Zonato](https://github.com/andreazonato): WUDAPT-WRF expert and liaison
+* [Jonas Kittner](https://github.com/theendlessriver13): Python wizard
 
 
 Credits
