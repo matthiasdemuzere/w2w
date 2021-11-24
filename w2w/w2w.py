@@ -64,7 +64,7 @@ def main(argv=None):
                         type=int,
                         dest='LCZ_BAND',
                         help='Band to use from LCZ file (DEFAULT: 0). '
-                             'For maps produced with LCZ Generator, use 1.',
+                             'For maps produced with LCZ Generator, use 1',
                         default=0)
     parser.add_argument('-f', '--frc-threshold',
                         metavar='',
