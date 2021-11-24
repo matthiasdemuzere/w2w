@@ -10,8 +10,17 @@ import os, sys
 import argparse
 from argparse import RawTextHelpFormatter
 import traceback
+from typing import Dict
+from scipy import stats
 
-def main():
+if sys.version_info < (3, 8):  # pragma: no cover (>=py38)
+    import importlib_metadata
+    import importlib_resources
+else:  # pragma: no cover (<py38)
+    import importlib.metadata as importlib_metadata
+    import importlib.resources as importlib_resources
+
+def main(argv=None):
 
     ''' Add WUDAPT info to WRF's '''
 
@@ -37,26 +46,41 @@ def main():
                         )
 
     # Additional arguments
-    parser.add_argument('-bc', nargs='+', type=int,
+    parser.add_argument(
+        '-V', '--version',
+        action='version',
+        version=f'%(prog)s {importlib_metadata.version("w2w")}',
+    )
+    parser.add_argument('-b', '--built-lcz',
+                        nargs='+',
+                        metavar='',
+                        type=int,
                         dest='built_lcz',
-                        help='LCZ classes considered as urban (DEFAULT: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])',
+                        help='LCZ classes considered as urban '
+                             '(DEFAULT: 1 2 3 4 5 6 7 8 9 10)',
                         default=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-    parser.add_argument('-lcz_band', type=int,
+    parser.add_argument('-l', '--lcz-band',
+                        metavar='',
+                        type=int,
                         dest='LCZ_BAND',
                         help='Band to use from LCZ file (DEFAULT: 0). '
                              'For maps produced with LCZ Generator, use 1.',
                         default=0)
-    parser.add_argument('-frc', type=float,
+    parser.add_argument('-f', '--frc-threshold',
+                        metavar='',
+                        type=float,
                         dest='FRC_THRESHOLD',
-                        help='FRC_URB2D treshold value to assign pixel as urban (DEFAULT: 0.2)',
+                        help='FRC_URB2D treshold value to assign pixel as urban '
+                             '(DEFAULT: 0.2)',
                         default=0.2)
-    parser.add_argument('-nlus', type=int,
+    parser.add_argument('-n', '--npix-nlc',
+                        metavar='',
+                        type=int,
                         dest='NPIX_NLC',
                         help='Number of pixels to use for sampling neighbouring '
                              'natural land cover (DEFAULT: 45)',
                         default=45)
-
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     # Define output and tmp file(s), the latter is removed when done.
     dst_nu_file = os.path.join(
@@ -150,7 +174,7 @@ def main():
     print("********* All done ***********")
 
 
-def check_lcz_wrf_extent(info):
+def check_lcz_wrf_extent(info: Dict[str, str]) -> None:
 
     # Read the data
     lcz = rasterio.open(info['src_file'])
@@ -211,10 +235,11 @@ def wrf_remove_urban(
                                  )-lon.isel(south_north=i,west_east=j))**2
 
                 disflat = dis.stack(gridpoints=('south_north','west_east'))\
-                    .reset_index('gridpoints').drop(['south_north','west_east'])
+                    .reset_index('gridpoints').drop_vars(['south_north','west_east'])
                 aux = luse.where(dis<disflat.sortby(disflat)
                                  .isel(gridpoints=NPIX_NLC),drop=True)
-                newluse[i,j]=int(mode(aux.values.flatten())[0])
+                m = stats.mode(aux.values.flatten(), nan_policy="omit")[0]
+                newluse[i, j] = int(m)
 
                 auxg = greenf.where(dis<disflat.sortby(disflat)
                                     .isel(gridpoints=NPIX_NLC),drop=True)\
@@ -232,10 +257,12 @@ def wrf_remove_urban(
                                  )-lon.isel(south_north=i,west_east=j))**2
 
                 disflat = dis.stack(gridpoints=('south_north','west_east'))\
-                    .reset_index('gridpoints').drop(['south_north','west_east'])
+                    .reset_index('gridpoints').drop_vars(['south_north','west_east'])
                 aux = luse.where(dis<disflat.sortby(disflat)
                                  .isel(gridpoints=NPIX_NLC),drop=True)
-                newlu = int(mode(aux.values.flatten())[0])-1
+                m = stats.mode(aux.values.flatten(), nan_policy="omit")[0]
+                newlu = int(m) - 1
+                #newlu = int(mode(aux.values.flatten())[0])-1
                 newluf[newlu,i,j]+=luf.isel(south_north=i,west_east=j,land_cat=12).values
                 newluf[12,i,j]=0.
 
@@ -283,7 +310,7 @@ def _ucp_resampler(
 
     # Read the look-up table
     ucp_table = pd.read_csv(
-        './LCZ_UCP_lookup.csv',
+        importlib_resources.open_text('w2w.resources', 'LCZ_UCP_lookup.csv'),
         sep=',', index_col=0
     ).iloc[:17, :]
 
@@ -372,7 +399,7 @@ def _hgt_resampler(
 
     # Read the look-up table
     ucp_table = pd.read_csv(
-        './LCZ_UCP_lookup.csv',
+        importlib_resources.open_text('w2w.resources', 'LCZ_UCP_lookup.csv'),
         sep=',', index_col=0
     ).iloc[:17, :]
 
@@ -477,7 +504,7 @@ def _compute_hi_distribution(
 
     # Read the look-up table
     ucp_table = pd.read_csv(
-        './LCZ_UCP_lookup.csv',
+        importlib_resources.open_text('w2w.resources', 'LCZ_UCP_lookup.csv'),
         sep=',', index_col=0
     ).iloc[:17, :]
 
@@ -720,7 +747,7 @@ def _adjust_greenfrac_landusef(
 
     # First store orginal attributes, then drop variable
     luf_attrs = dst_data.LANDUSEF.attrs
-    dst_data = dst_data.drop('LANDUSEF')
+    dst_data = dst_data.drop_vars('LANDUSEF')
 
     # Expand axis to take shape (1,41,x,y)
     landusef_new = np.expand_dims(landusef_new, axis=0)
@@ -770,7 +797,7 @@ def add_frc_lu_index_2_wrf(
     dst_data[ucp_key] = dst_data['LU_INDEX'].copy()
     dst_data[ucp_key] = (
                     ('Time', 'south_north', 'west_east'),
-                    frc_urb
+                    frc_urb.data
                 )
 
     # Add proper attributes to the FRC_URB2D field
@@ -937,12 +964,12 @@ def create_extent_file(
     dst_extent.LU_INDEX.values = lu_index
 
     # Remove some unnecesary variables to reduce file size
-    dst_extent = dst_extent.drop(['FRC_URB2D','URB_PARAM'])
+    dst_extent = dst_extent.drop_vars(['FRC_URB2D','URB_PARAM'])
 
     # Reset LANDUSEF again to 21 classes.
     luf_attrs = dst_extent.LANDUSEF.attrs
     luf_values = dst_extent.LANDUSEF.values
-    dst_extent = dst_extent.drop('LANDUSEF')
+    dst_extent = dst_extent.drop_vars('LANDUSEF')
 
     # Add back to data-array, including (altered) attributes
     dst_extent['LANDUSEF'] =     (
@@ -1002,7 +1029,7 @@ def expand_land_cat_parents(
 
                 # First store orginal attributes, then drop variable
                 luf_attrs = da.LANDUSEF.attrs
-                da = da.drop('LANDUSEF')
+                da = da.drop_vars('LANDUSEF')
 
                 # Add back to data-array, including (altered) attributes
                 da['LANDUSEF'] = (
@@ -1096,7 +1123,7 @@ def checks_and_cleaning(
     # Take expected ranges from the look-up table,
     # add some margin for changes due to interpolation.
     ucp_table = pd.read_csv(
-        './LCZ_UCP_lookup.csv',
+        importlib_resources.open_text('w2w.resources', 'LCZ_UCP_lookup.csv'),
         sep=',', index_col=0
     ).iloc[:17, :]
 
