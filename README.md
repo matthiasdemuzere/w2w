@@ -8,7 +8,8 @@ Install
 ------------
 `pip install w2w`
 
-**Install from GitHub**
+Install from GitHub:
+
 `pip install git+https://github.com/matthiasdemuzere/w2w`
 
 Documentation & citation
