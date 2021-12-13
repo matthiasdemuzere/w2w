@@ -235,12 +235,12 @@ def wrf_remove_urban(
 
                 disflat = dis.stack(gridpoints=('south_north','west_east'))\
                     .reset_index('gridpoints').drop_vars(['south_north','west_east'])
-                aux = luse.where(dis<disflat.sortby(disflat)
+                aux = luse.where(dis<=disflat.sortby(disflat)
                                  .isel(gridpoints=NPIX_NLC),drop=True)
                 m = stats.mode(aux.values.flatten(), nan_policy="omit")[0]
                 newluse[i, j] = int(m)
 
-                auxg = greenf.where(dis<disflat.sortby(disflat)
+                auxg = greenf.where(dis<=disflat.sortby(disflat)
                                     .isel(gridpoints=NPIX_NLC),drop=True)\
                     .where(aux==newluse[i,j]).mean(dim=['south_north','west_east'])
                 newgreenf[:,i,j]=auxg
@@ -264,7 +264,7 @@ def wrf_remove_urban(
 
                 disflat = dis.stack(gridpoints=('south_north','west_east'))\
                     .reset_index('gridpoints').drop_vars(['south_north','west_east'])
-                aux = luse.where(dis<disflat.sortby(disflat)
+                aux = luse.where(dis<=disflat.sortby(disflat)
                                  .isel(gridpoints=NPIX_NLC),drop=True)
                 m = stats.mode(aux.values.flatten(), nan_policy="omit")[0]
                 newlu = int(m) - 1
