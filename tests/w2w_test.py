@@ -4,8 +4,8 @@ import shutil
 from w2w.w2w import main
 from w2w.w2w import check_lcz_wrf_extent
 from w2w.w2w import wrf_remove_urban
-from w2w.w2w import main
 from w2w.w2w import create_wrf_gridinfo
+from w2w.w2w import calc_distance_coord
 import xarray
 
 
@@ -120,3 +120,17 @@ def test_full_run_with_example_data(tmpdir):
         assert 'geo_em.d04_LCZ_params.nc' in contents
         assert 'geo_em.d04_NoUrban.nc' in contents
         assert 'geo_em.d04_LCZ_extent.nc' in contents
+
+
+@pytest.mark.parametrize(
+    ('coords', 'expected'),
+    (
+        pytest.param((89, 0, 90, 1), 111194, id='near northern pole'),
+        pytest.param((-89, 0, -90, 1), 111194, id='near southern pole'),
+        pytest.param((-60, -10, -70, -12), 1115764, id='southern eastern hemisphere'),
+        pytest.param((-1, 0, 1, 2), 314498, id='across equator'),
+        pytest.param((45, 179, 46, -179), 191461, id='across dateline')
+    ),
+)
+def test_calc_distance_coord(coords, expected):
+    assert calc_distance_coord(*coords) == pytest.approx(expected, abs=1)
