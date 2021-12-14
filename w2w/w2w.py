@@ -225,40 +225,46 @@ def wrf_remove_urban(
     for i in dst_data.south_north:
         for j in dst_data.west_east:
             if luse.isel(south_north=i,west_east=j) == 13:
-                dis = (lat.where((luse!=13) &
-                                 (luse!=17) &
-                                 (luse!=21)
-                                 )-lat.isel(south_north=i,west_east=j))**2 +\
-                      (lon.where((luse!=13) &
-                                 (luse!=17) &
-                                 (luse!=21)
-                                 )-lon.isel(south_north=i,west_east=j))**2
+
+                dis = calc_distance_coord(
+                                         lat.where((luse!=13) & (luse!=17) & (luse!=21)),
+                                         lon.where((luse!=13) & (luse!=17) & (luse!=21)),
+                                         lat.isel(south_north=i,west_east=j),
+                                         lon.isel(south_north=i,west_east=j)
+                                         )
 
                 disflat = dis.stack(gridpoints=('south_north','west_east'))\
                     .reset_index('gridpoints').drop_vars(['south_north','west_east'])
-                aux = luse.where(dis<disflat.sortby(disflat)
+                aux = luse.where(dis<=disflat.sortby(disflat)
                                  .isel(gridpoints=NPIX_NLC),drop=True)
                 m = stats.mode(aux.values.flatten(), nan_policy="omit")[0]
                 newluse[i, j] = int(m)
 
-                auxg = greenf.where(dis<disflat.sortby(disflat)
+                auxg = greenf.where(dis<=disflat.sortby(disflat)
                                     .isel(gridpoints=NPIX_NLC),drop=True)\
                     .where(aux==newluse[i,j]).mean(dim=['south_north','west_east'])
                 newgreenf[:,i,j]=auxg
 
             if luf.isel(south_north=i,west_east=j,land_cat=12)>0.:
-                dis = (lat.where((luf.isel(land_cat=12)==0.) &
-                                 (luf.isel(land_cat=16)==0.) &
-                                 (luf.isel(land_cat=20)==0.)
-                                 )-lat.isel(south_north=i,west_east=j))**2 +\
-                      (lon.where((luf.isel(land_cat=12)==0.) &
-                                 (luf.isel(land_cat=16)==0.) &
-                                 (luf.isel(land_cat=20)==0.)
-                                 )-lon.isel(south_north=i,west_east=j))**2
+                dis = calc_distance_coord(
+                                         lat.where(
+                                                    (luf.isel(land_cat=12)==0.) &
+                                                    (luf.isel(land_cat=16)==0.) &
+                                                    (luf.isel(land_cat=20)==0.)
+                                                  ),
+
+                                         lon.where(
+                                                    (luf.isel(land_cat=12)==0.) &
+                                                    (luf.isel(land_cat=16)==0.) &
+                                                    (luf.isel(land_cat=20)==0.)
+                                                  ),
+                                         lat.isel(south_north=i,west_east=j),
+                                         lon.isel(south_north=i,west_east=j)
+                                         )
 
                 disflat = dis.stack(gridpoints=('south_north','west_east'))\
                     .reset_index('gridpoints').drop_vars(['south_north','west_east'])
-                aux = luse.where(dis<disflat.sortby(disflat)
+                aux = luse.where(dis<=disflat.sortby(disflat)
                                  .isel(gridpoints=NPIX_NLC),drop=True)
                 m = stats.mode(aux.values.flatten(), nan_policy="omit")[0]
                 newlu = int(m) - 1
@@ -947,6 +953,25 @@ def add_urb_params_to_wrf(
     dst_final.to_netcdf(info['dst_lcz_params_file'])
 
     return nbui_max
+
+def calc_distance_coord(
+        lat1,lon1,lat2,lon2
+):
+
+    '''Calculate distance using coordinates
+       This uses the spherical law of cosines
+    '''
+
+    earth_radius=6371000 #Earth radius in m
+    lat1r = lat1*np.pi/180.
+    lat2r = lat2*np.pi/180.
+    lon1r = lon1*np.pi/180.
+    lon2r = lon2*np.pi/180.
+
+    d = np.arccos(np.sin(lat1r)*np.sin(lat2r) + np.cos(lat1r)*np.cos(lat2r)*np.cos(lon2r-lon1r))*earth_radius
+
+    return d
+
 
 def create_extent_file(
         info,
