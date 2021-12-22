@@ -1,5 +1,7 @@
 import os
 import pytest
+import rioxarray
+from affine import Affine
 import shutil
 from w2w.w2w import main
 from w2w.w2w import check_lcz_wrf_extent
@@ -94,13 +96,11 @@ def test_create_wrf_gridinfo(tmpdir):
     }
     create_wrf_gridinfo(info)
     assert os.listdir(tmpdir) == ['dst_gridinfo.tif']
-    tif = xarray.open_rasterio(info['dst_gridinfo'])
-    assert tif.crs == '+init=epsg:4326'
-    assert tif.transform == pytest.approx(
-        (
+    tif = rioxarray.open_rasterio(info['dst_gridinfo'])
+    assert tif.rio.crs.to_proj4() == '+init=epsg:4326'
+    assert tif.rio.transform() == Affine(
             0.01000213623046875, 0.0, -1.4050254821777344,
             0.0, 0.010000228881835938, 41.480000495910645,
-        )
     )
 
 

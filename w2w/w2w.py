@@ -1,7 +1,7 @@
 import numpy as np
 np.seterr(divide='ignore', invalid='ignore')
 import pandas as pd
-import rioxarray
+import rioxarray as rxr
 import rasterio
 import xarray as xr
 from rasterio.warp import reproject, Resampling
@@ -321,8 +321,8 @@ def _ucp_resampler(
     ).iloc[:17, :]
 
     # Read gridded data: LCZ and WRF grid
-    src_data = xr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
-    dst_grid = xr.open_rasterio(info['dst_gridinfo'])
+    src_data = rxr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
+    dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
 
     # Get Look-up for FRC_values
     if ucp_key in ['LB_URB2D', 'LF_URB2D', 'LP_URB2D']:
@@ -369,17 +369,17 @@ def _ucp_resampler(
     lcz_data_da = xr.Dataset(
         {'band': (['y', 'x'], lcz_data)},
         coords={'y': src_data.y.values, 'x': src_data.x.values},
-        attrs={'transform': src_data.transform, 'crs': src_data.crs}
+        attrs={'transform': src_data.rio.transform(), 'crs': src_data.rio.crs}
     ).to_array()
 
     # Info: https://rasterio.readthedocs.io/en/latest/api/rasterio.warp.html?highlight=reproject(#rasterio.warp.reproject
     ucp_2_wrf = reproject(
         lcz_data_da,
         dst_grid,
-        src_transform=lcz_data_da.attrs['transform'],
-        src_crs=lcz_data_da.attrs['crs'],
-        dst_transform=dst_grid.attrs['transform'],
-        dst_crs=dst_grid.attrs['crs'],
+        src_transform=lcz_data_da.rio.transform(),
+        src_crs=lcz_data_da.rio.crs,
+        dst_transform=dst_grid.rio.transform(),
+        dst_crs=dst_grid.rio.crs,
         resampling=Resampling[RESAMPLE_TYPE])[0]
 
     # In case of FRC_URB2D, filter for too low values
@@ -410,8 +410,8 @@ def _hgt_resampler(
     ).iloc[:17, :]
 
     # Read gridded data: LCZ and WRF grid
-    src_data = xr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
-    dst_grid = xr.open_rasterio(info['dst_gridinfo'])
+    src_data = rxr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
+    dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
 
     # Get Look-up for HGT values
     lookup_nom = ucp_table['BW'].loc[info['BUILT_LCZ']] ** 2 \
@@ -444,32 +444,32 @@ def _hgt_resampler(
     lcz_data_da_nom = xr.Dataset(
         {'band': (['y', 'x'], dataLcz_nom)},
         coords={'y': src_data.y.values, 'x': src_data.x.values},
-        attrs={'transform': src_data.transform, 'crs': src_data.crs}
+        attrs={'transform': src_data.rio.transform(), 'crs': src_data.rio.crs}
     ).to_array()
     lcz_data_da_denom = xr.Dataset(
         {'band': (['y', 'x'], dataLcz_denom)},
         coords={'y': src_data.y.values, 'x': src_data.x.values},
-        attrs={'transform': src_data.transform, 'crs': src_data.crs}
+        attrs={'transform': src_data.rio.transform(), 'crs': src_data.rio.crs}
     ).to_array()
 
     # Get the aggregated values on WRF grid - nominator
     ucp_2_wrf_nom = reproject(
         lcz_data_da_nom,
         dst_grid,
-        src_transform=lcz_data_da_nom.attrs['transform'],
-        src_crs=lcz_data_da_nom.attrs['crs'],
-        dst_transform=dst_grid.attrs['transform'],
-        dst_crs=dst_grid.attrs['crs'],
+        src_transform=lcz_data_da_nom.rio.transform(),
+        src_crs=lcz_data_da_nom.crs,
+        dst_transform=dst_grid.rio.transform(),
+        dst_crs=dst_grid.rio.crs,
         resampling=Resampling[RESAMPLE_TYPE])[0].copy()
 
     # Get the aggregated values on WRF grid - nominator
     ucp_2_wrf_denom = reproject(
         lcz_data_da_denom,
         dst_grid,
-        src_transform=lcz_data_da_denom.attrs['transform'],
-        src_crs=lcz_data_da_denom.attrs['crs'],
-        dst_transform=dst_grid.attrs['transform'],
-        dst_crs=dst_grid.attrs['crs'],
+        src_transform=lcz_data_da_denom.rio.transform(),
+        src_crs=lcz_data_da_denom.crs,
+        dst_transform=dst_grid.rio.transform(),
+        dst_crs=dst_grid.rio.crs,
         resampling=Resampling[RESAMPLE_TYPE])[0].copy()
 
     hgt_urb2d = ucp_2_wrf_nom / ucp_2_wrf_denom
@@ -594,8 +594,8 @@ def _hi_resampler(
     '''Helper function to resample ucp HI_URB2D_URB2D data to WRF grid'''
 
     # Read gridded data: LCZ and WRF grid
-    src_data = xr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
-    dst_grid = xr.open_rasterio(info['dst_gridinfo'])
+    src_data = rxr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
+    dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
 
     # Get mask of selected built LCZs
     lcz_urb_mask = xr.DataArray(
@@ -630,17 +630,17 @@ def _hi_resampler(
         lcz_data_da = xr.Dataset(
             {'band': (['y', 'x'], lcz_data)},
             coords={'y': src_data.y.values, 'x': src_data.x.values},
-            attrs={'transform': src_data.transform, 'crs': src_data.crs}
+            attrs={'transform': src_data.rio.transform(), 'crs': src_data.rio.crs}
         ).to_array()
 
         # Get the aggregated values on WRF grid
         ucp_2_wrf = reproject(
             lcz_data_da,
             dst_grid,
-            src_transform=lcz_data_da.attrs['transform'],
-            src_crs=lcz_data_da.attrs['crs'],
-            dst_transform=dst_grid.attrs['transform'],
-            dst_crs=dst_grid.attrs['crs'],
+            src_transform=lcz_data_da.rio.transform(),
+            src_crs=lcz_data_da.rio.crs,
+            dst_transform=dst_grid.rio.transform(),
+            dst_crs=dst_grid.rio.crs,
             resampling=Resampling[RESAMPLE_TYPE])[0]
 
         ## In case nans occur, set to zero
@@ -674,8 +674,8 @@ def _lcz_resampler(
 
     # Read required gridded data, LCZ, WRF grid, and
     # original WRF (for original MODIS urban mask)
-    src_data = xr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
-    dst_grid = xr.open_rasterio(info['dst_gridinfo'])
+    src_data = rxr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
+    dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
 
     # Mask natural LCZs before majority filtering.
     if LCZ_NAT_MASK:
@@ -686,10 +686,10 @@ def _lcz_resampler(
     lcz_2_wrf = reproject(
         src_data,
         dst_grid,
-        src_transform=src_data.attrs['transform'],
-        src_crs=src_data.attrs['crs'],
-        dst_transform=dst_grid.attrs['transform'],
-        dst_crs=dst_grid.attrs['crs'],
+        src_transform=src_data.rio.transform(),
+        src_crs=src_data.rio.crs,
+        dst_transform=dst_grid.rio.transform(),
+        dst_crs=dst_grid.rio.crs,
         resampling=Resampling['mode'])[0].values
 
     # if LCZ 15 selected in 'BUILT_LCZ', rename to 11
