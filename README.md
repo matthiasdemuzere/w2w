@@ -1,4 +1,4 @@
-[![ci](https://github.com/theendlessriver13/w2w/actions/workflows/ci.yml/badge.svg)](https://github.com/theendlessriver13/w2w/actions/workflows/ci.yml)
+[![ci](https://github.com/matthiasdemuzere/w2w/actions/workflows/ci.yml/badge.svg)](https://github.com/matthiasdemuzere/w2w/actions/workflows/ci.yml)
 
 w2w.py
 ======
