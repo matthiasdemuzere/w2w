@@ -1,4 +1,5 @@
 [![ci](https://github.com/matthiasdemuzere/w2w/actions/workflows/ci.yml/badge.svg)](https://github.com/matthiasdemuzere/w2w/actions/workflows/ci.yml)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/matthiasdemuzere/w2w/main.svg)](https://results.pre-commit.ci/latest/github/matthiasdemuzere/w2w/main)
 
 w2w.py
 ======
