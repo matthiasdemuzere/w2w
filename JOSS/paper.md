@@ -82,12 +82,12 @@ Two procedures are followed when assigning the various urban canopy parameters t
 
 **Procedure 1**: **Morphological parameters** are assigned directly to the high-resolution LCZ map, and are afterwards aggregated to the lower-resolution WRF grid. As a result, the method produces a unique urban morphology parameter value for each WRF grid cell. This was found to be more efficient in reproducing urban boundary layer features, especially in the outskirts of the city [@Zonato2020], and is in line with the [WUDAPT-to-COSMO](https://github.com/matthiasdemuzere/WUDAPT-to-COSMO) routine [@Varentsov2020].
 
-Morphological urban canopy parameter values are provided in `LCZ_UCP_default.csv`, and are generally based on values provided in @Stewart2012 and @Stewart2014. Note however that the values of MH_URB2D_MIN, MH_URB2D, MH_URB2D_MAX for LCZ 7 are set to 4, 5 and 6 m instead of 2, 3 and 4 m, because the minimum building height that can be assigned to BEP-BEM is 5m if dz_u = 5m (standard value) is used. 
+Morphological urban canopy parameter values are provided in `LCZ_UCP_default.csv`, and are generally based on values provided in @Stewart2012 and @Stewart2014. Note however that the values of MH_URB2D_MIN, MH_URB2D, MH_URB2D_MAX for LCZ 7 are set to 4, 5 and 6 m instead of 2, 3 and 4 m, because the minimum building height that can be assigned to BEP-BEM is 5m if dz_u = 5m (standard value) is used.
 
 In addition:
 
 * While `URBPARM_LCZ.TBL` (stored in WRF’s run/ folder) has values on street width (SW), `W2W` derives street width from the mean building height (MH_URB2D) and the Height-to-Width ratio (H2W), to have these fields consistent.
-* Building width (BW), is derived from (BLDFR_URB2D/ (FRC_URB2D-BLDFR_URB2D)) * SW, these values being available from the look-up table `LCZ_UCP_default.csv`. 
+* Building width (BW), is derived from (BLDFR_URB2D/ (FRC_URB2D-BLDFR_URB2D)) * SW, these values being available from the look-up table `LCZ_UCP_default.csv`.
 * Plan (LP_URB2D), frontal (LF_URB2D) and total (LB_URB2D) area indices are based on formulas in @Zonato2020.
 * HI_URB2D is obtained by fitting a bounded normal distribution to the minimum (MH_URB2D_MIN), mean (MH_URB2D), and maximum (MH_URB2D_MAX) building height, as provided in `LCZ_UCP_default.csv`. The building height standard deviation is also required, and is approximated as (MH_URB2D_MAX - MH_URB2D_MIN) / 4.
 * For computational efficiency, HI_URB2D values lower than 5% were set to 0 after resampling, the remaining HI_URB2D percentages are re-scaled to 100%.
