@@ -328,11 +328,15 @@ def _ucp_resampler(
     if ucp_key in ['LB_URB2D', 'LF_URB2D', 'LP_URB2D']:
 
         # Following Zonato et al (2020)
-        # and building width values from URB_PARAM.LCZ_TBL
         # Street width extracted from S02012 Building heighht and H2W.
         SW = ucp_table['MH_URB2D'] / ucp_table['H2W']
-        LAMBDA_P = ucp_table['BW'] / (ucp_table['BW'] + SW)
-        LAMBDA_F = 2 * ucp_table['MH_URB2D'] / (ucp_table['BW'] + SW)
+        # Building Width according to bldfr_urb2d/(frc_urb2d-bldfr_urb2d)*sw
+        BW = (ucp_table['BLDFR_URB2D'] /
+             (ucp_table['FRC_URB2D']-ucp_table['BLDFR_URB2D'])) \
+             * SW
+
+        LAMBDA_P = BW / (BW + SW)
+        LAMBDA_F = 2 * ucp_table['MH_URB2D'] / (BW + SW)
         LAMBDA_B = LAMBDA_P + LAMBDA_F
 
         if ucp_key == 'LB_URB2D':
@@ -413,10 +417,17 @@ def _hgt_resampler(
     src_data = rxr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
     dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
 
+    # Street width extracted from S02012 Building heighht and H2W.
+    SW = ucp_table['MH_URB2D'] / ucp_table['H2W']
+    # Building Width according to bldfr_urb2d/(frc_urb2d-bldfr_urb2d)*sw
+    BW = (ucp_table['BLDFR_URB2D'] /
+          (ucp_table['FRC_URB2D'] - ucp_table['BLDFR_URB2D'])) \
+         * SW
+
     # Get Look-up for HGT values
-    lookup_nom = ucp_table['BW'].loc[info['BUILT_LCZ']] ** 2 \
+    lookup_nom = BW.loc[info['BUILT_LCZ']] ** 2 \
                  * ucp_table['MH_URB2D'].loc[info['BUILT_LCZ']]
-    lookup_denom = ucp_table['BW'].loc[info['BUILT_LCZ']] ** 2
+    lookup_denom = BW.loc[info['BUILT_LCZ']] ** 2
 
     # Get mask of selected built LCZs
     lcz_urb_mask = xr.DataArray(
