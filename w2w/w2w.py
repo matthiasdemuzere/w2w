@@ -246,21 +246,36 @@ def wrf_remove_urban(
                 newgreenf[:,i,j]=auxg
 
             if luf.isel(south_north=i,west_east=j,land_cat=12)>0.:
-                dis = calc_distance_coord(
-                                         lat.where(
-                                                    (luf.isel(land_cat=12)==0.) &
-                                                    (luf.isel(land_cat=16)==0.) &
-                                                    (luf.isel(land_cat=20)==0.)
-                                                  ),
+                if len(luf.land_cat)>=20: #USING MODIS_LAKE
+                    dis = calc_distance_coord(
+                                             lat.where(
+                                                        (luf.isel(land_cat=12)==0.) &
+                                                        (luf.isel(land_cat=16)==0.) &
+                                                        (luf.isel(land_cat=20)==0.)
+                                                      ),
 
-                                         lon.where(
-                                                    (luf.isel(land_cat=12)==0.) &
-                                                    (luf.isel(land_cat=16)==0.) &
-                                                    (luf.isel(land_cat=20)==0.)
-                                                  ),
-                                         lat.isel(south_north=i,west_east=j),
-                                         lon.isel(south_north=i,west_east=j)
-                                         )
+                                             lon.where(
+                                                        (luf.isel(land_cat=12)==0.) &
+                                                        (luf.isel(land_cat=16)==0.) &
+                                                        (luf.isel(land_cat=20)==0.)
+                                                      ),
+                                             lat.isel(south_north=i,west_east=j),
+                                             lon.isel(south_north=i,west_east=j)
+                                             )
+                else: #USING MODIS (NO LAKES)
+                    dis = calc_distance_coord(
+                                             lat.where(
+                                                        (luf.isel(land_cat=12)==0.) &
+                                                        (luf.isel(land_cat=16)==0.)
+                                                      ),
+
+                                             lon.where(
+                                                        (luf.isel(land_cat=12)==0.) &
+                                                        (luf.isel(land_cat=16)==0.)
+                                                      ),
+                                             lat.isel(south_north=i,west_east=j),
+                                             lon.isel(south_north=i,west_east=j)
+                                             )
 
                 disflat = dis.stack(gridpoints=('south_north','west_east'))\
                     .reset_index('gridpoints').drop_vars(['south_north','west_east'])
