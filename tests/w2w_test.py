@@ -46,10 +46,17 @@ def test_check_lcz_wrf_extent_ok(capsys):
     assert 'OK - LCZ domain is covering WRF domain' in out
 
 
-def test_wrf_remove_urban(tmpdir):
+@pytest.mark.parametrize(
+    ('dst_file', 'dst_nu_file'),
+    (
+        pytest.param('testing/5by5.nc', '5by5_new.nc', id='all cat'),
+        pytest.param('testing/5by5_20cat.nc', '5by5_20cat_new.nc', id='20 cat'),
+    )
+)
+def test_wrf_remove_urban(tmpdir, dst_file, dst_nu_file):
     info = {
-        'dst_file': 'testing/5by5.nc',
-        'dst_nu_file': os.path.join(tmpdir, '5by5_new.nc')
+        'dst_file': dst_file,
+        'dst_nu_file': os.path.join(tmpdir, dst_nu_file)
     }
     old_ds = xarray.open_dataset(info['dst_file'])
     wrf_remove_urban(info=info, NPIX_NLC=9)
