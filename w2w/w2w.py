@@ -246,7 +246,7 @@ def wrf_remove_urban(
                 newgreenf[:,i,j]=auxg
 
             if luf.isel(south_north=i,west_east=j,land_cat=12)>0.:
-                if len(luf.land_cat)>=20: #USING MODIS_LAKE
+                if len(luf.land_cat)>20: #USING MODIS_LAKE
                     dis = calc_distance_coord(
                                              lat.where(
                                                         (luf.isel(land_cat=12)==0.) &
