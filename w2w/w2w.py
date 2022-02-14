@@ -765,7 +765,8 @@ def _adjust_greenfrac_landusef(
     )
 
     # Copy values from original file
-    landusef_new[:21,:,:] = dst_data['LANDUSEF'][0, :21, :, :]
+    orig_num_land_cat = dst_data['LANDUSEF'].shape()[1]
+    landusef_new[:orig_num_land_cat,:,:] = dst_data['LANDUSEF'][0, :orig_num_land_cat, :, :]
 
     # First set all values to zero for urban mask
     landusef_new[:, frc_mask] = 0 # First all to 0, so sum remains 1 in the end
