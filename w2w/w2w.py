@@ -220,6 +220,7 @@ def wrf_remove_urban(
     newluse=luse.values.copy()
     newluf=luf.values.copy()
     newgreenf=greenf.values.copy()
+    orig_num_land_cat=dst_data.NUM_LAND_CAT
 
     # Convert urban to surrounding natural characteristics
     for i in dst_data.south_north:
@@ -246,21 +247,36 @@ def wrf_remove_urban(
                 newgreenf[:,i,j]=auxg
 
             if luf.isel(south_north=i,west_east=j,land_cat=12)>0.:
-                dis = calc_distance_coord(
-                                         lat.where(
-                                                    (luf.isel(land_cat=12)==0.) &
-                                                    (luf.isel(land_cat=16)==0.) &
-                                                    (luf.isel(land_cat=20)==0.)
-                                                  ),
+                if orig_num_land_cat>20: #USING MODIS_LAKE
+                    dis = calc_distance_coord(
+                                             lat.where(
+                                                        (luf.isel(land_cat=12)==0.) &
+                                                        (luf.isel(land_cat=16)==0.) &
+                                                        (luf.isel(land_cat=20)==0.)
+                                                      ),
 
-                                         lon.where(
-                                                    (luf.isel(land_cat=12)==0.) &
-                                                    (luf.isel(land_cat=16)==0.) &
-                                                    (luf.isel(land_cat=20)==0.)
-                                                  ),
-                                         lat.isel(south_north=i,west_east=j),
-                                         lon.isel(south_north=i,west_east=j)
-                                         )
+                                             lon.where(
+                                                        (luf.isel(land_cat=12)==0.) &
+                                                        (luf.isel(land_cat=16)==0.) &
+                                                        (luf.isel(land_cat=20)==0.)
+                                                      ),
+                                             lat.isel(south_north=i,west_east=j),
+                                             lon.isel(south_north=i,west_east=j)
+                                             )
+                else: #USING MODIS (NO LAKES)
+                    dis = calc_distance_coord(
+                                             lat.where(
+                                                        (luf.isel(land_cat=12)==0.) &
+                                                        (luf.isel(land_cat=16)==0.)
+                                                      ),
+
+                                             lon.where(
+                                                        (luf.isel(land_cat=12)==0.) &
+                                                        (luf.isel(land_cat=16)==0.)
+                                                      ),
+                                             lat.isel(south_north=i,west_east=j),
+                                             lon.isel(south_north=i,west_east=j)
+                                             )
 
                 disflat = dis.stack(gridpoints=('south_north','west_east'))\
                     .reset_index('gridpoints').drop_vars(['south_north','west_east'])
@@ -723,6 +739,7 @@ def _adjust_greenfrac_landusef(
 ):
 
     dst_data_orig = xr.open_dataset(info['dst_file'])
+    orig_num_land_cat=dst_data_orig.NUM_LAND_CAT
 
     # Adjust GREENFRAC and LANDUSEF
     # GREENFRAC is set as average / month from GREENFRAC
@@ -750,7 +767,7 @@ def _adjust_greenfrac_landusef(
     )
 
     # Copy values from original file
-    landusef_new[:21,:,:] = dst_data['LANDUSEF'][0, :21, :, :]
+    landusef_new[:orig_num_land_cat,:,:] = dst_data['LANDUSEF'][0, :orig_num_land_cat, :, :]
 
     # First set all values to zero for urban mask
     landusef_new[:, frc_mask] = 0 # First all to 0, so sum remains 1 in the end
@@ -994,6 +1011,10 @@ def create_extent_file(
     dst_params = xr.open_dataset(info['dst_lcz_params_file'])
     dst_extent = dst_params.copy()
 
+    dst_data_orig = xr.open_dataset(info['dst_file'])
+    orig_num_land_cat=dst_data_orig.NUM_LAND_CAT
+    orig_luf_description=dst_data_orig.LANDUSEF.description
+
     lu_index = dst_extent.LU_INDEX.values
     lu_index[lu_index >= 31] = 13
 
@@ -1010,18 +1031,18 @@ def create_extent_file(
     # Add back to data-array, including (altered) attributes
     dst_extent['LANDUSEF'] =     (
         ('Time', 'land_cat', 'south_north', 'west_east'),
-        luf_values[:,:21,:,:]
+        luf_values[:,:orig_num_land_cat,:,:]
     )
     dst_extent['LANDUSEF'].values[0, 12, frc_mask] = 1
     dst_extent['LANDUSEF'] = dst_extent.LANDUSEF.astype('float32')
 
-    luf_attrs['description'] = 'Noah-modified 21-category IGBP-MODIS landuse'
+    luf_attrs['description'] = orig_luf_description
     for key in luf_attrs.keys():
         dst_extent['LANDUSEF'].attrs[key] = luf_attrs[key]
 
     # Reset some other global attributes
     dst_extent.attrs['FLAG_URB_PARAM'] = np.intc(0)
-    dst_extent.attrs['NUM_LAND_CAT'] = np.intc(21)
+    dst_extent.attrs['NUM_LAND_CAT'] = np.intc(orig_num_land_cat)
 
     # Save file.
     dst_extent.to_netcdf(info['dst_lcz_extent_file'])
@@ -1054,6 +1075,7 @@ def expand_land_cat_parents(
         if int(da.attrs['NUM_LAND_CAT']) != 41:
 
             try:
+                orig_num_land_cat = da.attrs['NUM_LAND_CAT']
                 # Set number of land categories to 41
                 da.attrs['NUM_LAND_CAT'] = np.intc(41)
 
@@ -1061,7 +1083,7 @@ def expand_land_cat_parents(
                 landusef_new = np.zeros(
                     (1, 41, da.LANDUSEF.shape[2], da.LANDUSEF.shape[3])
                 )
-                landusef_new[:, :21, :, :] = da['LANDUSEF'].values
+                landusef_new[:, :orig_num_land_cat, :, :] = da['LANDUSEF'].values
 
                 # First store orginal attributes, then drop variable
                 luf_attrs = da.LANDUSEF.attrs
