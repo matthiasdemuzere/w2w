@@ -12,6 +12,7 @@ from argparse import RawTextHelpFormatter
 import traceback
 from typing import Dict
 from scipy import stats
+from pyproj import CRS
 
 if sys.version_info < (3, 9):  # pragma: <3.9 cover
     import importlib_metadata
