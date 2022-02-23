@@ -99,18 +99,16 @@ def test_check_lcz_wrf_extent_ok(capsys):
     out, _ = capsys.readouterr()
     assert 'OK - LCZ domain is covering WRF domain' in out
 
-def test_check_lcz_integrity_clean_file_written(capsys):
+def test_check_lcz_integrity_clean_file_written(tmpdir):
 
     info = {
         'src_file': 'testing/shanghai.tif',
         'dst_file': 'testing/geo_em.d02_Shanghai.nc',
+        'src_file_clean': os.path.join(tmpdir, 'shanghai_clean.tif'),
     }
-    src_file_clean = info['src_file'].replace('.tif','_clean.tif')
-    info['src_file_clean'] = src_file_clean
-
     LCZ_BAND = 0
     check_lcz_integrity(info=info, LCZ_BAND=LCZ_BAND)
-    assert os.path.exists(info['src_file_clean'])
+    assert os.listdir(tmpdir) == ['shanghai_clean.tif']
 
 @pytest.mark.parametrize(
     ('dst_file', 'dst_nu_file'),
@@ -176,6 +174,7 @@ def test_create_wrf_gridinfo(tmpdir):
             0.0, 0.010000228881835938, 41.480000495910645,
     )
 
+#def test_ucp_resampler_LB_URB2D()
 
 def test_full_run_with_example_data(tmpdir):
     input_files = (

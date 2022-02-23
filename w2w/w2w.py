@@ -390,9 +390,7 @@ def wrf_remove_urban(
 
 
 # Make WRF grid info available for Resampler (tmp file)
-def create_wrf_gridinfo(
-        info,
-):
+def create_wrf_gridinfo(info: Dict[str, str]) -> None:
 
     # Read  gridded WRF data
     dst_data = xr.open_dataset(info['dst_nu_file'])
@@ -408,7 +406,6 @@ def create_wrf_gridinfo(
     da_lu.rio.write_crs("epsg:4326", inplace=True)
     da_lu.rio.to_raster(info['dst_gridinfo'])
 
-    return 0
 
 def _ucp_resampler(
         info,
@@ -424,17 +421,17 @@ def _ucp_resampler(
     src_data = rxr.open_rasterio(info['src_file_clean'])[0, :, :]
     dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
 
+    # Street width extracted from S02012 Building heighht and H2W.
+    SW = ucp_table['MH_URB2D'] / ucp_table['H2W']
+    # Building Width according to bldfr_urb2d/(frc_urb2d-bldfr_urb2d)*sw
+    BW = (ucp_table['BLDFR_URB2D'] /
+          (ucp_table['FRC_URB2D'] - ucp_table['BLDFR_URB2D'])) \
+         * SW
+
     # Get Look-up for FRC_values
     if ucp_key in ['LB_URB2D', 'LF_URB2D', 'LP_URB2D']:
 
         # Following Zonato et al (2020)
-        # Street width extracted from S02012 Building heighht and H2W.
-        SW = ucp_table['MH_URB2D'] / ucp_table['H2W']
-        # Building Width according to bldfr_urb2d/(frc_urb2d-bldfr_urb2d)*sw
-        BW = (ucp_table['BLDFR_URB2D'] /
-             (ucp_table['FRC_URB2D']-ucp_table['BLDFR_URB2D'])) \
-             * SW
-
         LAMBDA_P = BW / (BW + SW)
         LAMBDA_F = 2 * ucp_table['MH_URB2D'] / (BW + SW)
         LAMBDA_B = LAMBDA_P + LAMBDA_F
