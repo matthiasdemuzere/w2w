@@ -435,12 +435,6 @@ def _ucp_resampler(
 
     '''Helper function to resample lcz ucp data to WRF grid'''
 
-    # Read the look-up table
-    ucp_table = pd.read_csv(
-        importlib_resources.files('w2w.resources').joinpath('LCZ_UCP_lookup.csv'),
-        index_col=0
-    ).iloc[:17, :]
-
     # Read gridded data: LCZ and WRF grid
     src_data = rxr.open_rasterio(info['src_file_clean'])[0, :, :]
     dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
@@ -523,12 +517,6 @@ def _hgt_resampler(
 ):
 
     '''Helper function to resample lcz ucp data to WRF grid'''
-
-    # Read the look-up table
-    ucp_table = pd.read_csv(
-        importlib_resources.files('w2w.resources').joinpath('LCZ_UCP_lookup.csv'),
-        index_col=0
-    ).iloc[:17, :]
 
     # Read gridded data: LCZ and WRF grid
     src_data = rxr.open_rasterio(info['src_file'])[0, :, :]
@@ -1262,13 +1250,6 @@ def checks_and_cleaning(info, ucp_table):
           f"{info['dst_lcz_params_file'].split('/')[-1]}?")
     ifile = info['dst_lcz_params_file']
     da = xr.open_dataset(ifile)
-
-    # Take expected ranges from the look-up table,
-    # add some margin for changes due to interpolation.
-    ucp_table = pd.read_csv(
-        importlib_resources.files('w2w.resources').joinpath('LCZ_UCP_lookup.csv'),
-        index_col=0
-    ).iloc[:17, :]
 
     ucp_dict = {
         'LP_URB2D'  : {
