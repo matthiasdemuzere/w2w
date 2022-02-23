@@ -142,7 +142,7 @@ def main(argv=None):
     }
 
     # Execute the functions
-    print("Check LCZ integrity, in terms of class labels, projection and extent\n")
+    print("Check LCZ integrity, in terms of class labels, projection and extent")
     check_lcz_integrity(
         info=info,
         LCZ_BAND=args.LCZ_BAND,
@@ -244,7 +244,7 @@ def _check_lcz_wrf_extent(lcz, wrf) -> None:
         print(message)
         sys.exit(1)
     else:
-        print("OK - LCZ domain is covering WRF domain")
+        print("> LCZ domain is covering WRF domain")
 
 
 def check_lcz_integrity(info: Dict[str, str], LCZ_BAND: int):
@@ -276,14 +276,14 @@ def check_lcz_integrity(info: Dict[str, str], LCZ_BAND: int):
             lcz=lcz,
             lcz_to_change=lcz_100,
         )
-        print("LCZ class labels renamed from 1 to 17.")
+        print("> LCZ class labels renamed from 1 to 17.")
 
     # Re-project when not WGS84 (EPSG:4326)
     if lcz.rio.crs != CRS.from_epsg(4326):
         lcz = lcz.rio.reproject("EPSG:4326")
         lcz.data = xr.where(lcz.data > 0, lcz.data, 0)
         lcz.data = lcz.data.astype(np.int8)
-        print("LCZ map reprojected to WGS84 (EPSG:4326).")
+        print("> LCZ map reprojected to WGS84 (EPSG:4326).")
 
     # Check if LCZ map exceeds domain of geo_em file in all directions
     _check_lcz_wrf_extent(lcz, wrf)
