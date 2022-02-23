@@ -11,10 +11,12 @@ from w2w.w2w import _replace_lcz_number
 from w2w.w2w import check_lcz_integrity
 from w2w.w2w import wrf_remove_urban
 from w2w.w2w import create_wrf_gridinfo
+from w2w.w2w import _get_SW_BW
 from w2w.w2w import calc_distance_coord
 import pandas as pd
 import xarray as xr
 import numpy as np
+import pandas as pd
 
 
 def test_argparse_shows_help():
@@ -39,14 +41,7 @@ def test_replace_lcz_number_ok(capsys):
 
     # Test whether LCZs 100+ are converted to 11+
     assert (np.unique(lcz_new.data).tolist() ==
-            [1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, 15, 17]) \
-           is True
-    # Make sure no 100+ LCZ classes are present
-    assert 101 not in np.unique(lcz_new.data)
-    assert 102 not in np.unique(lcz_new.data)
-    assert 104 not in np.unique(lcz_new.data)
-    assert 105 not in np.unique(lcz_new.data)
-    assert 107 not in np.unique(lcz_new.data)
+            [1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, 15, 17])
 
 
 def test_check_lcz_integrity_crs_changed(capsys, tmpdir):
@@ -176,7 +171,43 @@ def test_create_wrf_gridinfo(tmpdir):
             0.0, 0.010000228881835938, 41.480000495910645,
     )
 
-#def test_ucp_resampler_LB_URB2D()
+def test_get_SW_BW(capsys):
+
+    ucp_table = pd.read_csv('testing/LCZ_UCP_lookup.csv',
+        sep=',', index_col=0
+    ).iloc[:17, :]
+    SW, BW = _get_SW_BW(ucp_table)
+
+    assert list(SW[:10]) == [
+        20.0,
+        14.0,
+        5.2,
+        50.0,
+        35.0,
+        13.0,
+        3.3333333333333335,
+        32.5,
+        43.333333333333336,
+        28.571428571428573
+    ]
+    assert list(BW[:10]) == [
+        22.22222222222222,
+        22.000000000000004,
+        9.533333333333337,
+        42.85714285714285,
+        26.25,
+        13.0,
+        25.000000000000007,
+        28.888888888888893,
+        43.333333333333336,
+        23.80952380952381
+    ]
+
+#def test_ucp_resampler_LB_URB2D(capsys):
+
+#    ucp_key = 'LB_URB2D'
+
+
 
 def test_full_run_with_example_data(tmpdir):
     input_files = (

@@ -406,6 +406,19 @@ def create_wrf_gridinfo(info: Dict[str, str]) -> None:
     da_lu.rio.write_crs("epsg:4326", inplace=True)
     da_lu.rio.to_raster(info['dst_gridinfo'])
 
+def _get_SW_BW(ucp_table):
+
+    '''Get Street and Building Width'''
+
+    # Street width extracted from S02012 Building heighht and H2W.
+    SW = ucp_table['MH_URB2D'] / ucp_table['H2W']
+    # Building Width according to bldfr_urb2d/(frc_urb2d-bldfr_urb2d)*sw
+    BW = (ucp_table['BLDFR_URB2D'] /
+          (ucp_table['FRC_URB2D'] - ucp_table['BLDFR_URB2D'])) \
+         * SW
+
+    return SW, BW
+
 
 def _ucp_resampler(
         info,
@@ -421,12 +434,8 @@ def _ucp_resampler(
     src_data = rxr.open_rasterio(info['src_file_clean'])[0, :, :]
     dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
 
-    # Street width extracted from S02012 Building heighht and H2W.
-    SW = ucp_table['MH_URB2D'] / ucp_table['H2W']
-    # Building Width according to bldfr_urb2d/(frc_urb2d-bldfr_urb2d)*sw
-    BW = (ucp_table['BLDFR_URB2D'] /
-          (ucp_table['FRC_URB2D'] - ucp_table['BLDFR_URB2D'])) \
-         * SW
+    # Get Street and Building Width
+    SW, BW = _get_SW_BW(ucp_table)
 
     # Get Look-up for FRC_values
     if ucp_key in ['LB_URB2D', 'LF_URB2D', 'LP_URB2D']:
