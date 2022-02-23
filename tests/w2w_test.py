@@ -14,6 +14,7 @@ from w2w.w2w import create_wrf_gridinfo
 from w2w.w2w import calc_distance_coord
 import pandas as pd
 import xarray as xr
+import numpy as np
 
 
 def test_argparse_shows_help():
@@ -48,10 +49,11 @@ def test_replace_lcz_number_ok(capsys):
     assert 107 not in np.unique(lcz_new.data)
 
 
-def test_check_lcz_integrity_crs_changed(capsys):
+def test_check_lcz_integrity_crs_changed(capsys, tmpdir):
 
     info = {
         'src_file': 'testing/Shanghai.tif',
+        'src_file_clean': os.path.join(tmpdir, 'Shanghai_clean.tif'),
         'dst_file': 'testing/geo_em.d02_Shanghai.nc',
     }
     LCZ_BAND = 0
@@ -104,7 +106,7 @@ def test_check_lcz_integrity_clean_file_written(tmpdir):
     info = {
         'src_file': 'testing/Shanghai.tif',
         'dst_file': 'testing/geo_em.d02_Shanghai.nc',
-        'src_file_clean': os.path.join(tmpdir, 'shanghai_clean.tif'),
+        'src_file_clean': os.path.join(tmpdir, 'Shanghai_clean.tif'),
     }
     LCZ_BAND = 0
     check_lcz_integrity(info=info, LCZ_BAND=LCZ_BAND)
