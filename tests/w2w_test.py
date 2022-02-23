@@ -7,6 +7,8 @@ import shutil
 import w2w.w2w
 from w2w.w2w import main
 from w2w.w2w import _check_lcz_wrf_extent
+from w2w.w2w import _replace_lcz_number
+from w2w.w2w import check_lcz_integrity
 from w2w.w2w import wrf_remove_urban
 from w2w.w2w import create_wrf_gridinfo
 from w2w.w2w import calc_distance_coord
@@ -17,6 +19,46 @@ import xarray as xr
 def test_argparse_shows_help():
     with pytest.raises(SystemExit):
         main(['--help'])
+
+def test_replace_lcz_number_ok(capsys):
+    info = {
+        'src_file': 'testing/shanghai.tif',
+    }
+    LCZ_BAND = 0
+    lcz = rxr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
+
+    lcz_100 = np.array(
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+         101, 102, 103, 104, 105, 106, 107]
+    )
+    lcz_new = _replace_lcz_number(
+            lcz=lcz,
+            lcz_to_change=lcz_100,
+        )
+
+    # Test whether LCZs 100+ are converted to 11+
+    assert (np.unique(lcz_new.data).tolist() ==
+            [1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, 15, 17]) \
+           is True
+    # Make sure no 100+ LCZ classes are present
+    assert 101 not in np.unique(lcz_new.data)
+    assert 102 not in np.unique(lcz_new.data)
+    assert 104 not in np.unique(lcz_new.data)
+    assert 105 not in np.unique(lcz_new.data)
+    assert 107 not in np.unique(lcz_new.data)
+
+
+def test_check_lcz_integrity_crs_changed(capsys):
+
+    info = {
+        'src_file': 'testing/shanghai.tif',
+        'dst_file': 'testing/geo_em.d02_Shanghai.nc',
+    }
+    LCZ_BAND = 0
+    check_lcz_integrity(info=info, LCZ_BAND=LCZ_BAND)
+    out, _ = capsys.readouterr()
+    assert 'LCZ map reprojected to WGS84 (EPSG:4326).' in out
+
 
 
 def test_check_lcz_wrf_extent_lcz_too_small(capsys):
@@ -57,6 +99,18 @@ def test_check_lcz_wrf_extent_ok(capsys):
     out, _ = capsys.readouterr()
     assert 'OK - LCZ domain is covering WRF domain' in out
 
+def test_check_lcz_integrity_clean_file_written(capsys):
+
+    info = {
+        'src_file': 'testing/shanghai.tif',
+        'dst_file': 'testing/geo_em.d02_Shanghai.nc',
+    }
+    src_file_clean = info['src_file'].replace('.tif','_clean.tif')
+    info['src_file_clean'] = src_file_clean
+
+    LCZ_BAND = 0
+    check_lcz_integrity(info=info, LCZ_BAND=LCZ_BAND)
+    assert os.path.exists(info['src_file_clean'])
 
 @pytest.mark.parametrize(
     ('dst_file', 'dst_nu_file'),
