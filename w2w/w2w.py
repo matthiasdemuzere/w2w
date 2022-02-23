@@ -1350,6 +1350,8 @@ def checks_and_cleaning(info, ucp_table):
     print('Cleaning up ...')
     if os.path.exists(info['dst_gridinfo']):
         os.remove(info['dst_gridinfo'])
+    if os.path.exists(info['src_file_clean']):
+        os.remove(info['src_file_clean'])
 
 ###############################################################################
 ##### __main__  scope
