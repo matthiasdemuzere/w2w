@@ -94,7 +94,7 @@ def test_check_lcz_wrf_extent_ok(capsys):
     wrf = xr.open_dataset(info['dst_file'])
     _check_lcz_wrf_extent(lcz=lcz, wrf=wrf)
     out, _ = capsys.readouterr()
-    assert 'OK - LCZ domain is covering WRF domain' in out
+    assert '> LCZ domain is covering WRF domain' in out
 
 def test_check_lcz_integrity_clean_file_written(tmpdir):
 

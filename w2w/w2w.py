@@ -277,6 +277,8 @@ def check_lcz_integrity(info: Dict[str, str], LCZ_BAND: int):
             lcz_to_change=lcz_100,
         )
         print("> LCZ class labels renamed from 1 to 17.")
+    else:
+        print("> LCZ labels as expected (1 to 17)")
 
     # Re-project when not WGS84 (EPSG:4326)
     if lcz.rio.crs != CRS.from_epsg(4326):
@@ -284,6 +286,8 @@ def check_lcz_integrity(info: Dict[str, str], LCZ_BAND: int):
         lcz.data = xr.where(lcz.data > 0, lcz.data, 0)
         lcz.data = lcz.data.astype(np.int8)
         print("> LCZ map reprojected to WGS84 (EPSG:4326).")
+    else:
+        print("> LCZ provided as WGS84 (EPSG:4326)")
 
     # Check if LCZ map exceeds domain of geo_em file in all directions
     _check_lcz_wrf_extent(lcz, wrf)
