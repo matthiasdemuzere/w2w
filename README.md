@@ -55,7 +55,34 @@ Additional arguments to be used:
 -l --lcz-band = Band to use from LCZ file (DEFAULT: 0). For maps produced with LCZ Generator, use 1
 -f --frc-threshold = FRC_URB2D treshold value to assign pixel as urban (DEFAULT: 0.2)
 -n --npix-nlc = Number of pixels to use for sampling neighbouring natural land cover (DEFAULT: 45)
+--lcz-ucp = Specify a custom lookup table for the LCZ-based Urban Canopy Parameters
 ```
+### Using a custom lookup table for the LCZ-based urban canopy parameters
+
+- A table must have this this format (indentation optional). The table displayed below is the default table
+
+```csv
+   ,FRC_URB2D ,MH_URB2D_MIN ,MH_URB2D ,MH_URB2D_MAX ,BLDFR_URB2D ,H2W
+1  ,0.95      ,25           ,50       ,75           ,0.5         ,2.5
+2  ,0.9       ,10           ,17.5     ,25           ,0.55        ,1.25
+3  ,0.85      ,3            ,6.5      ,10           ,0.55        ,1.25
+4  ,0.65      ,25           ,50       ,75           ,0.3         ,1
+5  ,0.7       ,10           ,17.5     ,25           ,0.3         ,0.5
+6  ,0.6       ,3            ,6.5      ,10           ,0.3         ,0.5
+7  ,0.85      ,4            ,5        ,6            ,0.75        ,1.5
+8  ,0.85      ,3            ,6.5      ,10           ,0.4         ,0.2
+9  ,0.3       ,3            ,6.5      ,10           ,0.15        ,0.15
+10 ,0.55      ,5            ,10       ,15           ,0.25        ,0.35
+11 ,0         ,0            ,0        ,0            ,0           ,0
+12 ,0         ,0            ,0        ,0            ,0           ,0
+13 ,0         ,0            ,0        ,0            ,0           ,0
+14 ,0         ,0            ,0        ,0            ,0           ,0
+15 ,0.95      ,0            ,0        ,0            ,0.05        ,0
+16 ,0         ,0            ,0        ,0            ,0           ,0
+17 ,0         ,0            ,0        ,0            ,0           ,0
+```
+- you can create a custom csv-file based on this format and use it specifying it with the `--lcz-ucp` flag. For the example: `w2w ./sample_data lcz_zaragoza.tif geo_em.d04.nc --lcz-ucp path/to/custom_lcz_ucp.csv`
+
 
 Documentation & citation
 -------
