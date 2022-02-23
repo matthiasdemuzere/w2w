@@ -219,7 +219,7 @@ def _replace_lcz_number(lcz, lcz_to_change):
     lcz_new = lcz.copy()
     lcz_new.data = df.map(d).values\
         .reshape(lcz.shape)\
-        .astype('int8')
+        .astype(np.int8)
 
     return lcz_new
 
@@ -281,7 +281,8 @@ def check_lcz_integrity(info: Dict[str, str], LCZ_BAND: int):
     # Re-project when not WGS84 (EPSG:4326)
     if lcz.rio.crs != CRS.from_epsg(4326):
         lcz = lcz.rio.reproject("EPSG:4326")
-        lcz.data = xr.where(lcz.data > 0, lcz.data, np.nan)
+        lcz.data = xr.where(lcz.data > 0, lcz.data, 0)
+        lcz.data = lcz.data.astype(int)
         print("LCZ map reprojected to WGS84 (EPSG:4326).")
 
     # Check if LCZ map exceeds domain of geo_em file in all directions
