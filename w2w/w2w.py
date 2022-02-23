@@ -80,7 +80,22 @@ def main(argv=None):
                         help='Number of pixels to use for sampling neighbouring '
                              'natural land cover (DEFAULT: 45)',
                         default=45)
+    parser.add_argument(
+        '--lcz-ucp',
+        type=str,
+        help='File with custom LCZ-based urban canopy parameters',
+    )
     args = parser.parse_args(argv)
+
+    # check if a custom LUT was set and read it
+    if args.lcz_ucp is not None:
+        lookup_table = args.lcz_ucp
+    else:
+        lookup_table = importlib_resources.files(
+            'w2w.resources',
+        ).joinpath('LCZ_UCP_lookup.csv')
+
+    ucp_table = pd.read_csv(lookup_table, index_col=0)
 
     # Define output and tmp file(s), the latter is removed when done.
     dst_nu_file = os.path.join(
@@ -138,6 +153,7 @@ def main(argv=None):
         LCZ_BAND=args.LCZ_BAND,
         FRC_THRESHOLD=args.FRC_THRESHOLD,
         LCZ_NAT_MASK=True,
+        ucp_table=ucp_table,
     )
     print("")
 
@@ -145,6 +161,7 @@ def main(argv=None):
     nbui_max = add_urb_params_to_wrf(
         info=info,
         LCZ_BAND=args.LCZ_BAND,
+        ucp_table=ucp_table,
     )
     print("")
 
@@ -167,9 +184,7 @@ def main(argv=None):
     print("")
 
     print("Start sanity check and clean-up ...")
-    checks_and_cleaning(
-        info=info,
-    )
+    checks_and_cleaning(info=info, ucp_table=ucp_table)
     print("")
     print("********* All done ***********")
 
@@ -325,16 +340,11 @@ def _ucp_resampler(
         ucp_key,
         RESAMPLE_TYPE,
         LCZ_BAND,
+        ucp_table,
         **kwargs,
 ):
 
     '''Helper function to resample lcz ucp data to WRF grid'''
-
-    # Read the look-up table
-    ucp_table = pd.read_csv(
-        importlib_resources.files('w2w.resources').joinpath('LCZ_UCP_lookup.csv'),
-        sep=',', index_col=0
-    ).iloc[:17, :]
 
     # Read gridded data: LCZ and WRF grid
     src_data = rxr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
@@ -419,15 +429,10 @@ def _hgt_resampler(
         info,
         RESAMPLE_TYPE,
         LCZ_BAND,
+        ucp_table,
 ):
 
     '''Helper function to resample lcz ucp data to WRF grid'''
-
-    # Read the look-up table
-    ucp_table = pd.read_csv(
-        importlib_resources.files('w2w.resources').joinpath('LCZ_UCP_lookup.csv'),
-        sep=',', index_col=0
-    ).iloc[:17, :]
 
     # Read gridded data: LCZ and WRF grid
     src_data = rxr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
@@ -528,18 +533,13 @@ def _get_truncated_normal(
 
 def _compute_hi_distribution(
         info,
+        ucp_table,
         SAMPLE_SIZE=5000000,
         DIST_MARGIN=0.15,
         # HI_THRES_MIN=5,
 ):
 
     ''' Helper function to compute building height distribution'''
-
-    # Read the look-up table
-    ucp_table = pd.read_csv(
-        importlib_resources.files('w2w.resources').joinpath('LCZ_UCP_lookup.csv'),
-        sep=',', index_col=0
-    ).iloc[:17, :]
 
     # Initialize dataframe that stores building height distributions
     df_hi = pd.DataFrame(
@@ -615,6 +615,7 @@ def _hi_resampler(
         info,
         RESAMPLE_TYPE,
         LCZ_BAND,
+        ucp_table,
         HI_THRES_MIN=5,
 ):
 
@@ -637,7 +638,7 @@ def _hi_resampler(
     lcz_arr[~lcz_urb_mask] = 0
 
     # Compute the building height densities.
-    df_hi = _compute_hi_distribution(info)
+    df_hi = _compute_hi_distribution(info, ucp_table=ucp_table)
 
     # Initialize array to store temp values
     hi_arr = np.zeros((15,dst_grid.shape[1],dst_grid.shape[2]))
@@ -805,6 +806,7 @@ def add_frc_lu_index_2_wrf(
         LCZ_BAND,
         FRC_THRESHOLD,
         LCZ_NAT_MASK,
+        ucp_table,
 ):
 
     '''
@@ -822,6 +824,7 @@ def add_frc_lu_index_2_wrf(
         RESAMPLE_TYPE='average',
         LCZ_BAND=LCZ_BAND,
         FRC_THRESHOLD = FRC_THRESHOLD,
+        ucp_table=ucp_table
     )
 
     # Add to geo_em* that that has no MODIS urban
@@ -892,6 +895,7 @@ def _initialize_urb_param(
 def add_urb_params_to_wrf(
         info,
         LCZ_BAND,
+        ucp_table,
 ):
 
     ''' Map, aggregate and add lcz-based UCP values to WRF'''
@@ -928,18 +932,21 @@ def add_urb_params_to_wrf(
                 ucp_key=ucp_key,
                 RESAMPLE_TYPE='average',
                 LCZ_BAND=LCZ_BAND,
+                ucp_table=ucp_table,
             )
         elif ucp_key in ['HGT_URB2D']:
             ucp_res = _hgt_resampler(
                 info=info,
                 RESAMPLE_TYPE='average',
                 LCZ_BAND=LCZ_BAND,
+                ucp_table=ucp_table,
             )
         elif ucp_key in ['HI_URB2D']:
             ucp_res, nbui_max = _hi_resampler(
                 info=info,
                 RESAMPLE_TYPE='average',
-                LCZ_BAND=LCZ_BAND
+                LCZ_BAND=LCZ_BAND,
+                ucp_table=ucp_table,
             )
 
         # Store UCPs in wrf destination file.
@@ -1112,9 +1119,7 @@ def expand_land_cat_parents(
                   f"already contains 41 LC classes")
 
 
-def checks_and_cleaning(
-        info,
-):
+def checks_and_cleaning(info, ucp_table):
 
     'Sanity checks and cleaning'
 
@@ -1177,13 +1182,6 @@ def checks_and_cleaning(
           f"{info['dst_lcz_params_file'].split('/')[-1]}?")
     ifile = info['dst_lcz_params_file']
     da = xr.open_dataset(ifile)
-
-    # Take expected ranges from the look-up table,
-    # add some margin for changes due to interpolation.
-    ucp_table = pd.read_csv(
-        importlib_resources.files('w2w.resources').joinpath('LCZ_UCP_lookup.csv'),
-        sep=',', index_col=0
-    ).iloc[:17, :]
 
     ucp_dict = {
         'LP_URB2D'  : {

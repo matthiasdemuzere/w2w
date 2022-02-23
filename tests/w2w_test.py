@@ -1,13 +1,16 @@
 import os
+from unittest import mock
 import pytest
 import rioxarray
 from affine import Affine
 import shutil
+import w2w.w2w
 from w2w.w2w import main
 from w2w.w2w import check_lcz_wrf_extent
 from w2w.w2w import wrf_remove_urban
 from w2w.w2w import create_wrf_gridinfo
 from w2w.w2w import calc_distance_coord
+import pandas as pd
 import xarray
 
 
@@ -141,3 +144,44 @@ def test_full_run_with_example_data(tmpdir):
 )
 def test_calc_distance_coord(coords, expected):
     assert calc_distance_coord(*coords) == pytest.approx(expected, abs=1)
+
+
+def test_main_with_custom_lcz_ucp(tmpdir):
+    input_files = (
+        'geo_em.d01.nc', 'geo_em.d03.nc', 'geo_em.d03.nc','geo_em.d04.nc',
+        'lcz_zaragoza.tif',
+    )
+    input_dir = tmpdir.mkdir('input')
+    for f in input_files:
+        shutil.copy(os.path.join('sample_data', f), input_dir)
+
+    shutil.copy('testing/custom_lcz_ucp.csv', tmpdir)
+
+    with tmpdir.as_cwd():
+        with mock.patch.object(w2w.w2w, 'checks_and_cleaning') as m:
+            main(
+                [
+                    'input', 'lcz_zaragoza.tif', 'geo_em.d04.nc',
+                    '--lcz-ucp', 'custom_lcz_ucp.csv',
+                ],
+            )
+
+    exp_df = pd.read_csv('testing/custom_lcz_ucp.csv', index_col=0)
+    pd.testing.assert_frame_equal(exp_df, m.call_args[1]['ucp_table'])
+
+
+def test_main_default_lcz_ucp(tmpdir):
+    input_files = (
+        'geo_em.d01.nc', 'geo_em.d03.nc', 'geo_em.d03.nc','geo_em.d04.nc',
+        'lcz_zaragoza.tif',
+    )
+    input_dir = tmpdir.mkdir('input')
+    for f in input_files:
+        shutil.copy(os.path.join('sample_data', f), input_dir)
+
+    with tmpdir.as_cwd():
+        with mock.patch.object(w2w.w2w, 'checks_and_cleaning') as m:
+            main(['input', 'lcz_zaragoza.tif', 'geo_em.d04.nc'])
+
+    exp_df = pd.read_csv('w2w/resources/LCZ_UCP_lookup.csv', index_col=0)
+    pd.testing.assert_frame_equal(exp_df, m.call_args[1]['ucp_table'])
