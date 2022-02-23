@@ -466,7 +466,7 @@ def _ucp_resampler(
     )
 
     # Get LCZ class values only.
-    lcz_arr = src_data.values
+    lcz_arr = src_data.data.astype(np.int8)
 
     # Set LCZ classes not in BUILT_LCZ to 0
     lcz_arr[~lcz_urb_mask] = 0
@@ -519,11 +519,7 @@ def _hgt_resampler(
     dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
 
     # Street width extracted from S02012 Building heighht and H2W.
-    SW = ucp_table['MH_URB2D'] / ucp_table['H2W']
-    # Building Width according to bldfr_urb2d/(frc_urb2d-bldfr_urb2d)*sw
-    BW = (ucp_table['BLDFR_URB2D'] /
-          (ucp_table['FRC_URB2D'] - ucp_table['BLDFR_URB2D'])) \
-         * SW
+    SW, BW = _get_SW_BW(ucp_table)
 
     # Get Look-up for HGT values
     lookup_nom = BW.loc[info['BUILT_LCZ']] ** 2 \
@@ -537,7 +533,7 @@ def _hgt_resampler(
     )
 
     # Get LCZ class values only.
-    lcz_arr = src_data.values
+    lcz_arr = src_data.data.astype(np.int8)
 
     # Set LCZ classes not in BUILT_LCZ to 0
     lcz_arr[~lcz_urb_mask] = 0
@@ -711,7 +707,7 @@ def _hi_resampler(
     )
 
     # Get LCZ class values only.
-    lcz_arr = src_data.values
+    lcz_arr = src_data.data.astype(np.int8)
 
     # Set LCZ classes not in BUILT_LCZ to 0
     lcz_arr[~lcz_urb_mask] = 0
