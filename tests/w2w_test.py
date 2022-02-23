@@ -22,7 +22,7 @@ def test_argparse_shows_help():
 
 def test_replace_lcz_number_ok(capsys):
     info = {
-        'src_file': 'testing/shanghai.tif',
+        'src_file': 'testing/Shanghai.tif',
     }
     LCZ_BAND = 0
     lcz = rxr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
@@ -51,7 +51,7 @@ def test_replace_lcz_number_ok(capsys):
 def test_check_lcz_integrity_crs_changed(capsys):
 
     info = {
-        'src_file': 'testing/shanghai.tif',
+        'src_file': 'testing/Shanghai.tif',
         'dst_file': 'testing/geo_em.d02_Shanghai.nc',
     }
     LCZ_BAND = 0
@@ -102,13 +102,13 @@ def test_check_lcz_wrf_extent_ok(capsys):
 def test_check_lcz_integrity_clean_file_written(tmpdir):
 
     info = {
-        'src_file': 'testing/shanghai.tif',
+        'src_file': 'testing/Shanghai.tif',
         'dst_file': 'testing/geo_em.d02_Shanghai.nc',
         'src_file_clean': os.path.join(tmpdir, 'shanghai_clean.tif'),
     }
     LCZ_BAND = 0
     check_lcz_integrity(info=info, LCZ_BAND=LCZ_BAND)
-    assert os.listdir(tmpdir) == ['shanghai_clean.tif']
+    assert os.listdir(tmpdir) == ['Shanghai_clean.tif']
 
 @pytest.mark.parametrize(
     ('dst_file', 'dst_nu_file'),
