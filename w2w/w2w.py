@@ -211,7 +211,7 @@ def _replace_lcz_number(lcz, lcz_to_change):
          11, 12, 13, 14, 15, 16, 17]
     )
 
-    lcz_arr = lcz.data.flatten().astype('int')
+    lcz_arr = lcz.data.flatten().astype(np.int8)
     df = pd.Series(lcz_arr, dtype=lcz_expected.dtype)
 
     d = dict(zip(lcz_to_change, lcz_expected))
@@ -282,14 +282,14 @@ def check_lcz_integrity(info: Dict[str, str], LCZ_BAND: int):
     if lcz.rio.crs != CRS.from_epsg(4326):
         lcz = lcz.rio.reproject("EPSG:4326")
         lcz.data = xr.where(lcz.data > 0, lcz.data, 0)
-        lcz.data = lcz.data.astype(int)
+        lcz.data = lcz.data.astype(np.int8)
         print("LCZ map reprojected to WGS84 (EPSG:4326).")
 
     # Check if LCZ map exceeds domain of geo_em file in all directions
     _check_lcz_wrf_extent(lcz, wrf)
 
     # Write clean LCZ to file, used in all subsequent routines.
-    lcz.rio.to_raster(info['src_file_clean'])
+    lcz.rio.to_raster(info['src_file_clean'], dtype=np.int8)
 
 
 def wrf_remove_urban(
