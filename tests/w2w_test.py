@@ -17,6 +17,7 @@ import pandas as pd
 import xarray as xr
 import numpy as np
 import pandas as pd
+from pytest import approx
 
 
 def test_argparse_shows_help():
@@ -171,36 +172,22 @@ def test_create_wrf_gridinfo(tmpdir):
             0.0, 0.010000228881835938, 41.480000495910645,
     )
 
-def test_get_SW_BW(capsys):
+def test_get_SW_BW():
 
-    ucp_table = pd.read_csv('testing/LCZ_UCP_lookup.csv',
-        sep=',', index_col=0
+    ucp_table = pd.read_csv(
+        'w2w/resources/LCZ_UCP_lookup.csv',
+         index_col=0
     ).iloc[:17, :]
+
     SW, BW = _get_SW_BW(ucp_table)
 
-    assert list(SW[:10]) == [
-        20.0,
-        14.0,
-        5.2,
-        50.0,
-        35.0,
-        13.0,
-        3.3333333333333335,
-        32.5,
-        43.333333333333336,
-        28.571428571428573
+    assert approx(list(SW[:10])) == [
+        20.0, 14.0, 5.2, 50.0, 35.0,
+        13.0, 3.333333, 32.5, 43.333333, 28.571428
     ]
-    assert list(BW[:10]) == [
-        22.22222222222222,
-        22.000000000000004,
-        9.533333333333337,
-        42.85714285714285,
-        26.25,
-        13.0,
-        25.000000000000007,
-        28.888888888888893,
-        43.333333333333336,
-        23.80952380952381
+    assert approx(list(BW[:10])) == [
+        22.222222, 22.0, 9.533333, 42.857142, 26.25,
+        13.0, 25.0, 28.888888, 43.333333, 23.809523
     ]
 
 #def test_ucp_resampler_LB_URB2D(capsys):
