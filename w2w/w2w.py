@@ -223,7 +223,7 @@ def _replace_lcz_number(lcz, lcz_to_change):
 
     return lcz_new
 
-def _check_lcz_wrf_extent(lcz, wrf) -> str:
+def _check_lcz_wrf_extent(lcz, wrf) -> None:
 
     # Get bounding box coordinates
     lcz_xmin, lcz_ymin, lcz_xmax, lcz_ymax = lcz.rio.bounds()
@@ -241,10 +241,10 @@ def _check_lcz_wrf_extent(lcz, wrf) -> str:
                  f"{lcz_xmin, lcz_ymin, lcz_xmax, lcz_ymax}\n" \
                   "WRF bounds (xmin, ymin, xmax, ymax): "\
                  f"{wrf_xmin, wrf_ymin, wrf_xmax, wrf_ymax}"
+        print(message)
+        sys.exit(1)
     else:
-        message = "OK - LCZ domain is covering WRF domain"
-
-    return message
+        print("OK - LCZ domain is covering WRF domain")
 
 
 def check_lcz_integrity(info: Dict[str, str], LCZ_BAND: int):
@@ -279,21 +279,16 @@ def check_lcz_integrity(info: Dict[str, str], LCZ_BAND: int):
         print("LCZ class labels renamed from 1 to 17.")
 
     # Re-project when not WGS84 (EPSG:4326)
-    if not lcz.rio.crs == CRS.from_epsg(4326):
+    if lcz.rio.crs != CRS.from_epsg(4326):
         lcz = lcz.rio.reproject("EPSG:4326")
         lcz.data = xr.where(lcz.data > 0, lcz.data, np.nan)
         print("LCZ map reprojected to WGS84 (EPSG:4326).")
 
     # Check if LCZ map exceeds domain of geo_em file in all directions
-    message = _check_lcz_wrf_extent(lcz, wrf)
-    print(message)
+    _check_lcz_wrf_extent(lcz, wrf)
 
-    if 'ERROR' in message:
-        sys.exit()
-
-    else:
-        #lcz.data = lcz.data.astype(int)
-        lcz.rio.to_raster(info['src_file_clean'])
+    # Write clean LCZ to file, used in all subsequent routines.
+    lcz.rio.to_raster(info['src_file_clean'])
 
 
 def wrf_remove_urban(

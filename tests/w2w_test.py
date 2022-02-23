@@ -1,17 +1,17 @@
 import os
 from unittest import mock
 import pytest
-import rioxarray
+import rioxarray as rxr
 from affine import Affine
 import shutil
 import w2w.w2w
 from w2w.w2w import main
-#from w2w.w2w import check_lcz_wrf_extent
+from w2w.w2w import _check_lcz_wrf_extent
 from w2w.w2w import wrf_remove_urban
 from w2w.w2w import create_wrf_gridinfo
 from w2w.w2w import calc_distance_coord
 import pandas as pd
-import xarray
+import xarray as xr
 
 
 def test_argparse_shows_help():
@@ -19,34 +19,43 @@ def test_argparse_shows_help():
         main(['--help'])
 
 
-# def test_check_lcz_wrf_extent_lcz_too_small(capsys):
-#     info = {
-#         'src_file': 'testing/lcz_too_small.tif',
-#         'dst_file': 'sample_data/geo_em.d04.nc',
-#     }
-#     with pytest.raises(SystemExit):
-#         check_lcz_wrf_extent(info=info)
-#
-#     out, _ = capsys.readouterr()
-#     assert (
-#         'ERROR: LCZ domain should be larger than WRF domain in all directions.'
-#     ) in out
-#     # TODO maybe add the actual values to check they are correct
-#     assert (
-#         'ERROR: LCZ domain should be larger than WRF domain '
-#         'in all directions.\nLCZ bounds  (xmin, ymin, xmax, ymax): '
-#     ) in out
-#     assert 'WRF bounds  (xmin, ymin, xmax, ymax): ' in out
-#
-#
-# def test_check_lcz_wrf_extent_ok(capsys):
-#     info = {
-#         'src_file': 'sample_data/lcz_zaragoza.tif',
-#         'dst_file': 'sample_data/geo_em.d04.nc',
-#     }
-#     check_lcz_wrf_extent(info=info)
-#     out, _ = capsys.readouterr()
-#     assert 'OK - LCZ domain is covering WRF domain' in out
+def test_check_lcz_wrf_extent_lcz_too_small(capsys):
+    info = {
+        'src_file': 'testing/lcz_too_small.tif',
+        'dst_file': 'sample_data/geo_em.d04.nc',
+    }
+    LCZ_BAND = 0
+
+    lcz = rxr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
+    wrf = xr.open_dataset(info['dst_file'])
+
+    with pytest.raises(SystemExit):
+        _check_lcz_wrf_extent(lcz=lcz, wrf=wrf)
+
+    out, _ = capsys.readouterr()
+    assert (
+        'ERROR: LCZ domain should be larger than WRF domain'
+    ) in out
+    # TODO maybe add the actual values to check they are correct
+    assert (
+        'ERROR: LCZ domain should be larger than WRF domain '
+        'in all directions.\nLCZ bounds (xmin, ymin, xmax, ymax): '
+    ) in out
+    assert 'WRF bounds (xmin, ymin, xmax, ymax): ' in out
+
+
+def test_check_lcz_wrf_extent_ok(capsys):
+    info = {
+        'src_file': 'sample_data/lcz_zaragoza.tif',
+        'dst_file': 'sample_data/geo_em.d04.nc',
+    }
+    LCZ_BAND = 0
+
+    lcz = rxr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
+    wrf = xr.open_dataset(info['dst_file'])
+    _check_lcz_wrf_extent(lcz=lcz, wrf=wrf)
+    out, _ = capsys.readouterr()
+    assert 'OK - LCZ domain is covering WRF domain' in out
 
 
 @pytest.mark.parametrize(
@@ -61,9 +70,9 @@ def test_wrf_remove_urban(tmpdir, dst_file, dst_nu_file):
         'dst_file': dst_file,
         'dst_nu_file': os.path.join(tmpdir, dst_nu_file)
     }
-    old_ds = xarray.open_dataset(info['dst_file'])
+    old_ds = xr.open_dataset(info['dst_file'])
     wrf_remove_urban(info=info, NPIX_NLC=9)
-    ds = xarray.open_dataset(info['dst_nu_file'])
+    ds = xr.open_dataset(info['dst_nu_file'])
     # check lused 13 was reclassified to 12
     assert ds.LU_INDEX.values[0][2][2] == 12
     assert ds.LU_INDEX.values[0][2][3] == 12
@@ -106,7 +115,7 @@ def test_create_wrf_gridinfo(tmpdir):
     }
     create_wrf_gridinfo(info)
     assert os.listdir(tmpdir) == ['dst_gridinfo.tif']
-    tif = rioxarray.open_rasterio(info['dst_gridinfo'])
+    tif = rxr.open_rasterio(info['dst_gridinfo'])
     assert tif.rio.crs.to_proj4() == '+init=epsg:4326'
     assert tif.rio.transform() == Affine(
             0.01000213623046875, 0.0, -1.4050254821777344,
