@@ -12,6 +12,7 @@ from argparse import RawTextHelpFormatter
 import traceback
 from typing import Dict
 from scipy import stats
+from pyproj import CRS
 
 if sys.version_info < (3, 9):  # pragma: <3.9 cover
     import importlib_metadata
@@ -98,6 +99,18 @@ def main(argv=None):
     ucp_table = pd.read_csv(lookup_table, index_col=0)
 
     # Define output and tmp file(s), the latter is removed when done.
+    src_file = os.path.join(
+        args.io_dir,
+        args.lcz_file
+    )
+    src_file_clean = os.path.join(
+        args.io_dir,
+        args.lcz_file.replace('.tif','_clean.tif')
+    )
+    dst_file = os.path.join(
+        args.io_dir,
+        args.wrf_file
+    )
     dst_nu_file = os.path.join(
         args.io_dir,
         args.wrf_file.replace('.nc','_NoUrban.nc')
@@ -118,8 +131,9 @@ def main(argv=None):
     # Put all information in info dictionary
     info = {
         'io_dir': args.io_dir,
-        'src_file': os.path.join(args.io_dir, args.lcz_file),
-        'dst_file': os.path.join(args.io_dir, args.wrf_file),
+        'src_file': src_file,
+        'src_file_clean': src_file_clean,
+        'dst_file': dst_file,
         'dst_nu_file': dst_nu_file,
         'dst_gridinfo': dst_gridinfo,
         'dst_lcz_extent_file': dst_lcz_extent_file,
@@ -128,11 +142,11 @@ def main(argv=None):
     }
 
     # Execute the functions
-    print("Check if LCZ domain extends WRF domain in all directions?")
-    check_lcz_wrf_extent(
+    print("Check LCZ integrity, in terms of class labels, projection and extent")
+    check_lcz_integrity(
         info=info,
+        LCZ_BAND=args.LCZ_BAND,
     )
-    print("")
 
     print("Replace WRF MODIS urban LC with surrounding natural LC")
     wrf_remove_urban(
@@ -150,7 +164,6 @@ def main(argv=None):
     print("+ FRC_URB2D, alter LU_INDEX, GREENFRAC and LANDUSEF")
     frc_mask = add_frc_lu_index_2_wrf(
         info=info,
-        LCZ_BAND=args.LCZ_BAND,
         FRC_THRESHOLD=args.FRC_THRESHOLD,
         LCZ_NAT_MASK=True,
         ucp_table=ucp_table,
@@ -158,11 +171,7 @@ def main(argv=None):
     print("")
 
     print("+ LCZ-based UCP values into WRF's URB_PARAM")
-    nbui_max = add_urb_params_to_wrf(
-        info=info,
-        LCZ_BAND=args.LCZ_BAND,
-        ucp_table=ucp_table,
-    )
+    nbui_max = add_urb_params_to_wrf(info=info, ucp_table=ucp_table)
     print("")
 
     print("Create LCZ-based urban extent file (excluding other LCZ-based info).")
@@ -189,32 +198,103 @@ def main(argv=None):
     print("********* All done ***********")
 
 
-def check_lcz_wrf_extent(info: Dict[str, str]) -> None:
 
-    # Read the data
-    lcz = rasterio.open(info['src_file'])
-    wrf = xr.open_dataset(info['dst_file'])
+# Overall function that tests the LCZ integrity, including:
+# - check LCZ classes, change if needed
+# - check projection system, change if needed
+# - check extent
+
+def _replace_lcz_number(lcz, lcz_to_change):
+
+    lcz_expected = np.array(
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+         11, 12, 13, 14, 15, 16, 17]
+    )
+
+    lcz_arr = lcz.data.flatten().astype(np.int32)
+    df = pd.Series(lcz_arr, dtype=lcz_expected.dtype)
+
+    d = dict(zip(lcz_to_change, lcz_expected))
+
+    lcz_new = lcz.copy()
+    lcz_new.data = df.map(d).values\
+        .reshape(lcz.shape)\
+        .astype(np.int32)
+
+    return lcz_new
+
+def _check_lcz_wrf_extent(lcz, wrf) -> None:
 
     # Get bounding box coordinates
-    lcz_xmin, lcz_ymin, lcz_xmax, lcz_ymax = lcz.bounds
+    lcz_xmin, lcz_ymin, lcz_xmax, lcz_ymax = lcz.rio.bounds()
     wrf_xmin, wrf_ymin, wrf_xmax, wrf_ymax = \
         float(wrf.XLONG_M.min()), float(wrf.XLAT_M.min()), \
         float(wrf.XLONG_M.max()), float(wrf.XLAT_M.max())
 
-    # Evaluate and throw error if wrf not within LCZ domain
+    # Evaluate and throw error if WRF not within LCZ domain
     if not (wrf_xmin > lcz_xmin ) & (wrf_xmax < lcz_xmax ) & \
            (wrf_ymin > lcz_ymin) & (wrf_ymax < lcz_ymax):
 
-        print("ERROR: LCZ domain should be larger than WRF domain "
-              "in all directions.")
-        print(f"LCZ bounds  (xmin, ymin, xmax, ymax): "
-              f"{lcz_xmin, lcz_ymin, lcz_xmax, lcz_ymax}")
-        print(f"WRF bounds  (xmin, ymin, xmax, ymax): "
-              f"{wrf_xmin, wrf_ymin, wrf_xmax, wrf_ymax}")
-
-        sys.exit()
+        message = "ERROR: LCZ domain should be larger than WRF domain " \
+                  "in all directions.\n" \
+                  "LCZ bounds (xmin, ymin, xmax, ymax): " \
+                 f"{lcz_xmin, lcz_ymin, lcz_xmax, lcz_ymax}\n" \
+                  "WRF bounds (xmin, ymin, xmax, ymax): "\
+                 f"{wrf_xmin, wrf_ymin, wrf_xmax, wrf_ymax}"
+        print(message)
+        sys.exit(1)
     else:
-        print("OK - LCZ domain is covering WRF domain")
+        print("> LCZ domain is covering WRF domain")
+
+
+def check_lcz_integrity(info: Dict[str, str], LCZ_BAND: int):
+
+    '''
+    Check integrity of LCZ GeoTIFF file, which should have:
+    - LCZ class labels between 1 and 17
+    - WGS84 (EPSG:4326) projection
+    - extent larger than WRF domain file, in all direction
+
+    Note that this procedure directly select correct band in GeoTIFF file,
+    so no need to select that specific band afterwards.
+
+    Output:
+        _clean.tif lcz file, used in the remainder of the tool.
+    '''
+
+    # Read the data
+    lcz = rxr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
+    wrf = xr.open_dataset(info['dst_file'])
+
+    # If any of [101, 102, 103, 104, 105, 106, 107] is in the lcz tif file.
+    lcz_100 = np.array(
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+         101, 102, 103, 104, 105, 106, 107]
+    )
+    if any(x in lcz.data.flatten() for x in lcz_100[10:]):
+        lcz = _replace_lcz_number(
+            lcz=lcz,
+            lcz_to_change=lcz_100,
+        )
+        print("> LCZ class labels renamed from 1 to 17.")
+    else:
+        print("> LCZ labels as expected (1 to 17)")
+
+    # Re-project when not WGS84 (EPSG:4326)
+    if lcz.rio.crs != CRS.from_epsg(4326):
+        lcz = lcz.rio.reproject("EPSG:4326")
+        lcz.data = xr.where(lcz.data > 0, lcz.data, 0)
+        lcz.data = lcz.data.astype(np.int32)
+        print("> LCZ map reprojected to WGS84 (EPSG:4326).")
+    else:
+        print("> LCZ provided as WGS84 (EPSG:4326)")
+
+    # Check if LCZ map exceeds domain of geo_em file in all directions
+    _check_lcz_wrf_extent(lcz, wrf)
+
+    # Write clean LCZ to file, used in all subsequent routines.
+    lcz.rio.to_raster(info['src_file_clean'], dtype=np.int32)
+
 
 def wrf_remove_urban(
         info,
@@ -315,9 +395,7 @@ def wrf_remove_urban(
 
 
 # Make WRF grid info available for Resampler (tmp file)
-def create_wrf_gridinfo(
-        info,
-):
+def create_wrf_gridinfo(info: Dict[str, str]) -> None:
 
     # Read  gridded WRF data
     dst_data = xr.open_dataset(info['dst_nu_file'])
@@ -333,13 +411,24 @@ def create_wrf_gridinfo(
     da_lu.rio.write_crs("epsg:4326", inplace=True)
     da_lu.rio.to_raster(info['dst_gridinfo'])
 
-    return 0
+def _get_SW_BW(ucp_table):
+
+    '''Get Street and Building Width'''
+
+    # Street width extracted from S02012 Building heighht and H2W.
+    SW = ucp_table['MH_URB2D'] / ucp_table['H2W']
+    # Building Width according to bldfr_urb2d/(frc_urb2d-bldfr_urb2d)*sw
+    BW = (ucp_table['BLDFR_URB2D'] /
+          (ucp_table['FRC_URB2D'] - ucp_table['BLDFR_URB2D'])) \
+         * SW
+
+    return SW, BW
+
 
 def _ucp_resampler(
         info,
         ucp_key,
         RESAMPLE_TYPE,
-        LCZ_BAND,
         ucp_table,
         **kwargs,
 ):
@@ -347,20 +436,16 @@ def _ucp_resampler(
     '''Helper function to resample lcz ucp data to WRF grid'''
 
     # Read gridded data: LCZ and WRF grid
-    src_data = rxr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
+    src_data = rxr.open_rasterio(info['src_file_clean'])[0, :, :]
     dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
+
+    # Get Street and Building Width
+    SW, BW = _get_SW_BW(ucp_table)
 
     # Get Look-up for FRC_values
     if ucp_key in ['LB_URB2D', 'LF_URB2D', 'LP_URB2D']:
 
         # Following Zonato et al (2020)
-        # Street width extracted from S02012 Building heighht and H2W.
-        SW = ucp_table['MH_URB2D'] / ucp_table['H2W']
-        # Building Width according to bldfr_urb2d/(frc_urb2d-bldfr_urb2d)*sw
-        BW = (ucp_table['BLDFR_URB2D'] /
-             (ucp_table['FRC_URB2D']-ucp_table['BLDFR_URB2D'])) \
-             * SW
-
         LAMBDA_P = BW / (BW + SW)
         LAMBDA_F = 2 * ucp_table['MH_URB2D'] / (BW + SW)
         LAMBDA_B = LAMBDA_P + LAMBDA_F
@@ -385,7 +470,7 @@ def _ucp_resampler(
     )
 
     # Get LCZ class values only.
-    lcz_arr = src_data.values
+    lcz_arr = src_data.data.astype(np.int32)
 
     # Set LCZ classes not in BUILT_LCZ to 0
     lcz_arr[~lcz_urb_mask] = 0
@@ -428,22 +513,17 @@ def _ucp_resampler(
 def _hgt_resampler(
         info,
         RESAMPLE_TYPE,
-        LCZ_BAND,
         ucp_table,
 ):
 
     '''Helper function to resample lcz ucp data to WRF grid'''
 
     # Read gridded data: LCZ and WRF grid
-    src_data = rxr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
+    src_data = rxr.open_rasterio(info['src_file'])[0, :, :]
     dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
 
     # Street width extracted from S02012 Building heighht and H2W.
-    SW = ucp_table['MH_URB2D'] / ucp_table['H2W']
-    # Building Width according to bldfr_urb2d/(frc_urb2d-bldfr_urb2d)*sw
-    BW = (ucp_table['BLDFR_URB2D'] /
-          (ucp_table['FRC_URB2D'] - ucp_table['BLDFR_URB2D'])) \
-         * SW
+    SW, BW = _get_SW_BW(ucp_table)
 
     # Get Look-up for HGT values
     lookup_nom = BW.loc[info['BUILT_LCZ']] ** 2 \
@@ -457,7 +537,7 @@ def _hgt_resampler(
     )
 
     # Get LCZ class values only.
-    lcz_arr = src_data.values
+    lcz_arr = src_data.data.astype(np.int32)
 
     # Set LCZ classes not in BUILT_LCZ to 0
     lcz_arr[~lcz_urb_mask] = 0
@@ -614,7 +694,6 @@ def _compute_hi_distribution(
 def _hi_resampler(
         info,
         RESAMPLE_TYPE,
-        LCZ_BAND,
         ucp_table,
         HI_THRES_MIN=5,
 ):
@@ -622,7 +701,7 @@ def _hi_resampler(
     '''Helper function to resample ucp HI_URB2D_URB2D data to WRF grid'''
 
     # Read gridded data: LCZ and WRF grid
-    src_data = rxr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
+    src_data = rxr.open_rasterio(info['src_file'])[0, :, :]
     dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
 
     # Get mask of selected built LCZs
@@ -632,7 +711,7 @@ def _hi_resampler(
     )
 
     # Get LCZ class values only.
-    lcz_arr = src_data.values
+    lcz_arr = src_data.data.astype(np.int32)
 
     # Set LCZ classes not in BUILT_LCZ to 0
     lcz_arr[~lcz_urb_mask] = 0
@@ -695,14 +774,13 @@ def _lcz_resampler(
         info,
         frc_urb2d,
         LCZ_NAT_MASK,
-        LCZ_BAND,
 ):
 
     '''Helper function to resample lcz classes to WRF grid'''
 
     # Read required gridded data, LCZ, WRF grid, and
     # original WRF (for original MODIS urban mask)
-    src_data = rxr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
+    src_data = rxr.open_rasterio(info['src_file'])[0, :, :]
     dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
 
     # Mask natural LCZs before majority filtering.
@@ -803,7 +881,6 @@ def _adjust_greenfrac_landusef(
 
 def add_frc_lu_index_2_wrf(
         info,
-        LCZ_BAND,
         FRC_THRESHOLD,
         LCZ_NAT_MASK,
         ucp_table,
@@ -822,7 +899,6 @@ def add_frc_lu_index_2_wrf(
         info=info,
         ucp_key=ucp_key,
         RESAMPLE_TYPE='average',
-        LCZ_BAND=LCZ_BAND,
         FRC_THRESHOLD = FRC_THRESHOLD,
         ucp_table=ucp_table
     )
@@ -851,7 +927,6 @@ def add_frc_lu_index_2_wrf(
         info=info,
         frc_urb2d=dst_data['FRC_URB2D'],
         LCZ_NAT_MASK=LCZ_NAT_MASK,
-        LCZ_BAND=LCZ_BAND,
     )
 
     # 2) as LU_INDEX = 30 to 41, as LCZ classes.
@@ -892,11 +967,7 @@ def _initialize_urb_param(
 
     return dst_data
 
-def add_urb_params_to_wrf(
-        info,
-        LCZ_BAND,
-        ucp_table,
-):
+def add_urb_params_to_wrf(info, ucp_table):
 
     ''' Map, aggregate and add lcz-based UCP values to WRF'''
 
@@ -931,21 +1002,18 @@ def add_urb_params_to_wrf(
                 info=info,
                 ucp_key=ucp_key,
                 RESAMPLE_TYPE='average',
-                LCZ_BAND=LCZ_BAND,
                 ucp_table=ucp_table,
             )
         elif ucp_key in ['HGT_URB2D']:
             ucp_res = _hgt_resampler(
                 info=info,
                 RESAMPLE_TYPE='average',
-                LCZ_BAND=LCZ_BAND,
                 ucp_table=ucp_table,
             )
         elif ucp_key in ['HI_URB2D']:
             ucp_res, nbui_max = _hi_resampler(
                 info=info,
                 RESAMPLE_TYPE='average',
-                LCZ_BAND=LCZ_BAND,
                 ucp_table=ucp_table,
             )
 
@@ -1289,6 +1357,8 @@ def checks_and_cleaning(info, ucp_table):
     print('Cleaning up ...')
     if os.path.exists(info['dst_gridinfo']):
         os.remove(info['dst_gridinfo'])
+    if os.path.exists(info['src_file_clean']):
+        os.remove(info['src_file_clean'])
 
 ###############################################################################
 ##### __main__  scope

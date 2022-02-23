@@ -1,22 +1,62 @@
 import os
 from unittest import mock
 import pytest
-import rioxarray
+import rioxarray as rxr
 from affine import Affine
 import shutil
 import w2w.w2w
 from w2w.w2w import main
-from w2w.w2w import check_lcz_wrf_extent
+from w2w.w2w import _check_lcz_wrf_extent
+from w2w.w2w import _replace_lcz_number
+from w2w.w2w import check_lcz_integrity
 from w2w.w2w import wrf_remove_urban
 from w2w.w2w import create_wrf_gridinfo
+from w2w.w2w import _get_SW_BW
 from w2w.w2w import calc_distance_coord
 import pandas as pd
-import xarray
+import xarray as xr
+import numpy as np
+import pandas as pd
+from pytest import approx
 
 
 def test_argparse_shows_help():
     with pytest.raises(SystemExit):
         main(['--help'])
+
+def test_replace_lcz_number_ok(capsys):
+    info = {
+        'src_file': 'testing/Shanghai.tif',
+    }
+    LCZ_BAND = 0
+    lcz = rxr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
+
+    lcz_100 = np.array(
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+         101, 102, 103, 104, 105, 106, 107]
+    )
+    lcz_new = _replace_lcz_number(
+            lcz=lcz,
+            lcz_to_change=lcz_100,
+        )
+
+    # Test whether LCZs 100+ are converted to 11+
+    assert (np.unique(lcz_new.data).tolist() ==
+            [1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, 15, 17])
+
+
+def test_check_lcz_integrity_crs_changed(capsys, tmpdir):
+
+    info = {
+        'src_file': 'testing/Shanghai.tif',
+        'src_file_clean': os.path.join(tmpdir, 'Shanghai_clean.tif'),
+        'dst_file': 'testing/geo_em.d02_Shanghai.nc',
+    }
+    LCZ_BAND = 0
+    check_lcz_integrity(info=info, LCZ_BAND=LCZ_BAND)
+    out, _ = capsys.readouterr()
+    assert 'LCZ map reprojected to WGS84 (EPSG:4326).' in out
+
 
 
 def test_check_lcz_wrf_extent_lcz_too_small(capsys):
@@ -24,19 +64,24 @@ def test_check_lcz_wrf_extent_lcz_too_small(capsys):
         'src_file': 'testing/lcz_too_small.tif',
         'dst_file': 'sample_data/geo_em.d04.nc',
     }
+    LCZ_BAND = 0
+
+    lcz = rxr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
+    wrf = xr.open_dataset(info['dst_file'])
+
     with pytest.raises(SystemExit):
-        check_lcz_wrf_extent(info=info)
+        _check_lcz_wrf_extent(lcz=lcz, wrf=wrf)
 
     out, _ = capsys.readouterr()
     assert (
-        'ERROR: LCZ domain should be larger than WRF domain in all directions.'
+        'ERROR: LCZ domain should be larger than WRF domain'
     ) in out
     # TODO maybe add the actual values to check they are correct
     assert (
         'ERROR: LCZ domain should be larger than WRF domain '
-        'in all directions.\nLCZ bounds  (xmin, ymin, xmax, ymax): '
+        'in all directions.\nLCZ bounds (xmin, ymin, xmax, ymax): '
     ) in out
-    assert 'WRF bounds  (xmin, ymin, xmax, ymax): ' in out
+    assert 'WRF bounds (xmin, ymin, xmax, ymax): ' in out
 
 
 def test_check_lcz_wrf_extent_ok(capsys):
@@ -44,10 +89,24 @@ def test_check_lcz_wrf_extent_ok(capsys):
         'src_file': 'sample_data/lcz_zaragoza.tif',
         'dst_file': 'sample_data/geo_em.d04.nc',
     }
-    check_lcz_wrf_extent(info=info)
-    out, _ = capsys.readouterr()
-    assert 'OK - LCZ domain is covering WRF domain' in out
+    LCZ_BAND = 0
 
+    lcz = rxr.open_rasterio(info['src_file'])[LCZ_BAND, :, :]
+    wrf = xr.open_dataset(info['dst_file'])
+    _check_lcz_wrf_extent(lcz=lcz, wrf=wrf)
+    out, _ = capsys.readouterr()
+    assert '> LCZ domain is covering WRF domain' in out
+
+def test_check_lcz_integrity_clean_file_written(tmpdir):
+
+    info = {
+        'src_file': 'testing/Shanghai.tif',
+        'dst_file': 'testing/geo_em.d02_Shanghai.nc',
+        'src_file_clean': os.path.join(tmpdir, 'Shanghai_clean.tif'),
+    }
+    LCZ_BAND = 0
+    check_lcz_integrity(info=info, LCZ_BAND=LCZ_BAND)
+    assert os.listdir(tmpdir) == ['Shanghai_clean.tif']
 
 @pytest.mark.parametrize(
     ('dst_file', 'dst_nu_file'),
@@ -61,9 +120,9 @@ def test_wrf_remove_urban(tmpdir, dst_file, dst_nu_file):
         'dst_file': dst_file,
         'dst_nu_file': os.path.join(tmpdir, dst_nu_file)
     }
-    old_ds = xarray.open_dataset(info['dst_file'])
+    old_ds = xr.open_dataset(info['dst_file'])
     wrf_remove_urban(info=info, NPIX_NLC=9)
-    ds = xarray.open_dataset(info['dst_nu_file'])
+    ds = xr.open_dataset(info['dst_nu_file'])
     # check lused 13 was reclassified to 12
     assert ds.LU_INDEX.values[0][2][2] == 12
     assert ds.LU_INDEX.values[0][2][3] == 12
@@ -106,12 +165,35 @@ def test_create_wrf_gridinfo(tmpdir):
     }
     create_wrf_gridinfo(info)
     assert os.listdir(tmpdir) == ['dst_gridinfo.tif']
-    tif = rioxarray.open_rasterio(info['dst_gridinfo'])
+    tif = rxr.open_rasterio(info['dst_gridinfo'])
     assert tif.rio.crs.to_proj4() == '+init=epsg:4326'
     assert tif.rio.transform() == Affine(
             0.01000213623046875, 0.0, -1.4050254821777344,
             0.0, 0.010000228881835938, 41.480000495910645,
     )
+
+def test_get_SW_BW():
+
+    ucp_table = pd.read_csv(
+        'w2w/resources/LCZ_UCP_lookup.csv',
+         index_col=0
+    ).iloc[:17, :]
+
+    SW, BW = _get_SW_BW(ucp_table)
+
+    assert approx(list(SW[:10])) == [
+        20.0, 14.0, 5.2, 50.0, 35.0,
+        13.0, 3.333333, 32.5, 43.333333, 28.571428
+    ]
+    assert approx(list(BW[:10])) == [
+        22.222222, 22.0, 9.533333, 42.857142, 26.25,
+        13.0, 25.0, 28.888888, 43.333333, 23.809523
+    ]
+
+#def test_ucp_resampler_LB_URB2D(capsys):
+
+#    ucp_key = 'LB_URB2D'
+
 
 
 def test_full_run_with_example_data(tmpdir):
