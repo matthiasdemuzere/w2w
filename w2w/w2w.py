@@ -450,7 +450,8 @@ def _ucp_resampler(
         **kwargs,
 ):
 
-    '''Helper function to resample lcz ucp data to WRF grid'''
+    '''Helper function to resample lcz ucp data ('FRC_URB2D', 'MH_URB2D',
+    'STDH_URB2D', 'LB_URB2D', 'LF_URB2D', 'LP_URB2D') to WRF grid'''
 
     # Read gridded data: LCZ and WRF grid
     src_data = rxr.open_rasterio(info['src_file_clean'])[0, :, :]
@@ -524,7 +525,8 @@ def _hgt_resampler(
         ucp_table,
 ):
 
-    '''Helper function to resample lcz ucp data to WRF grid'''
+    '''Helper function to resample HGT_URB2D (=Area Weighted
+    Mean Building Height ) data to WRF grid'''
 
     # Read gridded data: LCZ and WRF grid
     src_data = rxr.open_rasterio(info['src_file'])[0, :, :]
@@ -889,8 +891,8 @@ def add_frc_lu_index_2_wrf(
         info=info,
         ucp_key=ucp_key,
         RESAMPLE_TYPE='average',
-        FRC_THRESHOLD = FRC_THRESHOLD,
-        ucp_table=ucp_table
+        ucp_table=ucp_table,
+        FRC_THRESHOLD=FRC_THRESHOLD,
     )
 
     # Add to geo_em* that that has no MODIS urban
