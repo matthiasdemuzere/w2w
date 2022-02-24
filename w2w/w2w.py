@@ -424,6 +424,23 @@ def _get_SW_BW(ucp_table):
 
     return SW, BW
 
+def _get_lcz_arr(src_data, info):
+
+    ''' Get LCZ data as array, setting non-built pixels to 0'''
+
+    # Get mask of selected built LCZs
+    lcz_urb_mask = xr.DataArray(
+        np.in1d(src_data, info['BUILT_LCZ']).reshape(src_data.shape),
+        dims=src_data.dims, coords=src_data.coords
+    )
+
+    # Get LCZ class values only.
+    lcz_arr = src_data.data.astype(np.int32)
+
+    # Set LCZ classes not in BUILT_LCZ to 0
+    lcz_arr[~lcz_urb_mask] = 0
+
+    return lcz_arr
 
 def _ucp_resampler(
         info,
@@ -464,16 +481,7 @@ def _ucp_resampler(
         lookup = ucp_table[ucp_key].loc[info['BUILT_LCZ']]
 
     # Get mask of selected built LCZs
-    lcz_urb_mask = xr.DataArray(
-        np.in1d(src_data, info['BUILT_LCZ']).reshape(src_data.shape),
-        dims=src_data.dims, coords=src_data.coords
-    )
-
-    # Get LCZ class values only.
-    lcz_arr = src_data.data.astype(np.int32)
-
-    # Set LCZ classes not in BUILT_LCZ to 0
-    lcz_arr[~lcz_urb_mask] = 0
+    lcz_arr = _get_lcz_arr(src_data, info)
 
     # Make replacer object to map UCP values on LCZ class values
     replacer = np.zeros((max(info['BUILT_LCZ']) + 1,), object)
@@ -531,16 +539,7 @@ def _hgt_resampler(
     lookup_denom = BW.loc[info['BUILT_LCZ']] ** 2
 
     # Get mask of selected built LCZs
-    lcz_urb_mask = xr.DataArray(
-        np.in1d(src_data, info['BUILT_LCZ']).reshape(src_data.shape),
-        dims=src_data.dims, coords=src_data.coords
-    )
-
-    # Get LCZ class values only.
-    lcz_arr = src_data.data.astype(np.int32)
-
-    # Set LCZ classes not in BUILT_LCZ to 0
-    lcz_arr[~lcz_urb_mask] = 0
+    lcz_arr = _get_lcz_arr(src_data, info)
 
     # Make replacer object for nominator
     replacer_nom = np.zeros((max(info['BUILT_LCZ']) + 1,), object)
@@ -705,16 +704,7 @@ def _hi_resampler(
     dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
 
     # Get mask of selected built LCZs
-    lcz_urb_mask = xr.DataArray(
-        np.in1d(src_data, info['BUILT_LCZ']).reshape(src_data.shape),
-        dims=src_data.dims, coords=src_data.coords
-    )
-
-    # Get LCZ class values only.
-    lcz_arr = src_data.data.astype(np.int32)
-
-    # Set LCZ classes not in BUILT_LCZ to 0
-    lcz_arr[~lcz_urb_mask] = 0
+    lcz_arr = _get_lcz_arr(src_data, info)
 
     # Compute the building height densities.
     df_hi = _compute_hi_distribution(info, ucp_table=ucp_table)

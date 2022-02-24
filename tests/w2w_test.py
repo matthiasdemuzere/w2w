@@ -12,6 +12,7 @@ from w2w.w2w import check_lcz_integrity
 from w2w.w2w import wrf_remove_urban
 from w2w.w2w import create_wrf_gridinfo
 from w2w.w2w import _get_SW_BW
+from w2w.w2w import _get_lcz_arr
 from w2w.w2w import calc_distance_coord
 import pandas as pd
 import xarray as xr
@@ -24,7 +25,7 @@ def test_argparse_shows_help():
     with pytest.raises(SystemExit):
         main(['--help'])
 
-def test_replace_lcz_number_ok(capsys):
+def test_replace_lcz_number_ok():
     info = {
         'src_file': 'testing/Shanghai.tif',
     }
@@ -190,9 +191,29 @@ def test_get_SW_BW():
         13.0, 25.0, 28.888888, 43.333333, 23.809523
     ]
 
-#def test_ucp_resampler_LB_URB2D(capsys):
+def test_get_lcz_arr():
 
-#    ucp_key = 'LB_URB2D'
+    info = {
+        'src_file': 'sample_data/lcz_zaragoza.tif',
+        'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    }
+
+    # Read gridded data: LCZ and WRF grid
+    src_data = rxr.open_rasterio(info['src_file'])[0, :, :]
+
+    lcz_arr = _get_lcz_arr(
+        src_data=src_data,
+        info=info
+    )
+
+    # Make sure shape is fine
+    assert lcz_arr.shape == (765, 1210)
+    # Only built LCZs labels should be in array.
+    assert list(np.unique(lcz_arr)) == [0, 2, 3, 5, 6, 8, 9]
+    # All other LCZs should be masked = 0.
+    assert np.sum(lcz_arr == 0) == 905938
+    # Type should be integere, to make sure lookup works
+    assert lcz_arr.dtype == np.int32
 
 
 
