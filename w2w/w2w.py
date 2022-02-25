@@ -10,7 +10,7 @@ import os, sys
 import argparse
 from argparse import RawTextHelpFormatter
 import traceback
-from typing import Dict
+from typing import Dict, Any
 from scipy import stats
 from pyproj import CRS
 
@@ -411,7 +411,7 @@ def create_wrf_gridinfo(info: Dict[str, str]) -> None:
     da_lu.rio.write_crs("epsg:4326", inplace=True)
     da_lu.rio.to_raster(info['dst_gridinfo'])
 
-def _get_SW_BW(ucp_table):
+def _get_SW_BW(ucp_table) -> Any:
 
     '''Get Street and Building Width'''
 
@@ -424,7 +424,7 @@ def _get_SW_BW(ucp_table):
 
     return SW, BW
 
-def _get_lcz_arr(src_data, info):
+def _get_lcz_arr(src_data, info)-> Any:
 
     ''' Get LCZ data as array, setting non-built pixels to 0'''
 
@@ -448,7 +448,7 @@ def _ucp_resampler(
         RESAMPLE_TYPE,
         ucp_table,
         **kwargs,
-):
+)-> Any:
 
     '''Helper function to resample lcz ucp data ('FRC_URB2D', 'MH_URB2D',
     'STDH_URB2D', 'LB_URB2D', 'LF_URB2D', 'LP_URB2D') to WRF grid'''
@@ -523,7 +523,7 @@ def _hgt_resampler(
         info,
         RESAMPLE_TYPE,
         ucp_table,
-):
+)-> Any:
 
     '''Helper function to resample HGT_URB2D (=Area Weighted
     Mean Building Height ) data to WRF grid'''
@@ -592,33 +592,62 @@ def _hgt_resampler(
 
     return hgt_urb2d
 
-def _scale_hi(
-        array,
-):
+def _get_truncated_normal_sample(lcz_i,
+                                 ucp_table,
+                                 SAMPLE_SIZE=100000) -> Any:
 
-    ''' Helper function to scale HI_URB2D to 100%'''
+    ''' Helper function to return bounded normal distribution sample'''
 
-    return [(float(i) / sum(array) * 100.0) for i in array]
+    # Create instance of a truncated normal distribution
+    low = ucp_table['MH_URB2D_MIN'].loc[lcz_i]
+    mean = ucp_table['MH_URB2D'].loc[lcz_i]
+    upp = ucp_table['MH_URB2D_MAX'].loc[lcz_i]
+    sd = (ucp_table['MH_URB2D_MAX'].loc[lcz_i] -
+            ucp_table['MH_URB2D_MIN'].loc[lcz_i]) / 4
 
-def _get_truncated_normal(
-        mean,
-        sd,
-        low,
-        upp,
-):
+    hi_inst = truncnorm(
+        (low - mean) / sd, (upp - mean) / sd, loc=mean, scale=sd
+    )
 
-    ''' Helper function to return bounded normal distribution'''
+    # populate with large enough sample for accuracy
+    hi_sample = hi_inst.rvs(SAMPLE_SIZE)
 
-    return truncnorm(
-        (low - mean) / sd, (upp - mean) / sd, loc=mean, scale=sd)
+    return hi_sample
+
+def _check_hi_values(lcz_i, hi_sample, ucp_table, ERROR_MARGIN) -> None:
+
+    hi_metrics = [
+        'MH_URB2D_MIN',
+        'MH_URB2D_MAX',
+        'MH_URB2D',
+    ]
+    # Produce warning if approximated HI_URB2D distribution metrics
+    # are not as expected: using a ERROR_MARGIN % marging here.
+    for hi_metric in hi_metrics:
+
+        if hi_metric == 'MH_URB2D_MIN':
+            hi_sample_values = hi_sample.min()
+        elif hi_metric == 'MH_URB2D_MAX':
+            hi_sample_values = hi_sample.max()
+        elif hi_metric == 'MH_URB2D':
+            hi_sample_values = hi_sample.mean()
+
+        if not ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN) < \
+               hi_sample_values < \
+               ucp_table[hi_metric].loc[lcz_i] * (1 + ERROR_MARGIN):
+            print(f"WARNING: {hi_metric} distribution not in "
+                  f"expected range ({ERROR_MARGIN*100}% marging) for LCZ class {lcz_i}: "
+                  f"modelled: {np.round(hi_sample_values, 2)} | "
+                  f"expected: [{np.round(ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN),2)} - "
+                  f"{np.round(ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN),2)}]")
 
 def _compute_hi_distribution(
         info,
         ucp_table,
-        SAMPLE_SIZE=5000000,
-        DIST_MARGIN=0.15,
+        SAMPLE_SIZE=100000,
+        ERROR_MARGIN=0.05,
         # HI_THRES_MIN=5,
-):
+) -> Any:
 
     ''' Helper function to compute building height distribution'''
 
@@ -636,61 +665,39 @@ def _compute_hi_distribution(
         # LCZ 15 = paved, and considered to have no buildings (values = 0%)
         if not i == 15:
 
-            # Create instance of a truncated normal distribution
-            hi_inst = _get_truncated_normal(
-                mean=ucp_table['MH_URB2D'].loc[i],
-                sd=(ucp_table['MH_URB2D_MAX'].loc[i]-
-                    ucp_table['MH_URB2D_MIN'].loc[i])/4,
-                low=ucp_table['MH_URB2D_MIN'].loc[i],
-                upp=ucp_table['MH_URB2D_MAX'].loc[i]
+            # Make the sample
+            hi_sample = _get_truncated_normal_sample(
+                lcz_i=i,
+                ucp_table=ucp_table,
+                SAMPLE_SIZE=SAMPLE_SIZE,
             )
 
-            # populate with large enough sample for accuracy
-            hi_sample = hi_inst.rvs(SAMPLE_SIZE)
-
-            # Produce warning if approximated HI_URB2D distribution metrics
-            # are not as expected: using a DIST_MARGIN % marging here.
-            hi_metric = 'MH_URB2D_MIN'
-            if not ucp_table[hi_metric].loc[i] * (1-DIST_MARGIN) < \
-                hi_sample.min() < \
-                ucp_table[hi_metric].loc[i] * (1+DIST_MARGIN):
-                print("WARNING: MIN of HI_URB2D distribution not in "
-                      f"expected range ({DIST_MARGIN}% marging) for LCZ class {i}: "
-                      f"modelled: {np.round(hi_sample.min(),2)} | "
-                      f"expected: [{(ucp_table[hi_metric].loc[i] * (1-DIST_MARGIN)).round(2)} - "
-                      f"{(ucp_table[hi_metric].loc[i] * (1-DIST_MARGIN)).round(2)}]")
-
-            hi_metric = 'MH_URB2D_MAX'
-            if not ucp_table[hi_metric].loc[i] * (1-DIST_MARGIN) < \
-                hi_sample.max() < \
-                ucp_table[hi_metric].loc[i] * (1+DIST_MARGIN):
-                print("WARNING: MAX of HI_URB2D distribution not in "
-                      f"expected range ({DIST_MARGIN}% marging) for LCZ class {i}: "
-                      f"modelled: {np.round(hi_sample.max(),2)} | "
-                      f"expected: [{(ucp_table[hi_metric].loc[i] * (1-DIST_MARGIN)).round(2)} - "
-                      f"{(ucp_table[hi_metric].loc[i] * (1+DIST_MARGIN)).round(2)}]")
-
-            hi_metric = 'MH_URB2D'
-            if not ucp_table[hi_metric].loc[i] * (1-DIST_MARGIN) < \
-                hi_sample.mean() < \
-                ucp_table[hi_metric].loc[i] * (1+DIST_MARGIN):
-                print("WARNING: MEAN of HI_URB2D distribution not in "
-                      f"expected range ({DIST_MARGIN}% marging) for LCZ class {i}: "
-                      f"modelled: {np.round(hi_sample.mean(),2)} | "
-                      f"expected: [{(ucp_table[hi_metric].loc[i] * (1-DIST_MARGIN)).round(2)} - "
-                      f"{(ucp_table[hi_metric].loc[i] * (1+DIST_MARGIN)).round(2)}]")
+            # Check if values are within expected bounds.
+            _check_hi_values(
+                lcz_i=i,
+                hi_sample=hi_sample,
+                ucp_table=ucp_table,
+                ERROR_MARGIN=ERROR_MARGIN,
+            )
 
             # Count the values within pre-set bins
-            cnt = np.histogram(hi_sample, bins=np.arange(0,76,5))[0]
-            cnt = cnt/(SAMPLE_SIZE/100) # Convert to %
+            count_bins = np.histogram(hi_sample, bins=np.arange(0,76,5))[0]
+            count_bins = count_bins/(SAMPLE_SIZE/100) # Convert to %
 
             # Add to dataframe
-            df_hi.loc[i,:] = cnt
+            df_hi.loc[i,:] = count_bins
 
         # Set nans to zero
         df_hi = df_hi.fillna(0)
 
     return df_hi
+
+def _scale_hi(array) -> Any:
+
+    ''' Helper function to scale HI_URB2D to 100%'''
+
+    scaled_array = [(float(i) / sum(array) * 100.0) for i in array]
+    return scaled_array
 
 def _hi_resampler(
         info,
@@ -768,7 +775,7 @@ def _lcz_resampler(
         LCZ_NAT_MASK,
 ):
 
-    '''Helper function to resample lcz classes to WRF grid'''
+    '''Helper function to resample lcz classes to WRF grid using majority'''
 
     # Read required gridded data, LCZ, WRF grid, and
     # original WRF (for original MODIS urban mask)

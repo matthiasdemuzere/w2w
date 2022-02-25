@@ -16,7 +16,10 @@ from w2w.w2w import _get_lcz_arr
 from w2w.w2w import _ucp_resampler
 from w2w.w2w import _hgt_resampler
 from w2w.w2w import _scale_hi
+from w2w.w2w import _get_truncated_normal_sample
+from w2w.w2w import _check_hi_values
 from w2w.w2w import _compute_hi_distribution
+from w2w.w2w import _hi_resampler
 from w2w.w2w import calc_distance_coord
 import pandas as pd
 import xarray as xr
@@ -182,7 +185,7 @@ def test_get_SW_BW():
     ucp_table = pd.read_csv(
         'w2w/resources/LCZ_UCP_lookup.csv',
          index_col=0
-    ).iloc[:17, :]
+    )
 
     SW, BW = _get_SW_BW(ucp_table)
 
@@ -220,72 +223,64 @@ def test_get_lcz_arr():
     assert lcz_arr.dtype == np.int32
 
 
-def test_ucp_resampler_output_values_per_paramater():
-
+@pytest.mark.parametrize(
+    ('ucp_key', 'data_sum', 'data_mean'),
+    (
+        ('MH_URB2D', 2, 1.1429937),
+        ('STDH_URB2D', 2, 0.29812142),
+        ('LB_URB2D', 1, 0.15104416),
+        ('LF_URB2D', 1, 0.07032267),
+        ('LP_URB2D', 1, 0.08072148),
+    ),
+)
+def test_ucp_resampler_output_values_per_paramater(
+        ucp_key,
+        data_sum,
+        data_mean,
+):
     info = {
         'src_file': 'sample_data/lcz_zaragoza.tif',
         'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
         'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
         'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     }
+    ucp_table = pd.read_csv('w2w/resources/LCZ_UCP_lookup.csv', index_col=0)
+    ucp_res = _ucp_resampler(
+        info=info,
+        ucp_key=ucp_key,
+        RESAMPLE_TYPE='average',
+        ucp_table=ucp_table,
+    )
+    # Parameters should be on WRF grid size
+    assert ucp_res.shape == (1, 102, 162)
+    # Per parameter, check # max values and non-0 domain average
+    assert np.sum(ucp_res.data == ucp_res.data.max()) == data_sum
+    assert approx(np.mean(ucp_res.data[ucp_res.data > 0])) == data_mean
+    # Make sure no nans are present.
+    np.sum(np.isnan(ucp_res.data)) == 0
 
-    ucp_table = pd.read_csv(
-        'w2w/resources/LCZ_UCP_lookup.csv',
-         index_col=0
-    ).iloc[:17, :]
-
-    ucp_keys = [
-        'FRC_URB2D',
-        'MH_URB2D',
-        'STDH_URB2D',
-        'LB_URB2D',
-        'LF_URB2D',
-        'LP_URB2D'
-    ]
-
-    for ucp_key in ucp_keys:
-
-        if ucp_key == 'FRC_URB2D':
-            ucp_res = _ucp_resampler(
-                info=info,
-                ucp_key=ucp_key,
-                RESAMPLE_TYPE='average',
-                ucp_table=ucp_table,
-                FRC_THRESHOLD=0.2,
-            )
-        else:
-            ucp_res = _ucp_resampler(
-                info=info,
-                ucp_key=ucp_key,
-                RESAMPLE_TYPE='average',
-                ucp_table=ucp_table,
-            )
-        # Parameters should be on WRF grid size
-        assert ucp_res.shape == (1, 102, 162)
-
-        # Per parameter, check # max values and non-0 domain average
-        if ucp_key == 'FRC_URB2D':
-            assert np.sum(ucp_res.data == ucp_res.data.max()) == 1
-            assert approx(np.mean(ucp_res.data[ucp_res.data > 0])) == 0.428921
-        elif ucp_key == 'MH_URB2D':
-            assert np.sum(ucp_res.data == ucp_res.data.max()) == 2
-            assert approx(np.mean(ucp_res.data[ucp_res.data > 0])) == 1.1429937
-        elif ucp_key == 'STDH_URB2D':
-            assert np.sum(ucp_res.data == ucp_res.data.max()) == 2
-            assert approx(np.mean(ucp_res.data[ucp_res.data > 0])) == 0.29812142
-        elif ucp_key == 'LB_URB2D':
-            assert np.sum(ucp_res.data == ucp_res.data.max()) == 1
-            assert approx(np.mean(ucp_res.data[ucp_res.data > 0])) == 0.15104416
-        elif ucp_key == 'LF_URB2D':
-            assert np.sum(ucp_res.data == ucp_res.data.max()) == 1
-            assert approx(np.mean(ucp_res.data[ucp_res.data > 0])) == 0.07032267
-        elif ucp_key == 'LP_URB2D':
-            assert np.sum(ucp_res.data == ucp_res.data.max()) == 1
-            assert approx(np.mean(ucp_res.data[ucp_res.data > 0])) == 0.08072148
-
-        # Make sure no nans are present.
-        assert np.sum(np.isnan(ucp_res.data)) == 0
-
+def test_ucp_resampler_output_values_per_paramater_frc_threshold():
+    info = {
+        'src_file': 'sample_data/lcz_zaragoza.tif',
+        'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
+        'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
+        'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    }
+    ucp_table = pd.read_csv('w2w/resources/LCZ_UCP_lookup.csv', index_col=0)
+    ucp_res = _ucp_resampler(
+        info=info,
+        ucp_key='FRC_URB2D',
+        RESAMPLE_TYPE='average',
+        ucp_table=ucp_table,
+        FRC_THRESHOLD=0.2,
+    )
+    # Parameters should be on WRF grid size
+    assert ucp_res.shape == (1, 102, 162)
+    # Per parameter, check # max values and non-0 domain average
+    assert np.sum(ucp_res.data == ucp_res.data.max()) == 1
+    assert approx(np.mean(ucp_res.data[ucp_res.data > 0])) == 0.428921
+    # Make sure no nans are present.
+    np.sum(np.isnan(ucp_res.data)) == 0
 
 def test_hgt_resampler_output_values():
 
@@ -299,7 +294,7 @@ def test_hgt_resampler_output_values():
     ucp_table = pd.read_csv(
         'w2w/resources/LCZ_UCP_lookup.csv',
          index_col=0
-    ).iloc[:17, :]
+    )
 
     ucp_res = _hgt_resampler(
         info=info,
@@ -317,6 +312,116 @@ def test_hgt_resampler_output_values():
     # Make sure no nans are present.
     assert np.sum(np.isnan(ucp_res.data)) == 0
 
+#TODO: working on this test ... does not work yet.
+def test_check_hi_values_fails_skewed_distribution_ucp_table(capsys):
+
+    lcz_i = 1
+    SAMPLE_SIZE = 100000
+    ERROR_MARGIN=0.05
+
+    # create dummpy ucp_table, with skewed distribution
+    ucp_table = pd.DataFrame(
+        index = [1],
+        columns = ['MH_URB2D_MIN', 'MH_URB2D_MAX', 'MH_URB2D']
+    )
+    ucp_table.loc[1] = [5, 75, 10]
+
+    hi_sample = _get_truncated_normal_sample(
+        lcz_i=lcz_i,
+        ucp_table=ucp_table,
+        SAMPLE_SIZE=SAMPLE_SIZE
+    )
+
+    _check_hi_values(
+        lcz_i=lcz_i,
+        hi_sample=hi_sample,
+        ucp_table=ucp_table,
+        ERROR_MARGIN=ERROR_MARGIN)
+    out, _ = capsys.readouterr()
+    assert 'distribution not in expected range (5.0% marging) ' \
+           'for LCZ class 1' in out
+
+def test_check_hi_values_fails_sample_size_too_small(capsys):
+
+    lcz_i = 6
+    SAMPLE_SIZE = 10
+    ERROR_MARGIN = 0.05
+
+    ucp_table = pd.read_csv(
+        'w2w/resources/LCZ_UCP_lookup.csv',
+         index_col=0
+    )
+
+    hi_sample = _get_truncated_normal_sample(
+        lcz_i=lcz_i,
+        ucp_table=ucp_table,
+        SAMPLE_SIZE=SAMPLE_SIZE
+    )
+
+    _check_hi_values(
+        lcz_i=lcz_i,
+        hi_sample=hi_sample,
+        ucp_table=ucp_table,
+        ERROR_MARGIN=ERROR_MARGIN)
+    out, _ = capsys.readouterr()
+    assert 'distribution not in expected range' in out
+
+def test_check_hi_values_fails_error_margin_too_small(capsys):
+
+    lcz_i = 4
+    SAMPLE_SIZE = 100000
+    ERROR_MARGIN = 0.000001
+
+    ucp_table = pd.read_csv(
+        'w2w/resources/LCZ_UCP_lookup.csv',
+         index_col=0
+    )
+
+    hi_sample = _get_truncated_normal_sample(
+        lcz_i=lcz_i,
+        ucp_table=ucp_table,
+        SAMPLE_SIZE=SAMPLE_SIZE
+    )
+
+    _check_hi_values(
+        lcz_i=lcz_i,
+        hi_sample=hi_sample,
+        ucp_table=ucp_table,
+        ERROR_MARGIN=ERROR_MARGIN)
+    out, _ = capsys.readouterr()
+    assert 'distribution not in expected range' in out
+
+def test_compute_hi_distribution_values():
+
+    info = {
+        'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    }
+
+    ucp_table = pd.read_csv(
+        'w2w/resources/LCZ_UCP_lookup.csv',
+         index_col=0
+    )
+    SAMPLE_SIZE = 100000
+    ERROR_MARGIN = 0.05
+
+    df_hi = _compute_hi_distribution(
+        info=info,
+        ucp_table=ucp_table,
+        SAMPLE_SIZE=SAMPLE_SIZE,
+        ERROR_MARGIN=ERROR_MARGIN,
+    )
+
+    # LCZ 15 has no buildings (bare rock) so distribution of building heights
+    # across all height bins should be 0.
+    assert df_hi.iloc[15].fillna(0).sum() == 0
+
+    # The mean over all height bins and built classes should be 100%
+    assert 100 == approx(df_hi.sum(axis=1)[info['BUILT_LCZ']].mean())
+
+    # Natural LCZ classes should have all 0
+    value, counts = np.unique(df_hi.loc[range(11, 18, 1)].values, return_counts=True)
+    assert value[0] == 0
+    assert counts[0] == 7*15 # 7 Natural LCZs x 15 height bins
 
 def test_scale_hi():
 
@@ -330,41 +435,38 @@ def test_scale_hi():
     # Check that all pixels sum to 100
     assert np.full((5, 5), 100.) == approx((np.sum(a_scaled, axis=0)))
 
-def test_compute_hi_distribution_values():
+def test_hi_resampler():
 
     info = {
+        'src_file': 'sample_data/lcz_zaragoza.tif',
+        'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
+        'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
         'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     }
 
-    ucp_table = pd.read_csv(
-        'w2w/resources/LCZ_UCP_lookup.csv',
-         index_col=0
-    ).iloc[:17, :]
+    ucp_table = pd.read_csv('w2w/resources/LCZ_UCP_lookup.csv', index_col=0)
 
-    df_hi = _compute_hi_distribution(
+    hi_arr, nbui = _hi_resampler(
         info=info,
+        RESAMPLE_TYPE='average',
         ucp_table=ucp_table,
-        SAMPLE_SIZE=5000000,
-        DIST_MARGIN=0.15,
     )
 
-    # LCZ 15 has no buildings (bare rock) so distribution of building heights
-    # across all height bins should be 0.
-    assert df_hi.iloc[15].fillna(0).sum() == 0
+    # Output should be 15 building height classes on WRF grid
+    assert hi_arr.shape == (15, 102, 162)
 
-    # The mean over all height bins and built classes should be 100%
-    assert 100. == approx(df_hi.sum(axis=1)[info['BUILT_LCZ']].mean())
+    # Output can not contain % values below 5% (except 0%)
+    hi_arr_no_zero = hi_arr[hi_arr != 0]
+    assert np.sum(hi_arr_no_zero < 5) == 0
 
-    # Natural LCZ classes should have all 0
-    value, cnts = np.unique(df_hi.loc[range(11, 18, 1)].values, return_counts=True)
-    assert value[0] == 0
-    assert cnts[0] == 7*15 # 7 Natural LCZs x 15 height bins
+    # % per building height class should sum to 100 for urban pixels (1057)
+    hi_arr_sum = hi_arr.sum(axis=0)
+    assert hi_arr_sum[hi_arr_sum != 0].mean() == 100
 
-    # LCZ classes with same height properties (1&4, 2&5, 3&6),
-    # should have the same HI distributions
-    for i in [1,2,3]:
-        assert (df_hi.loc[[i]].values.round(0) == \
-                df_hi.loc[[i+3]].values.round(0)).all()
+    # Max number of HI intervals over all grid cells should be 5
+    assert nbui == 5
+
+
 
 
 
