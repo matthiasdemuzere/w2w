@@ -22,6 +22,7 @@ from w2w.w2w import _check_hi_values
 from w2w.w2w import _compute_hi_distribution
 from w2w.w2w import _hi_resampler
 from w2w.w2w import _lcz_resampler
+from w2w.w2w import add_frc_lu_index_2_wrf
 from w2w.w2w import calc_distance_coord
 import pandas as pd
 import xarray as xr
@@ -525,31 +526,52 @@ def test_lcz_resampler_lcz_nat_mask_on_off(
     # Make sure that nans are actually present when masking non-built LCZs
     assert np.isnan(lcz_values_def).any() == nan_present
 
-def test_lcz_resampler_lcz_nat_mask_on():
+def test_add_frc_lu_index_2_wrf(tmpdir):
 
     info = {
         'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
+        'dst_file': 'sample_data/geo_em.d04.nc',
+        'dst_nu_file': 'testing/geo_em.d04_NoUrban.nc',
         'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
+        'dst_lcz_params_file': os.path.join(tmpdir, 'geo_em.d04_LCZ_params.nc'),
+        'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     }
 
-    src_data = rxr.open_rasterio(info['src_file_clean'])[0, :, :]
-    dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
+    ucp_table = pd.read_csv('w2w/resources/LCZ_UCP_lookup.csv', index_col=0)
 
+    frc_mask = add_frc_lu_index_2_wrf(
+        info = info,
+        FRC_THRESHOLD = 0.2,
+        LCZ_NAT_MASK = True,
+        ucp_table = ucp_table,
+    )
 
+    # Check if LCZ params file is produced
+    assert os.listdir(tmpdir) == ['geo_em.d04_LCZ_params.nc']
 
-    lcz_2_wrf = reproject(
-        src_data,
-        dst_grid,
-        src_transform=src_data.rio.transform(),
-        src_crs=src_data.rio.crs,
-        dst_transform=dst_grid.rio.transform(),
-        dst_crs=dst_grid.rio.crs,
-        resampling=Resampling['mode'])[0].values
+    # frc_mask is used as a mask to set LANDUSEF = 1 in the extent file
+    # It should have the WRF grid extent, and be binary
+    assert frc_mask.shape == (102, 162)
+    assert frc_mask.dtype == bool
 
-    # With natural masking off, majority filtering also includes
-    # Natural classes
-    all_lczs = list(np.unique(lcz_2_wrf))
-    assert all(x in all_lczs for x in range(11,18,1))
+    # LU_Index should be expanded, reflecting LCZ classes between 31-41.
+    # Highest class available in sample data is LCZ 8 (39)
+    dst_params = xr.open_dataset(info['dst_lcz_params_file'])
+    assert dst_params['LU_INDEX'].max().data == 39
+
+    # The 41 category should also be embedded within the attributes' description
+    assert '41-category' in dst_params['LANDUSEF'].attrs['description']
+
+    # GREENFRAC is adjusted, because of LCZ implementation
+    # Can be - or +, depending on conversion natural to LCZ land.
+    dst_nu = xr.open_dataset(info['dst_nu_file'])
+    assert (dst_params['GREENFRAC'][0,:,:,:].mean(axis=0) -
+            dst_nu['GREENFRAC'][0,:,:,:].mean(axis=0)).data.min() == approx(-0.193724)
+    assert (dst_params['GREENFRAC'][0,:,:,:].mean(axis=0) -
+            dst_nu['GREENFRAC'][0,:,:,:].mean(axis=0)).data.max() == approx(0.31252602)
+
+    # If done properly, the Landuse Fraction should still add up to 1
+    assert np.unique(dst_params['LANDUSEF'][0,:,:,:].sum(axis=0)) == np.array(1)
 
 
 def test_full_run_with_example_data(tmpdir):
