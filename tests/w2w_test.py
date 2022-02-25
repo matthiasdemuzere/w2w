@@ -65,7 +65,7 @@ def test_check_lcz_integrity_crs_changed(capsys, tmpdir):
     LCZ_BAND = 0
     check_lcz_integrity(info=info, LCZ_BAND=LCZ_BAND)
     out, _ = capsys.readouterr()
-    assert 'LCZ map reprojected to WGS84 (EPSG:4326).' in out
+    assert 'LCZ map reprojected to WGS84 (EPSG:4326)' in out
 
 
 
