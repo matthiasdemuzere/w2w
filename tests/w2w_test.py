@@ -3,6 +3,7 @@ from unittest import mock
 import pytest
 import rioxarray as rxr
 from affine import Affine
+from rasterio.warp import reproject, Resampling
 import shutil
 import w2w.w2w
 from w2w.w2w import main
@@ -20,6 +21,7 @@ from w2w.w2w import _get_truncated_normal_sample
 from w2w.w2w import _check_hi_values
 from w2w.w2w import _compute_hi_distribution
 from w2w.w2w import _hi_resampler
+from w2w.w2w import _lcz_resampler
 from w2w.w2w import calc_distance_coord
 import pandas as pd
 import xarray as xr
@@ -438,7 +440,6 @@ def test_scale_hi():
 def test_hi_resampler():
 
     info = {
-        'src_file': 'sample_data/lcz_zaragoza.tif',
         'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
         'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
         'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
@@ -467,8 +468,88 @@ def test_hi_resampler():
     assert nbui == 5
 
 
+@pytest.mark.parametrize(
+    ('lcz_nat_mask', 'lcz_values', 'lcz_counts', 'nan_present'),
+    (
+        (False,
+         np.array([ 2.,  3.,  5.,  6.,  8.,  9., 11., 12., 13., 14., 15., 16., 17.]),
+         np.array([   17,     3,     1,    82,    95,     5,   175,  1498,   476,
+       12077,   103,  1966,    26]),
+         False,
+         ),
+        (True,
+         np.array([ 2.,  3.,  5.,  6.,  8.,  9.]),
+         np.array([   22,   154,     5,  1022,   266,   327, 14728]),
+         True,
+         )
+    ),
+)
+
+def test_lcz_resampler_lcz_nat_mask_on_off(
+        lcz_nat_mask,
+        lcz_values,
+        lcz_counts,
+        nan_present,
+):
+
+    info = {
+        'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
+        'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
+        'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    }
+
+    src_data = rxr.open_rasterio(info['src_file_clean'])[0, :, :]
+    dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
+
+    # Mask natural LCZs before majority filtering.
+    if lcz_nat_mask:
+        src_data = src_data.where(
+            src_data.isin(info['BUILT_LCZ'])
+        ).copy()
+
+    lcz_2_wrf = reproject(
+        src_data,
+        dst_grid,
+        src_transform=src_data.rio.transform(),
+        src_crs=src_data.rio.crs,
+        dst_transform=dst_grid.rio.transform(),
+        dst_crs=dst_grid.rio.crs,
+        resampling=Resampling['mode'])[0].values
+
+    # With natural masking off, majority filtering also includes
+    # Natural classes
+    lcz_values_def, lcz_counts_def = np.unique(lcz_2_wrf, return_counts=True)
+    assert (lcz_values_def[~np.isnan(lcz_values_def)] == lcz_values).all()
+    assert (lcz_counts_def == lcz_counts).all()
+
+    # Make sure that nans are actually present when masking non-built LCZs
+    assert np.isnan(lcz_values_def).any() == nan_present
+
+def test_lcz_resampler_lcz_nat_mask_on():
+
+    info = {
+        'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
+        'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
+    }
+
+    src_data = rxr.open_rasterio(info['src_file_clean'])[0, :, :]
+    dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
 
 
+
+    lcz_2_wrf = reproject(
+        src_data,
+        dst_grid,
+        src_transform=src_data.rio.transform(),
+        src_crs=src_data.rio.crs,
+        dst_transform=dst_grid.rio.transform(),
+        dst_crs=dst_grid.rio.crs,
+        resampling=Resampling['mode'])[0].values
+
+    # With natural masking off, majority filtering also includes
+    # Natural classes
+    all_lczs = list(np.unique(lcz_2_wrf))
+    assert all(x in all_lczs for x in range(11,18,1))
 
 
 def test_full_run_with_example_data(tmpdir):

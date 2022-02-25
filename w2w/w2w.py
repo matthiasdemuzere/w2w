@@ -529,7 +529,7 @@ def _hgt_resampler(
     Mean Building Height ) data to WRF grid'''
 
     # Read gridded data: LCZ and WRF grid
-    src_data = rxr.open_rasterio(info['src_file'])[0, :, :]
+    src_data = rxr.open_rasterio(info['src_file_clean'])[0, :, :]
     dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
 
     # Street width extracted from S02012 Building heighht and H2W.
@@ -709,7 +709,7 @@ def _hi_resampler(
     '''Helper function to resample ucp HI_URB2D_URB2D data to WRF grid'''
 
     # Read gridded data: LCZ and WRF grid
-    src_data = rxr.open_rasterio(info['src_file'])[0, :, :]
+    src_data = rxr.open_rasterio(info['src_file_clean'])[0, :, :]
     dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
 
     # Get mask of selected built LCZs
@@ -779,7 +779,7 @@ def _lcz_resampler(
 
     # Read required gridded data, LCZ, WRF grid, and
     # original WRF (for original MODIS urban mask)
-    src_data = rxr.open_rasterio(info['src_file'])[0, :, :]
+    src_data = rxr.open_rasterio(info['src_file_clean'])[0, :, :]
     dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
 
     # Mask natural LCZs before majority filtering.
