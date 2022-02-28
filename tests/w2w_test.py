@@ -620,47 +620,6 @@ def test_initialize_urb_param(
     # All attributes available?
     assert dst_final['URB_PARAM'].attrs[att_name] == att_value
 
-@pytest.mark.parametrize(
-    ('urb_param_name', 'urb_param_index','urb_param_val_min','urb_param_val_max'),
-    (
-        ('LP_URB2D', 91, 0.1, 0.6),
-        ('MH_URB2D', 92, 1.6, 17.5),
-        ('STDH_URB2D', 93, 0.4, 3.8),
-        ('HGT_URB2D', 94, 6.5, 17.5),
-        ('LB_URB2D', 95, 0.2, 1.6),
-        ('LF_URB2D', 96, 0.1, 1.0),
-        ('HI_URB2D', 118, 0.0, 18.1),
-    ),
-)
-def test_add_urb_params_to_wrf_urb_param_output(
-        urb_param_name,
-        urb_param_index,
-        urb_param_val_min,
-        urb_param_val_max,
-):
-    info = {
-        'dst_lcz_params_file': 'testing/geo_em.d04_LCZ_params.nc',
-    }
-
-    # Initialize empty URB_PARAM in final wrf file,
-    # with all zeros and proper attributes
-    ds_lcz_params = xr.open_dataset(info['dst_lcz_params_file'])
-
-    # get frc_mask, to only set values where FRC_URB2D > 0.
-    frc_mask = ds_lcz_params.FRC_URB2D.values[0,:,:] != 0
-
-    # Resamples params should have same grid
-    assert ds_lcz_params['URB_PARAM'][:, urb_param_index-1,:,:].shape == (1, 102, 162)
-
-    # Pixels that are masked by frc_mask should be 0
-    assert np.sum(ds_lcz_params['URB_PARAM'].data[:, urb_param_index - 1, frc_mask == 0]) == 0
-
-    # Checl min and max values per urban parameter
-    assert ds_lcz_params['URB_PARAM'].data[:, urb_param_index - 1, frc_mask != 0]\
-               .min().round(1) == approx(urb_param_val_min)
-    assert ds_lcz_params['URB_PARAM'].data[:, urb_param_index - 1, frc_mask != 0]\
-               .max().round(1) == approx(urb_param_val_max)
-
 
 def test_full_run_with_example_data(tmpdir):
     input_files = (

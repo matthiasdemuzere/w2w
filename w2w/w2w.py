@@ -1042,6 +1042,10 @@ def add_urb_params_to_wrf(info, ucp_table):
     # Make sure URB_PARAM is float32
     dst_final['URB_PARAM'] = dst_final.URB_PARAM.astype('float32')
 
+    # Expand attribute title
+    att_title = dst_final.attrs['TITLE']
+    dst_final.attrs['TITLE'] = f"{att_title}, perturbed by W2W"
+
     # Add/Change some additional global attributes,
     # including NBUI_MAX = max. nr. of HI intervals over the grid
     glob_attrs = {
@@ -1052,11 +1056,13 @@ def add_urb_params_to_wrf(info, ucp_table):
     for key in glob_attrs.keys():
         dst_final.attrs[key] = np.intc(glob_attrs[key])
 
-    #TODO: add final repo link when done.
     #Add DESCRIPTION in attrs, referring to tool
-    gh_repo = 'https://github.com/matthiasdemuzere/wrf-lcz-KL'
+    gh_ref = "Demuzere, M., Argüeso, D., Zonato, A., & Kittner, J. (2021). \n" \
+             "W2W: A Python package that injects WUDAPT's Local Climate Zone \n" \
+             "information in WRF [Computer software]. \n" \
+             "https://github.com/matthiasdemuzere/w2w"
     dst_final.attrs['DESCRIPTION'] = \
-        f"W2W.py tool used to create geo_em*.nc file: {gh_repo}"
+        f"W2W.py tool used to create geo_em*.nc file:\n {gh_ref}"
 
     # Save back to file
     if os.path.exists(info['dst_lcz_params_file']):
