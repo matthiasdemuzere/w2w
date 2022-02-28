@@ -10,6 +10,7 @@ from w2w.w2w import main
 from w2w.w2w import _check_lcz_wrf_extent
 from w2w.w2w import _replace_lcz_number
 from w2w.w2w import check_lcz_integrity
+from w2w.w2w import _calc_distance_coord
 from w2w.w2w import wrf_remove_urban
 from w2w.w2w import create_wrf_gridinfo
 from w2w.w2w import _get_SW_BW
@@ -24,7 +25,7 @@ from w2w.w2w import _hi_resampler
 from w2w.w2w import _lcz_resampler
 from w2w.w2w import add_frc_lu_index_2_wrf
 from w2w.w2w import _initialize_urb_param
-from w2w.w2w import calc_distance_coord
+from w2w.w2w import add_urb_params_to_wrf
 import pandas as pd
 import xarray as xr
 import numpy as np
@@ -119,6 +120,19 @@ def test_check_lcz_integrity_clean_file_written(tmpdir):
     LCZ_BAND = 0
     check_lcz_integrity(info=info, LCZ_BAND=LCZ_BAND)
     assert os.listdir(tmpdir) == ['Shanghai_clean.tif']
+
+@pytest.mark.parametrize(
+    ('coords', 'expected'),
+    (
+        pytest.param((89, 0, 90, 1), 111194, id='near northern pole'),
+        pytest.param((-89, 0, -90, 1), 111194, id='near southern pole'),
+        pytest.param((-60, -10, -70, -12), 1115764, id='southern eastern hemisphere'),
+        pytest.param((-1, 0, 1, 2), 314498, id='across equator'),
+        pytest.param((45, 179, 46, -179), 191461, id='across dateline')
+    ),
+)
+def test_calc_distance_coord(coords, expected):
+    assert _calc_distance_coord(*coords) == pytest.approx(expected, abs=1)
 
 @pytest.mark.parametrize(
     ('dst_file', 'dst_nu_file'),
@@ -574,6 +588,7 @@ def test_add_frc_lu_index_2_wrf(tmpdir):
     # If done properly, the Landuse Fraction should still add up to 1 for all pixels
     assert np.unique(dst_params['LANDUSEF'][0,:,:,:].sum(axis=0)) == np.array(1)
 
+
 @pytest.mark.parametrize(
     ('att_name', 'att_value'),
     (
@@ -592,19 +607,59 @@ def test_initialize_urb_param(
 ):
 
     info = {
-        'dst_lcz_params_file': 'testing/geo_em.d04_LCZ_params.nc',
+        'dst_lcz_params_file': 'testing/geo_em.d04_LCZ_params_no_urb_param.nc',
     }
 
     # Create the URB_PARAMS matrix
-    dst_data = _initialize_urb_param(
+    dst_final = _initialize_urb_param(
         info=info)
 
     # Check size of URB_PARAM
-    assert dst_data['URB_PARAM'].shape == (1, 132, 102, 162)
+    assert dst_final['URB_PARAM'].shape == (1, 132, 102, 162)
 
     # All attributes available?
-    assert dst_data['URB_PARAM'].attrs[att_name] == att_value
+    assert dst_final['URB_PARAM'].attrs[att_name] == att_value
 
+@pytest.mark.parametrize(
+    ('urb_param_name', 'urb_param_index','urb_param_val_min','urb_param_val_max'),
+    (
+        ('LP_URB2D', 91, 0.1, 0.6),
+        ('MH_URB2D', 92, 1.6, 17.5),
+        ('STDH_URB2D', 93, 0.4, 3.8),
+        ('HGT_URB2D', 94, 6.5, 17.5),
+        ('LB_URB2D', 95, 0.2, 1.6),
+        ('LF_URB2D', 96, 0.1, 1.0),
+        ('HI_URB2D', 118, 0.0, 18.1),
+    ),
+)
+def test_add_urb_params_to_wrf_urb_param_output(
+        urb_param_name,
+        urb_param_index,
+        urb_param_val_min,
+        urb_param_val_max,
+):
+    info = {
+        'dst_lcz_params_file': 'testing/geo_em.d04_LCZ_params.nc',
+    }
+
+    # Initialize empty URB_PARAM in final wrf file,
+    # with all zeros and proper attributes
+    ds_lcz_params = xr.open_dataset(info['dst_lcz_params_file'])
+
+    # get frc_mask, to only set values where FRC_URB2D > 0.
+    frc_mask = ds_lcz_params.FRC_URB2D.values[0,:,:] != 0
+
+    # Resamples params should have same grid
+    assert ds_lcz_params['URB_PARAM'][:, urb_param_index-1,:,:].shape == (1, 102, 162)
+
+    # Pixels that are masked by frc_mask should be 0
+    assert np.sum(ds_lcz_params['URB_PARAM'].data[:, urb_param_index - 1, frc_mask == 0]) == 0
+
+    # Checl min and max values per urban parameter
+    assert ds_lcz_params['URB_PARAM'].data[:, urb_param_index - 1, frc_mask != 0]\
+               .min().round(1) == approx(urb_param_val_min)
+    assert ds_lcz_params['URB_PARAM'].data[:, urb_param_index - 1, frc_mask != 0]\
+               .max().round(1) == approx(urb_param_val_max)
 
 
 def test_full_run_with_example_data(tmpdir):
@@ -624,19 +679,6 @@ def test_full_run_with_example_data(tmpdir):
         assert 'geo_em.d04_NoUrban.nc' in contents
         assert 'geo_em.d04_LCZ_extent.nc' in contents
 
-
-@pytest.mark.parametrize(
-    ('coords', 'expected'),
-    (
-        pytest.param((89, 0, 90, 1), 111194, id='near northern pole'),
-        pytest.param((-89, 0, -90, 1), 111194, id='near southern pole'),
-        pytest.param((-60, -10, -70, -12), 1115764, id='southern eastern hemisphere'),
-        pytest.param((-1, 0, 1, 2), 314498, id='across equator'),
-        pytest.param((45, 179, 46, -179), 191461, id='across dateline')
-    ),
-)
-def test_calc_distance_coord(coords, expected):
-    assert calc_distance_coord(*coords) == pytest.approx(expected, abs=1)
 
 
 def test_main_with_custom_lcz_ucp(tmpdir):

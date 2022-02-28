@@ -286,6 +286,25 @@ def check_lcz_integrity(info: Dict[str, str], LCZ_BAND: int):
     lcz.rio.to_raster(info['src_file_clean'], dtype=np.int32)
 
 
+def _calc_distance_coord(
+        lat1,lon1,lat2,lon2
+):
+
+    '''Calculate distance using coordinates
+       This uses the spherical law of cosines
+    '''
+
+    earth_radius=6371000 #Earth radius in m
+    lat1r = lat1*np.pi/180.
+    lat2r = lat2*np.pi/180.
+    lon1r = lon1*np.pi/180.
+    lon2r = lon2*np.pi/180.
+
+    d = np.arccos(np.sin(lat1r)*np.sin(lat2r) +
+                  np.cos(lat1r)*np.cos(lat2r)*np.cos(lon2r-lon1r))*earth_radius
+
+    return d
+
 def wrf_remove_urban(
         info,
         NPIX_NLC,
@@ -312,7 +331,7 @@ def wrf_remove_urban(
         for j in dst_data.west_east:
             if luse.isel(south_north=i,west_east=j) == 13:
 
-                dis = calc_distance_coord(
+                dis = _calc_distance_coord(
                                          lat.where((luse!=13) & (luse!=17) & (luse!=21)),
                                          lon.where((luse!=13) & (luse!=17) & (luse!=21)),
                                          lat.isel(south_north=i,west_east=j),
@@ -333,7 +352,7 @@ def wrf_remove_urban(
 
             if luf.isel(south_north=i,west_east=j,land_cat=12)>0.:
                 if orig_num_land_cat>20: #USING MODIS_LAKE
-                    dis = calc_distance_coord(
+                    dis = _calc_distance_coord(
                                              lat.where(
                                                         (luf.isel(land_cat=12)==0.) &
                                                         (luf.isel(land_cat=16)==0.) &
@@ -349,7 +368,7 @@ def wrf_remove_urban(
                                              lon.isel(south_north=i,west_east=j)
                                              )
                 else: #USING MODIS (NO LAKES)
-                    dis = calc_distance_coord(
+                    dis = _calc_distance_coord(
                                              lat.where(
                                                         (luf.isel(land_cat=12)==0.) &
                                                         (luf.isel(land_cat=16)==0.)
@@ -1012,13 +1031,13 @@ def add_urb_params_to_wrf(info, ucp_table):
             # for WUDAPT LCZs they are considered all equal
             for i in range(4):
                 ucp_res.values[:, frc_mask == 0] = 0
-                dst_final['URB_PARAM'][:, ucp_dict[ucp_key]-1+i, :, :] = ucp_res
+                dst_final['URB_PARAM'][:, (ucp_dict[ucp_key] - 1 + i), :, :] = ucp_res
         if ucp_key == 'HI_URB2D':
             ucp_res[:,frc_mask==0] = 0
             dst_final['URB_PARAM'][0, (ucp_dict[ucp_key] - 1):, :, :] = ucp_res
         else:
             ucp_res.values[:, frc_mask == 0] = 0
-            dst_final['URB_PARAM'].values[0, ucp_dict[ucp_key] - 1, :,:] = ucp_res
+            dst_final['URB_PARAM'].values[0, (ucp_dict[ucp_key] - 1), :,:] = ucp_res
 
     # Make sure URB_PARAM is float32
     dst_final['URB_PARAM'] = dst_final.URB_PARAM.astype('float32')
@@ -1045,25 +1064,6 @@ def add_urb_params_to_wrf(info, ucp_table):
     dst_final.to_netcdf(info['dst_lcz_params_file'])
 
     return nbui_max
-
-def calc_distance_coord(
-        lat1,lon1,lat2,lon2
-):
-
-    '''Calculate distance using coordinates
-       This uses the spherical law of cosines
-    '''
-
-    earth_radius=6371000 #Earth radius in m
-    lat1r = lat1*np.pi/180.
-    lat2r = lat2*np.pi/180.
-    lon1r = lon1*np.pi/180.
-    lon2r = lon2*np.pi/180.
-
-    d = np.arccos(np.sin(lat1r)*np.sin(lat2r) +
-                  np.cos(lat1r)*np.cos(lat2r)*np.cos(lon2r-lon1r))*earth_radius
-
-    return d
 
 
 def create_extent_file(
@@ -1259,20 +1259,8 @@ def checks_and_cleaning(info, ucp_table, nbui_max):
             'index': 95,
             'range': [0, 5]
         },
-        'LF_URB2D-x' : {
+        'LF_URB2D' : {
             'index': 96,
-            'range': [0, 5]
-        },
-        'LF_URB2D-y' : {
-            'index': 97,
-            'range': [0, 5]
-        },
-        'LF_URB2D-z' : {
-            'index': 98,
-            'range': [0, 5]
-        },
-        'LF_URB2D-w' : {
-            'index': 99,
             'range': [0, 5]
         },
     }
