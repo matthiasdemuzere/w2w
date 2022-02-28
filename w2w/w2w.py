@@ -1072,10 +1072,7 @@ def add_urb_params_to_wrf(info, ucp_table):
     return nbui_max
 
 
-def create_extent_file(
-        info,
-        frc_mask,
-):
+def create_extent_file(info, frc_mask) -> None:
 
     '''Create a domain file with an LCZ-based urban extent (excluding other LCZ-based info)'''
 
@@ -1137,51 +1134,51 @@ def expand_land_cat_parents(
         try:
             da = xr.open_dataset(ifile)
 
+            if int(da.attrs['NUM_LAND_CAT']) != 41:
+
+                try:
+                    orig_num_land_cat = da.attrs['NUM_LAND_CAT']
+                    # Set number of land categories to 41
+                    da.attrs['NUM_LAND_CAT'] = np.intc(41)
+
+                    # Create new landusef array with expanded dimensions
+                    landusef_new = np.zeros(
+                        (1, 41, da.LANDUSEF.shape[2], da.LANDUSEF.shape[3])
+                    )
+                    landusef_new[:, :orig_num_land_cat, :, :] = da['LANDUSEF'].values
+
+                    # First store orginal attributes, then drop variable
+                    luf_attrs = da.LANDUSEF.attrs
+                    da = da.drop_vars('LANDUSEF')
+
+                    # Add back to data-array, including (altered) attributes
+                    da['LANDUSEF'] = (
+                        ('Time', 'land_cat', 'south_north', 'west_east'),
+                        landusef_new
+                    )
+                    da['LANDUSEF'] = da.LANDUSEF.astype('float32')
+
+                    luf_attrs['description'] = 'Noah-modified 41-category IGBP-MODIS landuse'
+                    for key in luf_attrs.keys():
+                        da['LANDUSEF'].attrs[key] = luf_attrs[key]
+
+                    ofile = ifile.replace('.nc', '_41.nc')
+                    da.to_netcdf(ofile)
+
+                except Exception:
+                    err = traceback.format_exc()
+                    print(f'Cannot read change NUM_LAND_CAT and LANDUSEF dimensions\n{err}')
+
+            else:
+                #print(f"> Parent domain {info['dst_file'][:-5]}{i:02d}.nc "
+                #      f"already contains 41 LC classes")
+                print(f"> Parent domain d{i:02d}.nc already contains 41 LC classes")
+
         except Exception:
             print(f"WARNING: Parent domain {info['dst_file'][:-5]}{i:02d}.nc not found.\n"
                   f"Please make sure the parent domain files are in {info['io_dir']}\n"
                   f"Without this information, you will not be able to produce the boundary"
                   f"conditions with real.exe.")
-
-        if int(da.attrs['NUM_LAND_CAT']) != 41:
-
-            try:
-                orig_num_land_cat = da.attrs['NUM_LAND_CAT']
-                # Set number of land categories to 41
-                da.attrs['NUM_LAND_CAT'] = np.intc(41)
-
-                # Create new landusef array with expanded dimensions
-                landusef_new = np.zeros(
-                    (1, 41, da.LANDUSEF.shape[2], da.LANDUSEF.shape[3])
-                )
-                landusef_new[:, :orig_num_land_cat, :, :] = da['LANDUSEF'].values
-
-                # First store orginal attributes, then drop variable
-                luf_attrs = da.LANDUSEF.attrs
-                da = da.drop_vars('LANDUSEF')
-
-                # Add back to data-array, including (altered) attributes
-                da['LANDUSEF'] = (
-                    ('Time', 'land_cat', 'south_north', 'west_east'),
-                    landusef_new
-                )
-                da['LANDUSEF'] = da.LANDUSEF.astype('float32')
-
-                luf_attrs['description'] = 'Noah-modified 41-category IGBP-MODIS landuse'
-                for key in luf_attrs.keys():
-                    da['LANDUSEF'].attrs[key] = luf_attrs[key]
-
-                ofile = ifile.replace('.nc', '_41.nc')
-                da.to_netcdf(ofile)
-
-            except Exception:
-                err = traceback.format_exc()
-                print(f'Cannot read change NUM_LAND_CAT and LANDUSEF dimensions\n{err}')
-
-        else:
-            #print(f"> Parent domain {info['dst_file'][:-5]}{i:02d}.nc "
-            #      f"already contains 41 LC classes")
-            print(f"> Parent domain d{i:02d}.nc already contains 41 LC classes")
 
 
 def checks_and_cleaning(info, ucp_table, nbui_max):

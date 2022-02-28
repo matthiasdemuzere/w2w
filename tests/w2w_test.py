@@ -25,7 +25,8 @@ from w2w.w2w import _hi_resampler
 from w2w.w2w import _lcz_resampler
 from w2w.w2w import add_frc_lu_index_2_wrf
 from w2w.w2w import _initialize_urb_param
-from w2w.w2w import add_urb_params_to_wrf
+from w2w.w2w import create_extent_file
+from w2w.w2w import expand_land_cat_parents
 import pandas as pd
 import xarray as xr
 import numpy as np
@@ -619,6 +620,111 @@ def test_initialize_urb_param(
 
     # All attributes available?
     assert dst_final['URB_PARAM'].attrs[att_name] == att_value
+
+@pytest.mark.parametrize(
+    ('att_name', 'att_value'),
+    (
+        ('NUM_LAND_CAT', 41),
+        ('FLAG_URB_PARAM', 1),
+        ('NBUI_MAX', np.intc(5)),
+        ('TITLE', "OUTPUT FROM GEOGRID V4.0, perturbed by W2W"),
+    ),
+)
+def test_lcz_params_attr(
+        att_name,
+        att_value,
+):
+
+    info = {
+        'dst_lcz_params_file': 'testing/geo_em.d04_LCZ_params.nc',
+    }
+    dst_final = xr.open_dataset(
+        info['dst_lcz_params_file']
+    )
+    assert dst_final.attrs[att_name] == att_value
+
+def test_lcz_params_type():
+
+    info = {
+        'dst_lcz_params_file': 'testing/geo_em.d04_LCZ_params.nc',
+    }
+
+    dst_final = xr.open_dataset(
+        info['dst_lcz_params_file']
+    )
+    assert dst_final['URB_PARAM'].dtype == np.float32
+
+def test_create_extent_file(tmpdir):
+
+    info = {
+        'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
+        'dst_lcz_params_file': 'testing/geo_em.d04_LCZ_params.nc',
+        'dst_lcz_extent_file': os.path.join(tmpdir,'geo_em.d04_LCZ_extent.nc'),
+        'dst_file': 'sample_data/geo_em.d04.nc',
+        'dst_nu_file': 'testing/geo_em.d04_NoUrban.nc',
+        'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
+        'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    }
+
+    ucp_table = pd.read_csv(
+        'w2w/resources/LCZ_UCP_lookup.csv',
+         index_col=0
+    )
+
+    frc_mask = add_frc_lu_index_2_wrf(
+        info=info,
+        FRC_THRESHOLD=0.2,
+        LCZ_NAT_MASK=True,
+        ucp_table=ucp_table,
+    )
+
+    # Produce LCZ extent file
+    create_extent_file(
+        info=info,
+        frc_mask=frc_mask
+    )
+
+    # Read produced file
+    dst_extent = xr.open_dataset(info['dst_lcz_extent_file'])
+
+    # Check perturbations applied to LCZ_params file
+    assert dst_extent.attrs['FLAG_URB_PARAM'] == np.intc(0)
+    assert dst_extent.attrs['NUM_LAND_CAT'] == 41
+    assert dst_extent.LANDUSEF.description == \
+           'Noah-modified 21-category IGBP-MODIS landuse'
+    assert 'FRC_URB2D' not in list(dst_extent.data_vars)
+    assert 'URB_PARAM' not in list(dst_extent.data_vars)
+
+    # Number of urban pixels within LANDUSEF[12]
+    assert np.sum(dst_extent['LANDUSEF'].data[0, 12, :, :] == 1) == 369
+
+@pytest.mark.parametrize(
+    ('domain_id'),
+    (
+        ('01'),
+        ('02'),
+        ('03'),
+    ),
+)
+def test_expand_land_cat_parents_files_missing(domain_id, capsys, tmpdir):
+    input_files = (
+        'geo_em.d04.nc', 'lcz_zaragoza.tif',
+    )
+    input_dir = tmpdir.mkdir('input')
+    for f in input_files:
+        shutil.copy(os.path.join('sample_data', f), input_dir)
+
+    info = {
+        'dst_file': os.path.join(input_dir, 'geo_em.d04.nc'),
+        'io_dir': 'SOME_DIRECTORY',
+    }
+
+    expand_land_cat_parents(info=info)
+    out, _ = capsys.readouterr()
+
+    #warning_str = "Without this information, you will not be able to produce the boundary"
+    warning_str = f"WARNING: Parent domain {info['dst_file'][:-5]}{domain_id}.nc not found"
+    assert warning_str in out
 
 
 def test_full_run_with_example_data(tmpdir):
