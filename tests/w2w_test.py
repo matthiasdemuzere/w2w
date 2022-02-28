@@ -23,6 +23,7 @@ from w2w.w2w import _compute_hi_distribution
 from w2w.w2w import _hi_resampler
 from w2w.w2w import _lcz_resampler
 from w2w.w2w import add_frc_lu_index_2_wrf
+from w2w.w2w import _initialize_urb_param
 from w2w.w2w import calc_distance_coord
 import pandas as pd
 import xarray as xr
@@ -570,8 +571,40 @@ def test_add_frc_lu_index_2_wrf(tmpdir):
     assert (dst_params['GREENFRAC'][0,:,:,:].mean(axis=0) -
             dst_nu['GREENFRAC'][0,:,:,:].mean(axis=0)).data.max() == approx(0.31252602)
 
-    # If done properly, the Landuse Fraction should still add up to 1
+    # If done properly, the Landuse Fraction should still add up to 1 for all pixels
     assert np.unique(dst_params['LANDUSEF'][0,:,:,:].sum(axis=0)) == np.array(1)
+
+@pytest.mark.parametrize(
+    ('att_name', 'att_value'),
+    (
+        ('FieldType', np.intc(104)),
+        ('MemoryOrder', "XYZ"),
+        ('units', "dimensionless"),
+        ('description', "all urban parameters"),
+        ('stagger', "M"),
+        ('sr_x', np.intc(1)),
+        ('sr_y', np.intc(1)),
+    ),
+)
+def test_initialize_urb_param(
+        att_name,
+        att_value,
+):
+
+    info = {
+        'dst_lcz_params_file': 'testing/geo_em.d04_LCZ_params.nc',
+    }
+
+    # Create the URB_PARAMS matrix
+    dst_data = _initialize_urb_param(
+        info=info)
+
+    # Check size of URB_PARAM
+    assert dst_data['URB_PARAM'].shape == (1, 132, 102, 162)
+
+    # All attributes available?
+    assert dst_data['URB_PARAM'].attrs[att_name] == att_value
+
 
 
 def test_full_run_with_example_data(tmpdir):
