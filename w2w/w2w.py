@@ -213,9 +213,8 @@ def _replace_lcz_number(lcz, lcz_to_change):
 
 def _check_lcz_wrf_extent(lcz, wrf) -> None:
 
-    class bcolors:
-        ERROR = '\033[0;31m'
-        ENDC = '\033[0m'
+    ERROR = '\033[0;31m'
+    ENDC = '\033[0m'
 
     # Get bounding box coordinates
     lcz_xmin, lcz_ymin, lcz_xmax, lcz_ymax = lcz.rio.bounds()
@@ -227,12 +226,12 @@ def _check_lcz_wrf_extent(lcz, wrf) -> None:
     if not (wrf_xmin > lcz_xmin ) & (wrf_xmax < lcz_xmax ) & \
            (wrf_ymin > lcz_ymin) & (wrf_ymax < lcz_ymax):
 
-        message = f"{bcolors.ERROR}ERROR: LCZ domain should be larger than " \
+        message = f"{ERROR}ERROR: LCZ domain should be larger than " \
                   "WRF domain in all directions.\n" \
                   "LCZ bounds (xmin, ymin, xmax, ymax): " \
                  f"{lcz_xmin, lcz_ymin, lcz_xmax, lcz_ymax}\n" \
                   "WRF bounds (xmin, ymin, xmax, ymax): "\
-                 f"{wrf_xmin, wrf_ymin, wrf_xmax, wrf_ymax}{bcolors.ENDC}"
+                 f"{wrf_xmin, wrf_ymin, wrf_xmax, wrf_ymax}{ENDC}"
         print(message)
         sys.exit(1)
     else:
@@ -1199,30 +1198,29 @@ def checks_and_cleaning(info, ucp_table, nbui_max):
 
     'Sanity checks and cleaning'
 
-    class bcolors:
-        OKGREEN = "\033[0;32m"
-        WARNING = '\033[0;35m'
-        ENDC = '\033[0m'
+    OKGREEN = "\033[0;32m"
+    WARNING = '\033[0;35m'
+    ENDC = '\033[0m'
 
     base_text = f"> Check 1: Urban class removed from " \
           f"{info['dst_nu_file'].split('/')[-1]}?"
     ifile = info['dst_nu_file']
     da = xr.open_dataset(ifile)
     if 13 in da.LU_INDEX.values:
-        print(f"{base_text}\n{bcolors.WARNING} WARNING: Urban land use "
-              f"still present {bcolors.ENDC}")
+        print(f"{base_text}\n{WARNING} WARNING: Urban land use "
+              f"still present {ENDC}")
     else:
-        print(f"{base_text}{bcolors.OKGREEN} OK {bcolors.ENDC}")
+        print(f"{base_text}{OKGREEN} OK {ENDC}")
 
     base_text = f"> Check 2: LCZ Urban extent present in " \
           f"{info['dst_lcz_extent_file'].split('/')[-1]}?"
     ifile = info['dst_lcz_extent_file']
     da = xr.open_dataset(ifile)
     if not 13 in da.LU_INDEX.values:
-        print(f"{base_text}\n{bcolors.WARNING} WARNING: LCZ-based urban "
-              f"extent missing {bcolors.ENDC}")
+        print(f"{base_text}\n{WARNING} WARNING: LCZ-based urban "
+              f"extent missing {ENDC}")
     else:
-        print(f"{base_text}{bcolors.OKGREEN} OK {bcolors.ENDC}")
+        print(f"{base_text}{OKGREEN} OK {ENDC}")
 
 
     base_text = f"> Check 3: Urban LCZ classes exists in " \
@@ -1230,27 +1228,27 @@ def checks_and_cleaning(info, ucp_table, nbui_max):
     ifile = info['dst_lcz_params_file']
     da = xr.open_dataset(ifile)
     if 13 in da.LU_INDEX.values:
-        print(f"{base_text}\n{bcolors.WARNING} WARNING: Urban extent still "
-              f"defined via LU_INDEX = 13? {bcolors.ENDC}")
+        print(f"{base_text}\n{WARNING} WARNING: Urban extent still "
+              f"defined via LU_INDEX = 13? {ENDC}")
     else:
         LU_values = np.unique(da.LU_INDEX.values.flatten())
         LCZs = [int(i) for i in list(LU_values[LU_values >= 31] - 30)]
-        print(f"{base_text}{bcolors.OKGREEN} OK: LCZ Classes ({LCZs}) "
-              f"present {bcolors.ENDC}")
+        print(f"{base_text}{OKGREEN} OK: LCZ Classes ({LCZs}) "
+              f"present {ENDC}")
 
     base_text = f"> Check 4: FRC_URB2D present in " \
           f"{info['dst_lcz_params_file'].split('/')[-1]}?"
     ifile = info['dst_lcz_params_file']
     da = xr.open_dataset(ifile)
     if 'FRC_URB2D' not in list(da.keys()):
-        print(f"{base_text}\n{bcolors.WARNING} WARNING: FRC_URB2D not "
-              f"present in {ifile} {bcolors.ENDC}")
+        print(f"{base_text}\n{WARNING} WARNING: FRC_URB2D not "
+              f"present in {ifile} {ENDC}")
         frc_urb2d_present = 'NO'
     else:
         FRC_URB2D = da.FRC_URB2D.values
-        print(f"{base_text}{bcolors.OKGREEN} OK: FRC_URB2D values "
+        print(f"{base_text}{OKGREEN} OK: FRC_URB2D values "
               f"range between {'{:0.2f}'.format(FRC_URB2D.min())} and "
-              f"{'{:0.2f}'.format(FRC_URB2D.max())} {bcolors.ENDC}")
+              f"{'{:0.2f}'.format(FRC_URB2D.max())} {ENDC}")
         frc_urb2d_present = 'YES'
 
     base_text = f"> Check 5: URB_PARAMS matrix present in file " \
@@ -1258,11 +1256,11 @@ def checks_and_cleaning(info, ucp_table, nbui_max):
     ifile = info['dst_lcz_params_file']
     da = xr.open_dataset(ifile)
     if 'URB_PARAM' not in list(da.keys()):
-        print(f"{base_text}\n{bcolors.WARNING} WARNING: URB_PARAM matrix not "
-              f"present {bcolors.ENDC}")
+        print(f"{base_text}\n{WARNING} WARNING: URB_PARAM matrix not "
+              f"present {ENDC}")
         urb_param_present = 'NO'
     else:
-        print(f"{base_text}{bcolors.OKGREEN} OK {bcolors.ENDC}")
+        print(f"{base_text}{OKGREEN} OK {ENDC}")
         urb_param_present = 'YES'
 
     if urb_param_present == 'YES':
@@ -1318,10 +1316,10 @@ def checks_and_cleaning(info, ucp_table, nbui_max):
             result = _check_range(darr, exp_range)
 
             if result == -1:
-                print(f"{bcolors.WARNING} WARNING: {ucp_key} exceeds "
-                      f"expected value range {bcolors.ENDC}")
+                print(f"{WARNING} WARNING: {ucp_key} exceeds "
+                      f"expected value range {ENDC}")
             else:
-                print(f"{bcolors.OKGREEN}   + OK for {ucp_key} {bcolors.ENDC}")
+                print(f"{OKGREEN}   + OK for {ucp_key} {ENDC}")
 
         base_text = "> Check 7: Does HI_URB2D sum to 100% for urban pixels " \
               f"in {info['dst_lcz_params_file'].split('/')[-1]}?"
@@ -1330,10 +1328,10 @@ def checks_and_cleaning(info, ucp_table, nbui_max):
         hi_sum = hi_sum.where(hi_sum != 0, drop=True)
 
         if np.nanmax(np.abs((100 - hi_sum).values)) > 0.1:
-            print(f"{base_text}\n{bcolors.WARNING} WARNING: Not all pixels "
-                  f"have sum HI_URB2D == 100% {bcolors.ENDC}")
+            print(f"{base_text}\n{WARNING} WARNING: Not all pixels "
+                  f"have sum HI_URB2D == 100% {ENDC}")
         else:
-            print(f"{base_text}{bcolors.OKGREEN} OK {bcolors.ENDC}")
+            print(f"{base_text}{OKGREEN} OK {ENDC}")
 
     if frc_urb2d_present == 'YES':
         base_text = "> Check 8: Do FRC_URB and LCZs (from LU_INDEX) cover same extent " \
@@ -1344,10 +1342,10 @@ def checks_and_cleaning(info, ucp_table, nbui_max):
         lu_index_res = xr.where(lu_index >= 31, 1, 0)
 
         if int((frc_urb_res - lu_index_res).sum()) != 0:
-            print(f"{base_text}\n{bcolors.WARNING} WARNING: FRC_URB and LCZs in "
-                  f"LU_INDEX do not cover same extent {bcolors.ENDC}")
+            print(f"{base_text}\n{WARNING} WARNING: FRC_URB and LCZs in "
+                  f"LU_INDEX do not cover same extent {ENDC}")
         else:
-            print(f"{base_text}{bcolors.OKGREEN} OK {bcolors.ENDC}")
+            print(f"{base_text}{OKGREEN} OK {ENDC}")
 
     base_text = "> Check 9: Extent and # urban pixels same for " \
           "*_extent.nc and *_params.nc output file?"
@@ -1357,15 +1355,15 @@ def checks_and_cleaning(info, ucp_table, nbui_max):
     da_p_res = xr.where(da_p.LU_INDEX >=31, 1,0)
 
     if int((da_p_res - da_e_res).sum()) != 0:
-        print(f"{base_text}\n {bcolors.WARNING} WARNING: Different "
+        print(f"{base_text}\n {WARNING} WARNING: Different "
               f"# urban pixels (or extent) "
               f"according to LU_INDEX: "
               f" - extent: {int(da_e_res.sum().values)}"
-              f" - params: {int(da_p_res.sum().values)} {bcolors.ENDC}"
+              f" - params: {int(da_p_res.sum().values)} {ENDC}"
               )
     else:
-        print(f"{base_text}{bcolors.OKGREEN} OK, urban extent the same "
-              f"({int(da_p_res.sum().values)}) {bcolors.ENDC}")
+        print(f"{base_text}{OKGREEN} OK, urban extent the same "
+              f"({int(da_p_res.sum().values)}) {ENDC}")
 
     print('> Cleaning up ... all done!')
     if os.path.exists(info['dst_gridinfo']):

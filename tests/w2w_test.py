@@ -55,12 +55,15 @@ def test_create_info_dict():
     assert len(info.keys()) == 9
 
     # Three files are tifs
-    assert len([i for i in list(info.values())[:-1] if
-                i.endswith('.tif')]) == 3
+    assert info['dst_gridinfo'] == 'input/directory/wrf_file_gridinfo.tif'
+    assert info['src_file'] == 'input/directory/lcz_file.tif'
+    assert info['src_file_clean'] == 'input/directory/lcz_file_clean.tif'
 
     # 4 files are netcdf files
-    assert len([i for i in list(info.values())[:-1] if
-                i.endswith('.nc')]) == 4
+    assert info['dst_file'] == 'input/directory/wrf_file.nc'
+    assert info['dst_lcz_extent_file'] == 'input/directory/wrf_file_LCZ_extent.nc'
+    assert info['dst_lcz_params_file'] == 'input/directory/wrf_file_LCZ_params.nc'
+
     # Last entry is list of built LCZs
     assert isinstance(list(info.values())[-1], list)
 
@@ -95,6 +98,8 @@ def test_check_lcz_integrity_lcz_numbers_as_expected(capsys, tmpdir):
     check_lcz_integrity(info=info, LCZ_BAND=LCZ_BAND)
     out, _ = capsys.readouterr()
     assert '> LCZ labels as expected (1 to 17)' in out
+    assert os.listdir(tmpdir) == ['lcz_zaragoza_clean.tif']
+
 
 def test_check_lcz_integrity_crs_changed(capsys, tmpdir):
 
@@ -107,6 +112,7 @@ def test_check_lcz_integrity_crs_changed(capsys, tmpdir):
     check_lcz_integrity(info=info, LCZ_BAND=LCZ_BAND)
     out, _ = capsys.readouterr()
     assert 'LCZ map reprojected to WGS84 (EPSG:4326)' in out
+    assert os.listdir(tmpdir) == ['Shanghai_clean.tif']
 
 
 
@@ -707,18 +713,13 @@ def test_create_lcz_params_file_attrs_type(
     dst_params = xr.open_dataset(info['dst_lcz_params_file'])
     assert dst_params.attrs[att_name] == att_value
 
-    # Make sure type of URB_PARAM if float
+    # Make sure type of URB_PARAM is float
     assert dst_params['URB_PARAM'].dtype == np.float32
 
     # Check if nbui_max has expected value
     assert nbui_max == 5
 
 def test_create_lcz_extent_file(tmpdir):
-
-    # tmpdir = '/home/demuzmp4/Desktop'
-    # info = {
-    #     'dst_lcz_extent_file': os.path.join(tmpdir,'geo_em.d04_LCZ_extent.nc'),
-    # }
     info = {
         'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
         'dst_lcz_params_file': 'testing/geo_em.d04_LCZ_params.nc',
@@ -784,7 +785,6 @@ def test_expand_land_cat_parents_files_missing(domain_id, capsys, tmpdir):
     expand_land_cat_parents(info=info)
     out, _ = capsys.readouterr()
 
-    #warning_str = "Without this information, you will not be able to produce the boundary"
     warning_str = f"WARNING: Parent domain {info['dst_file'][:-5]}{domain_id}.nc not found"
     assert warning_str in out
 
@@ -874,8 +874,7 @@ def test_checks_and_cleaning_sample_data_all_ok(capsys, tmpdir):
 
     NBUI_MAX = 5
 
-    class bcolors:
-        OKGREEN = "\033[0;32m"
+    OKGREEN = "\033[0;32m"
 
     checks_and_cleaning(
         info=info,
@@ -887,49 +886,49 @@ def test_checks_and_cleaning_sample_data_all_ok(capsys, tmpdir):
     # Check the outcome of the sample data, for which all is fine.
     base_text = f"> Check 1: Urban class removed from " \
           f"{info['dst_nu_file'].split('/')[-1]}?"
-    check1 = f"{base_text}{bcolors.OKGREEN} OK"
+    check1 = f"{base_text}{OKGREEN} OK"
     assert check1 in out
 
     base_text = f"> Check 2: LCZ Urban extent present in " \
           f"{info['dst_lcz_extent_file'].split('/')[-1]}?"
-    check2 = f"{base_text}{bcolors.OKGREEN} OK"
+    check2 = f"{base_text}{OKGREEN} OK"
     assert check2 in out
 
     base_text = f"> Check 3: Urban LCZ classes exists in " \
                 f"{info['dst_lcz_params_file'].split('/')[-1]}?"
-    check3 = f"{base_text}{bcolors.OKGREEN} OK: LCZ Classes"
+    check3 = f"{base_text}{OKGREEN} OK: LCZ Classes"
     assert check3 in out
 
     base_text = f"> Check 4: FRC_URB2D present in " \
           f"{info['dst_lcz_params_file'].split('/')[-1]}?"
-    check4 = f"{base_text}{bcolors.OKGREEN} OK: FRC_URB2D values "
+    check4 = f"{base_text}{OKGREEN} OK: FRC_URB2D values "
     assert check4 in out
 
     base_text = f"> Check 5: URB_PARAMS matrix present in file " \
           f"{info['dst_lcz_params_file'].split('/')[-1]}?"
-    check5 = f"{base_text}{bcolors.OKGREEN} OK "
+    check5 = f"{base_text}{OKGREEN} OK "
     assert check5 in out
 
     base_text = "> Check 6: Do URB_PARAM variable values follow expected range in " \
           f"{info['dst_lcz_params_file'].split('/')[-1]}?"
     check6a = f"{base_text}"
-    check6b = f"{bcolors.OKGREEN}   + OK for"
+    check6b = f"{OKGREEN}   + OK for"
     assert check6a in out
     assert check6b in out
 
     base_text = "> Check 7: Does HI_URB2D sum to 100% for urban pixels " \
           f"in {info['dst_lcz_params_file'].split('/')[-1]}?"
-    check7 = f"{base_text}{bcolors.OKGREEN} OK"
+    check7 = f"{base_text}{OKGREEN} OK"
     assert check7 in out
 
     base_text = "> Check 8: Do FRC_URB and LCZs (from LU_INDEX) cover same extent " \
           f"in {info['dst_lcz_params_file'].split('/')[-1]}?"
-    check8 = f"{base_text}{bcolors.OKGREEN} OK"
+    check8 = f"{base_text}{OKGREEN} OK"
     assert check8 in out
 
     base_text = "> Check 9: Extent and # urban pixels same for " \
           "*_extent.nc and *_params.nc output file?"
-    check9 = f"{base_text}{bcolors.OKGREEN} OK, urban extent the same "
+    check9 = f"{base_text}{OKGREEN} OK, urban extent the same "
     assert check9 in out
 
     assert f" Set nbui_max to {NBUI_MAX} during compilation, " in out
@@ -983,14 +982,7 @@ def test_checks_and_cleaning_sample_data_check1to5_wrong(
 
 
 @pytest.mark.parametrize(
-    ('ucp_key'),
-    (
-        ('MH_URB2D'),
-        ('STDH_URB2D'),
-        ('LB_URB2D'),
-        ('LF_URB2D'),
-        ('LP_URB2D'),
-    ),
+    'ucp_key', ('MH_URB2D', 'STDH_URB2D', 'LB_URB2D', 'LF_URB2D', 'LP_URB2D'),
 )
 def test_checks_and_cleaning_sample_data_check6to9_wrong(
         ucp_key,
