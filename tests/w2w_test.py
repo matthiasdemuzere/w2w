@@ -7,6 +7,7 @@ from rasterio.warp import reproject, Resampling
 import shutil
 import w2w.w2w
 from w2w.w2w import main
+from w2w.w2w import create_info_dict
 from w2w.w2w import _check_lcz_wrf_extent
 from w2w.w2w import _replace_lcz_number
 from w2w.w2w import check_lcz_integrity
@@ -23,9 +24,9 @@ from w2w.w2w import _check_hi_values
 from w2w.w2w import _compute_hi_distribution
 from w2w.w2w import _hi_resampler
 from w2w.w2w import _lcz_resampler
-from w2w.w2w import add_frc_lu_index_2_wrf
+from w2w.w2w import _add_frc_lu_index_2_wrf
 from w2w.w2w import _initialize_urb_param
-from w2w.w2w import create_extent_file
+from w2w.w2w import create_lcz_extent_file
 from w2w.w2w import expand_land_cat_parents
 import pandas as pd
 import xarray as xr
@@ -37,6 +38,29 @@ from pytest import approx
 def test_argparse_shows_help():
     with pytest.raises(SystemExit):
         main(['--help'])
+
+def test_create_info_dict():
+
+    class mock_args:
+        lcz_file= 'lcz_file.tif'
+        wrf_file = 'wrf_file.nc'
+        io_dir = 'input/directory'
+        built_lcz = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+    info = create_info_dict(mock_args)
+
+    # info is Dict, with 9 keys
+    assert len(info.keys()) == 9
+
+    # Three files are tifs
+    assert len([i for i in list(info.values())[:-1] if
+                i.endswith('.tif')]) == 3
+
+    # 4 files are netcdf files
+    assert len([i for i in list(info.values())[:-1] if
+                i.endswith('.nc')]) == 4
+    # Last entry is list of built LCZs
+    assert isinstance(list(info.values())[-1], list)
 
 def test_replace_lcz_number_ok():
     info = {
@@ -58,6 +82,17 @@ def test_replace_lcz_number_ok():
     assert (np.unique(lcz_new.data).tolist() ==
             [1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 14, 15, 17])
 
+def test_check_lcz_integrity_lcz_numbers_as_expected(capsys, tmpdir):
+
+    info = {
+        'src_file': 'sample_data/lcz_zaragoza.tif',
+        'src_file_clean': os.path.join(tmpdir, 'lcz_zaragoza_clean.tif'),
+        'dst_file': 'sample_data/geo_em.d04.nc',
+    }
+    LCZ_BAND = 0
+    check_lcz_integrity(info=info, LCZ_BAND=LCZ_BAND)
+    out, _ = capsys.readouterr()
+    assert '> LCZ labels as expected (1 to 17)' in out
 
 def test_check_lcz_integrity_crs_changed(capsys, tmpdir):
 
@@ -331,7 +366,6 @@ def test_hgt_resampler_output_values():
     # Make sure no nans are present.
     assert np.sum(np.isnan(ucp_res.data)) == 0
 
-#TODO: working on this test ... does not work yet.
 def test_check_hi_values_fails_skewed_distribution_ucp_table(capsys):
 
     lcz_i = 1
@@ -343,13 +377,14 @@ def test_check_hi_values_fails_skewed_distribution_ucp_table(capsys):
         index = [1],
         columns = ['MH_URB2D_MIN', 'MH_URB2D_MAX', 'MH_URB2D']
     )
-    ucp_table.loc[1] = [5, 75, 10]
+    ucp_table.loc[1] = [5, 150, 40]
 
     hi_sample = _get_truncated_normal_sample(
         lcz_i=lcz_i,
         ucp_table=ucp_table,
         SAMPLE_SIZE=SAMPLE_SIZE
     )
+    assert len(hi_sample) == SAMPLE_SIZE
 
     _check_hi_values(
         lcz_i=lcz_i,
@@ -430,10 +465,6 @@ def test_compute_hi_distribution_values():
         ERROR_MARGIN=ERROR_MARGIN,
     )
 
-    # LCZ 15 has no buildings (bare rock) so distribution of building heights
-    # across all height bins should be 0.
-    assert df_hi.iloc[15].fillna(0).sum() == 0
-
     # The mean over all height bins and built classes should be 100%
     assert 100 == approx(df_hi.sum(axis=1)[info['BUILT_LCZ']].mean())
 
@@ -441,6 +472,30 @@ def test_compute_hi_distribution_values():
     value, counts = np.unique(df_hi.loc[range(11, 18, 1)].values, return_counts=True)
     assert value[0] == 0
     assert counts[0] == 7*15 # 7 Natural LCZs x 15 height bins
+
+def test_compute_hi_distribution_values_lcz15():
+
+    info = {
+        'BUILT_LCZ': [15],
+    }
+
+    ucp_table = pd.read_csv(
+        'w2w/resources/LCZ_UCP_lookup.csv',
+         index_col=0
+    )
+    SAMPLE_SIZE = 100000
+    ERROR_MARGIN = 0.05
+
+    df_hi = _compute_hi_distribution(
+        info=info,
+        ucp_table=ucp_table,
+        SAMPLE_SIZE=SAMPLE_SIZE,
+        ERROR_MARGIN=ERROR_MARGIN,
+    )
+
+    # LCZ 15 has no buildings (bare rock) so distribution of building heights
+    # across all height bins should be 0.
+    assert df_hi.iloc[15].fillna(0).sum() == 0
 
 def test_scale_hi():
 
@@ -486,108 +541,82 @@ def test_hi_resampler():
 
 
 @pytest.mark.parametrize(
-    ('lcz_nat_mask', 'lcz_values', 'lcz_counts', 'nan_present'),
+    ('LCZ_NAT_MASK', 'lcz_values', 'lcz_counts'),
     (
         (False,
-         np.array([ 2.,  3.,  5.,  6.,  8.,  9., 11., 12., 13., 14., 15., 16., 17.]),
-         np.array([   17,     3,     1,    82,    95,     5,   175,  1498,   476,
-       12077,   103,  1966,    26]),
-         False,
+         np.array([32., 33., 35., 36., 38., 39., 41., 42., 43., 44., 46.]),
+         np.array([ 17,   3,   1,  77,  95,   2,   7,   5,   2, 150,  10]),
          ),
         (True,
-         np.array([ 2.,  3.,  5.,  6.,  8.,  9.]),
-         np.array([   22,   154,     5,  1022,   266,   327, 14728]),
-         True,
-         )
+         np.array([32., 33., 35., 36., 38., 39., 41.]),
+         np.array([ 18,  30,   1, 171, 136,   4,   9]),
+         ),
     ),
 )
 
-def test_lcz_resampler_lcz_nat_mask_on_off(
-        lcz_nat_mask,
+def test_lcz_resampler_lcz_nat_mask_on_off_with_lcz15(
+        LCZ_NAT_MASK,
         lcz_values,
         lcz_counts,
-        nan_present,
 ):
 
     info = {
         'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
         'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
-        'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        'src_file_frc_urb2d': 'testing/geo_em.d04_LCZ_params_no_urb_param.nc',
+        'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15],
     }
 
-    src_data = rxr.open_rasterio(info['src_file_clean'])[0, :, :]
-    dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
+    frc_data = xr.open_dataset(info['src_file_frc_urb2d'])
+    frc_urb2d = frc_data['FRC_URB2D']
 
-    # Mask natural LCZs before majority filtering.
-    if lcz_nat_mask:
-        src_data = src_data.where(
-            src_data.isin(info['BUILT_LCZ'])
-        ).copy()
-
-    lcz_2_wrf = reproject(
-        src_data,
-        dst_grid,
-        src_transform=src_data.rio.transform(),
-        src_crs=src_data.rio.crs,
-        dst_transform=dst_grid.rio.transform(),
-        dst_crs=dst_grid.rio.crs,
-        resampling=Resampling['mode'])[0].values
-
+    frc_mask, lcz_resampled = _lcz_resampler(
+        info=info,
+        frc_urb2d=frc_urb2d,
+        LCZ_NAT_MASK=LCZ_NAT_MASK,
+    )
     # With natural masking off, majority filtering also includes
     # Natural classes
-    lcz_values_def, lcz_counts_def = np.unique(lcz_2_wrf, return_counts=True)
-    assert (lcz_values_def[~np.isnan(lcz_values_def)] == lcz_values).all()
+    lcz_values_def, lcz_counts_def = np.unique(lcz_resampled, return_counts=True)
+    assert (lcz_values_def == lcz_values).all()
     assert (lcz_counts_def == lcz_counts).all()
 
-    # Make sure that nans are actually present when masking non-built LCZs
-    assert np.isnan(lcz_values_def).any() == nan_present
-
-def test_add_frc_lu_index_2_wrf(tmpdir):
+def test_add_frc_lu_index_2_wrf():
 
     info = {
         'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
         'dst_file': 'sample_data/geo_em.d04.nc',
         'dst_nu_file': 'testing/geo_em.d04_NoUrban.nc',
         'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
-        'dst_lcz_params_file': os.path.join(tmpdir, 'geo_em.d04_LCZ_params.nc'),
         'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     }
 
     ucp_table = pd.read_csv('w2w/resources/LCZ_UCP_lookup.csv', index_col=0)
 
-    frc_mask = add_frc_lu_index_2_wrf(
+    dst_data = _add_frc_lu_index_2_wrf(
         info = info,
         FRC_THRESHOLD = 0.2,
         LCZ_NAT_MASK = True,
         ucp_table = ucp_table,
     )
 
-    # Check if LCZ params file is produced
-    assert os.listdir(tmpdir) == ['geo_em.d04_LCZ_params.nc']
-
-    # frc_mask is used as a mask to set LANDUSEF = 1 in the extent file
-    # It should have the WRF grid extent, and be binary
-    assert frc_mask.shape == (102, 162)
-    assert frc_mask.dtype == bool
-
     # LU_Index should be expanded, reflecting LCZ classes between 31-41.
     # Highest class available in sample data is LCZ 8 (39)
-    dst_params = xr.open_dataset(info['dst_lcz_params_file'])
-    assert dst_params['LU_INDEX'].max().data == 39
+    assert dst_data['LU_INDEX'].max().data == 39
 
     # The 41 category should also be embedded within the attributes' description
-    assert '41-category' in dst_params['LANDUSEF'].attrs['description']
+    assert '41-category' in dst_data['LANDUSEF'].attrs['description']
 
     # GREENFRAC is adjusted, because of LCZ implementation
     # Can be - or +, depending on conversion natural to LCZ land.
     dst_nu = xr.open_dataset(info['dst_nu_file'])
-    assert (dst_params['GREENFRAC'][0,:,:,:].mean(axis=0) -
+    assert (dst_data['GREENFRAC'][0,:,:,:].mean(axis=0) -
             dst_nu['GREENFRAC'][0,:,:,:].mean(axis=0)).data.min() == approx(-0.193724)
-    assert (dst_params['GREENFRAC'][0,:,:,:].mean(axis=0) -
+    assert (dst_data['GREENFRAC'][0,:,:,:].mean(axis=0) -
             dst_nu['GREENFRAC'][0,:,:,:].mean(axis=0)).data.max() == approx(0.31252602)
 
     # If done properly, the Landuse Fraction should still add up to 1 for all pixels
-    assert np.unique(dst_params['LANDUSEF'][0,:,:,:].sum(axis=0)) == np.array(1)
+    assert np.unique(dst_data['LANDUSEF'][0,:,:,:].sum(axis=0)) == np.array(1)
 
 
 @pytest.mark.parametrize(
@@ -608,12 +637,14 @@ def test_initialize_urb_param(
 ):
 
     info = {
-        'dst_lcz_params_file': 'testing/geo_em.d04_LCZ_params_no_urb_param.nc',
+        'dst_no_params': 'testing/geo_em.d04_LCZ_params_no_urb_param.nc',
     }
+
+    dst_data = xr.open_dataset(info['dst_no_params'])
 
     # Create the URB_PARAMS matrix
     dst_final = _initialize_urb_param(
-        info=info)
+        dst_data=dst_data)
 
     # Check size of URB_PARAM
     assert dst_final['URB_PARAM'].shape == (1, 132, 102, 162)
@@ -636,26 +667,29 @@ def test_lcz_params_attr(
 ):
 
     info = {
-        'dst_lcz_params_file': 'testing/geo_em.d04_LCZ_params.nc',
+        'dst_lcz_params': 'testing/geo_em.d04_LCZ_params.nc',
     }
-    dst_final = xr.open_dataset(
-        info['dst_lcz_params_file']
-    )
+
+    dst_final = xr.open_dataset(info['dst_lcz_params'])
     assert dst_final.attrs[att_name] == att_value
 
 def test_lcz_params_type():
 
     info = {
-        'dst_lcz_params_file': 'testing/geo_em.d04_LCZ_params.nc',
+        'dst_lcz_params': 'testing/geo_em.d04_LCZ_params.nc',
     }
 
     dst_final = xr.open_dataset(
-        info['dst_lcz_params_file']
+        info['dst_lcz_params']
     )
     assert dst_final['URB_PARAM'].dtype == np.float32
 
-def test_create_extent_file(tmpdir):
+def test_create_lcz_extent_file(tmpdir):
 
+    # tmpdir = '/home/demuzmp4/Desktop'
+    # info = {
+    #     'dst_lcz_extent_file': os.path.join(tmpdir,'geo_em.d04_LCZ_extent.nc'),
+    # }
     info = {
         'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
         'dst_lcz_params_file': 'testing/geo_em.d04_LCZ_params.nc',
@@ -671,7 +705,7 @@ def test_create_extent_file(tmpdir):
          index_col=0
     )
 
-    frc_mask = add_frc_lu_index_2_wrf(
+    frc_mask = _add_frc_lu_index_2_wrf(
         info=info,
         FRC_THRESHOLD=0.2,
         LCZ_NAT_MASK=True,
@@ -679,9 +713,8 @@ def test_create_extent_file(tmpdir):
     )
 
     # Produce LCZ extent file
-    create_extent_file(
+    create_lcz_extent_file(
         info=info,
-        frc_mask=frc_mask
     )
 
     # Read produced file
@@ -707,12 +740,12 @@ def test_create_extent_file(tmpdir):
     ),
 )
 def test_expand_land_cat_parents_files_missing(domain_id, capsys, tmpdir):
-    input_files = (
-        'geo_em.d04.nc', 'lcz_zaragoza.tif',
+    ifiles = (
+        'geo_em.d04.nc', 'lcz_zaragoza_clean.tif',
     )
     input_dir = tmpdir.mkdir('input')
-    for f in input_files:
-        shutil.copy(os.path.join('sample_data', f), input_dir)
+    shutil.copy(os.path.join('sample_data', ifiles[0]), input_dir)
+    shutil.copy(os.path.join('testing', ifiles[1]), input_dir)
 
     info = {
         'dst_file': os.path.join(input_dir, 'geo_em.d04.nc'),
@@ -726,62 +759,126 @@ def test_expand_land_cat_parents_files_missing(domain_id, capsys, tmpdir):
     warning_str = f"WARNING: Parent domain {info['dst_file'][:-5]}{domain_id}.nc not found"
     assert warning_str in out
 
-
-def test_full_run_with_example_data(tmpdir):
-    input_files = (
-        'geo_em.d01.nc', 'geo_em.d03.nc', 'geo_em.d03.nc','geo_em.d04.nc',
-        'lcz_zaragoza.tif',
-    )
+def test_expand_land_cat_parents_no_num_land_cat(tmpdir, capsys):
     input_dir = tmpdir.mkdir('input')
-    for f in input_files:
-        shutil.copy(os.path.join('sample_data', f), input_dir)
-
-    with tmpdir.as_cwd():
-        main(['input', 'lcz_zaragoza.tif', 'geo_em.d04.nc'])
-
-        contents = os.listdir(input_dir)
-        assert 'geo_em.d04_LCZ_params.nc' in contents
-        assert 'geo_em.d04_NoUrban.nc' in contents
-        assert 'geo_em.d04_LCZ_extent.nc' in contents
-
-
-
-def test_main_with_custom_lcz_ucp(tmpdir):
-    input_files = (
-        'geo_em.d01.nc', 'geo_em.d03.nc', 'geo_em.d03.nc','geo_em.d04.nc',
-        'lcz_zaragoza.tif',
+    shutil.copy(os.path.join('testing', 'geo_em.d02_Shanghai.nc'),
+                os.path.join(input_dir,'geo_em.d02.nc')
+                )
+    shutil.copy(os.path.join('testing', 'geo_em.d01_Shanghai_no_NUM_LAND_CAT.nc'),
+                os.path.join(input_dir,'geo_em.d01.nc')
+                )
+    info = {
+        'dst_file' : os.path.join(input_dir,'geo_em.d02.nc'),
+        'io_dir': 'some_dummy_directory'
+    }
+    expand_land_cat_parents(
+        info=info,
     )
+    out, _ = capsys.readouterr()
+    warning_str = f"Cannot read NUM_LAND_CAT"
+    assert warning_str in out
+
+
+def test_expand_land_cat_parents_num_land_cat_41(capsys, tmpdir):
+
     input_dir = tmpdir.mkdir('input')
-    for f in input_files:
-        shutil.copy(os.path.join('sample_data', f), input_dir)
-
-    shutil.copy('testing/custom_lcz_ucp.csv', tmpdir)
-
-    with tmpdir.as_cwd():
-        with mock.patch.object(w2w.w2w, 'checks_and_cleaning') as m:
-            main(
-                [
-                    'input', 'lcz_zaragoza.tif', 'geo_em.d04.nc',
-                    '--lcz-ucp', 'custom_lcz_ucp.csv',
-                ],
-            )
-
-    exp_df = pd.read_csv('testing/custom_lcz_ucp.csv', index_col=0)
-    pd.testing.assert_frame_equal(exp_df, m.call_args[1]['ucp_table'])
-
-
-def test_main_default_lcz_ucp(tmpdir):
-    input_files = (
-        'geo_em.d01.nc', 'geo_em.d03.nc', 'geo_em.d03.nc','geo_em.d04.nc',
-        'lcz_zaragoza.tif',
+    shutil.copy(os.path.join('testing', 'geo_em.d02_Shanghai.nc'),
+                os.path.join(input_dir,'geo_em.d02.nc')
+                )
+    shutil.copy(os.path.join('testing', 'geo_em.d01_Shanghai_ncl41.nc'),
+                os.path.join(input_dir,'geo_em.d01.nc')
+                )
+    info = {
+        'dst_file' : os.path.join(input_dir,'geo_em.d02.nc'),
+        'io_dir': 'some_dummy_directory'
+    }
+    expand_land_cat_parents(
+        info=info,
     )
+    out, _ = capsys.readouterr()
+    assert 'already contains 41 LC classes' in out
+
+def test_expand_land_cat_parents_num_land_cat_not41(capsys, tmpdir):
+
     input_dir = tmpdir.mkdir('input')
-    for f in input_files:
-        shutil.copy(os.path.join('sample_data', f), input_dir)
+    shutil.copy(os.path.join('testing', 'geo_em.d02_Shanghai.nc'),
+                os.path.join(input_dir,'geo_em.d02.nc')
+                )
+    shutil.copy(os.path.join('testing', 'geo_em.d01_Shanghai_ncl20.nc'),
+                os.path.join(input_dir,'geo_em.d01.nc')
+                )
+    info = {
+        'dst_file' : os.path.join(input_dir,'geo_em.d02.nc'),
+        'io_dir': 'some_dummy_directory'
+    }
+    expand_land_cat_parents(
+        info=info,
+    )
+    out, _ = capsys.readouterr()
+    contents = os.listdir(input_dir)
+    assert 'geo_em.d01_41.nc' in contents
 
-    with tmpdir.as_cwd():
-        with mock.patch.object(w2w.w2w, 'checks_and_cleaning') as m:
-            main(['input', 'lcz_zaragoza.tif', 'geo_em.d04.nc'])
 
-    exp_df = pd.read_csv('w2w/resources/LCZ_UCP_lookup.csv', index_col=0)
-    pd.testing.assert_frame_equal(exp_df, m.call_args[1]['ucp_table'])
+# def test_full_run_with_example_data(tmpdir):
+#     input_dir = tmpdir.mkdir('input')
+#     input_files = (
+#         'geo_em.d01.nc',
+#         'geo_em.d03.nc',
+#         'geo_em.d03.nc',
+#         'geo_em.d04.nc',
+#     )
+#     for f in input_files:
+#         shutil.copy(os.path.join('sample_data', f), input_dir)
+#     shutil.copy(os.path.join('testing', 'lcz_zaragoza_clean.tif'), input_dir)
+#
+#     with tmpdir.as_cwd():
+#         main(['input', 'lcz_zaragoza_clean.tif', 'geo_em.d04.nc'])
+#
+#         contents = os.listdir(input_dir)
+#         assert 'geo_em.d04_LCZ_params.nc' in contents
+#         assert 'geo_em.d04_NoUrban.nc' in contents
+#         assert 'geo_em.d04_LCZ_extent.nc' in contents
+#
+#
+#
+# def test_main_with_custom_lcz_ucp(tmpdir):
+#     input_dir = tmpdir.mkdir('input')
+#     input_files = (
+#         'geo_em.d01.nc',
+#         'geo_em.d03.nc',
+#         'geo_em.d03.nc',
+#         'geo_em.d04.nc',
+#     )
+#     for f in input_files:
+#         shutil.copy(os.path.join('sample_data', f), input_dir)
+#     shutil.copy(os.path.join('testing', 'lcz_zaragoza_clean.tif'), input_dir)
+#     shutil.copy('testing/custom_lcz_ucp.csv', tmpdir)
+#
+#     with tmpdir.as_cwd():
+#         with mock.patch.object(w2w.w2w, 'checks_and_cleaning') as m:
+#             main(
+#                 [
+#                     'input', 'lcz_zaragoza_clean.tif', 'geo_em.d04.nc',
+#                     '--lcz-ucp', 'custom_lcz_ucp.csv',
+#                 ],
+#             )
+#
+#     exp_df = pd.read_csv('testing/custom_lcz_ucp.csv', index_col=0)
+#     pd.testing.assert_frame_equal(exp_df, m.call_args[1]['ucp_table'])
+#
+#
+# def test_main_default_lcz_ucp(tmpdir):
+#     input_files = (
+#         'geo_em.d01.nc', 'geo_em.d03.nc', 'geo_em.d03.nc','geo_em.d04.nc',
+#         'lcz_zaragoza_clean.tif',
+#     )
+#     input_dir = tmpdir.mkdir('input')
+#     for f in input_files:
+#         shutil.copy(os.path.join('sample_data', f), input_dir)
+#
+#     with tmpdir.as_cwd():
+#         with mock.patch.object(w2w.w2w, 'checks_and_cleaning') as m:
+#             main(['input', 'lcz_zaragoza.tif', 'geo_em.d04.nc'])
+#
+#     exp_df = pd.read_csv('w2w/resources/LCZ_UCP_lookup.csv', index_col=0)
+#     pd.testing.assert_frame_equal(exp_df, m.call_args[1]['ucp_table'])

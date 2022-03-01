@@ -88,7 +88,7 @@ def main(argv=None):
     )
     args = parser.parse_args(argv)
 
-    # check if a custom LUT was set and read it
+    # check if a custom LCZ UCP file was set and read it
     if args.lcz_ucp is not None:
         lookup_table = args.lcz_ucp
     else:
@@ -96,7 +96,54 @@ def main(argv=None):
             'w2w.resources',
         ).joinpath('LCZ_UCP_lookup.csv')
 
+    # Execute the functions
+    print("--> Set files structure")
+    info = create_info_dict(args)
     ucp_table = pd.read_csv(lookup_table, index_col=0)
+
+    print("--> Check LCZ integrity, in terms of class labels, projection and extent")
+    check_lcz_integrity(
+        info=info,
+        LCZ_BAND=args.LCZ_BAND,
+    )
+
+    print("--> Replace WRF MODIS urban LC with surrounding natural LC")
+    wrf_remove_urban(
+        info=info,
+        NPIX_NLC=args.NPIX_NLC,
+    )
+
+    print("--> Create temporary WRF grid .tif file for resampling")
+    create_wrf_gridinfo(
+        info=info,
+    )
+
+    print("--> Create LCZ-based geo_em file")
+    nbui_max = create_lcz_params_file(
+        info=info,
+        FRC_THRESHOLD=args.FRC_THRESHOLD,
+        LCZ_NAT_MASK=True,
+        ucp_table=ucp_table,
+    )
+
+    print("--> Create LCZ-based urban extent geo_em file (excluding other LCZ-based info)")
+    create_lcz_extent_file(
+        info=info,
+    )
+
+    print("--> Expanding land categories of parent domain(s) to 41")
+    expand_land_cat_parents(
+        info=info,
+    )
+
+    print("\n--> Start sanity check and clean-up ...")
+    checks_and_cleaning(
+        info=info,
+        ucp_table=ucp_table,
+        nbui_max=nbui_max,
+    )
+
+def create_info_dict(args) -> Dict:
 
     # Define output and tmp file(s), the latter is removed when done.
     src_file = os.path.join(
@@ -141,54 +188,7 @@ def main(argv=None):
         'BUILT_LCZ': args.built_lcz,
     }
 
-    # Execute the functions
-    print("--> Check LCZ integrity, in terms of class labels, projection and extent")
-    check_lcz_integrity(
-        info=info,
-        LCZ_BAND=args.LCZ_BAND,
-    )
-
-    print("--> Replace WRF MODIS urban LC with surrounding natural LC")
-    wrf_remove_urban(
-        info=info,
-        NPIX_NLC=args.NPIX_NLC,
-    )
-
-    print("--> Create temporary WRF grid .tif file for resampling")
-    create_wrf_gridinfo(
-        info=info,
-    )
-
-    print("--> Add FRC_URB2D & alter LU_INDEX, GREENFRAC and LANDUSEF")
-    frc_mask = add_frc_lu_index_2_wrf(
-        info=info,
-        FRC_THRESHOLD=args.FRC_THRESHOLD,
-        LCZ_NAT_MASK=True,
-        ucp_table=ucp_table,
-    )
-
-    print("--> Insert LCZ-based UCP values into WRF's URB_PARAM")
-    nbui_max = add_urb_params_to_wrf(info=info, ucp_table=ucp_table)
-
-    print("--> Create LCZ-based urban extent file (excluding other LCZ-based info)")
-    create_extent_file(
-        info=info,
-        frc_mask=frc_mask,
-    )
-
-    print("--> Expanding land categories of parent domain(s) to 41")
-    expand_land_cat_parents(
-        info=info,
-    )
-
-    print("\n--> Start sanity check and clean-up ...")
-    checks_and_cleaning(
-        info=info,
-        ucp_table=ucp_table,
-        nbui_max=nbui_max,
-    )
-
-
+    return info
 
 def _replace_lcz_number(lcz, lcz_to_change):
 
@@ -655,7 +655,6 @@ def _compute_hi_distribution(
         ucp_table,
         SAMPLE_SIZE=100000,
         ERROR_MARGIN=0.05,
-        # HI_THRES_MIN=5,
 ) -> Any:
 
     ''' Helper function to compute building height distribution'''
@@ -887,7 +886,7 @@ def _adjust_greenfrac_landusef(
     return dst_data
 
 
-def add_frc_lu_index_2_wrf(
+def _add_frc_lu_index_2_wrf(
         info,
         FRC_THRESHOLD,
         LCZ_NAT_MASK,
@@ -943,21 +942,13 @@ def add_frc_lu_index_2_wrf(
     # Also adjust GREENFRAC and LANDUSEF
     dst_data = _adjust_greenfrac_landusef(info, dst_data, frc_mask)
 
-    # Save to final _lcz_params file
-    if os.path.exists(info['dst_lcz_params_file']):
-        os.remove(info['dst_lcz_params_file'])
-    dst_data.to_netcdf(info['dst_lcz_params_file'])
-
-    return frc_mask
+    return dst_data
 
 
-def _initialize_urb_param(
-        info,
-):
+def _initialize_urb_param(dst_data):
 
     ''' Helper function to initialize URB_PARAM in WRF geo_em file'''
 
-    dst_data = xr.open_dataset(info['dst_lcz_params_file'])
     URB_PARAM = np.zeros([1, 132,
                           len(dst_data.south_north),
                           len(dst_data.west_east)])
@@ -975,13 +966,23 @@ def _initialize_urb_param(
 
     return dst_data
 
-def add_urb_params_to_wrf(info, ucp_table):
+def create_lcz_params_file(info, FRC_THRESHOLD, LCZ_NAT_MASK, ucp_table):
 
-    ''' Map, aggregate and add lcz-based UCP values to WRF'''
+    '''
+    Create a domain file with all LCZ-based information:
+    Map, aggregate and add lcz-based UCP values to the inner geo_em file.
+    '''
+
+    dst_data = _add_frc_lu_index_2_wrf(
+        info=info,
+        FRC_THRESHOLD=FRC_THRESHOLD,
+        LCZ_NAT_MASK=LCZ_NAT_MASK,
+        ucp_table=ucp_table,
+    )
 
     # Initialize empty URB_PARAM in final wrf file,
     # with all zeros and proper attributes
-    dst_final = _initialize_urb_param(info)
+    dst_final = _initialize_urb_param(dst_data=dst_data)
 
     # get frc_mask, to only set values where FRC_URB2D > 0.
     frc_mask = dst_final.FRC_URB2D.values[0,:,:] != 0
@@ -1072,11 +1073,13 @@ def add_urb_params_to_wrf(info, ucp_table):
     return nbui_max
 
 
-def create_extent_file(info, frc_mask) -> None:
+def create_lcz_extent_file(info) -> None:
 
     '''Create a domain file with an LCZ-based urban extent (excluding other LCZ-based info)'''
 
     dst_params = xr.open_dataset(info['dst_lcz_params_file'])
+    frc_mask = dst_params.FRC_URB2D.values[0, :, :] != 0
+
     dst_extent = dst_params.copy()
 
     dst_data_orig = xr.open_dataset(info['dst_file'])
@@ -1131,12 +1134,13 @@ def expand_land_cat_parents(
 
         ifile = f"{info['dst_file'][:-5]}{i:02d}.nc"
 
-        try:
+        if os.path.exists(ifile):
+
             da = xr.open_dataset(ifile)
 
-            if int(da.attrs['NUM_LAND_CAT']) != 41:
+            try:
+                if int(da.attrs['NUM_LAND_CAT']) != 41:
 
-                try:
                     orig_num_land_cat = da.attrs['NUM_LAND_CAT']
                     # Set number of land categories to 41
                     da.attrs['NUM_LAND_CAT'] = np.intc(41)
@@ -1165,16 +1169,15 @@ def expand_land_cat_parents(
                     ofile = ifile.replace('.nc', '_41.nc')
                     da.to_netcdf(ofile)
 
-                except Exception:
-                    err = traceback.format_exc()
-                    print(f'Cannot read change NUM_LAND_CAT and LANDUSEF dimensions\n{err}')
+                else:
+                    # print(f"> Parent domain {info['dst_file'][:-5]}{i:02d}.nc "
+                    #      f"already contains 41 LC classes")
+                    print(f"> Parent domain d{i:02d}.nc already contains 41 LC classes")
+            except Exception:
+                err = traceback.format_exc()
+                print(f'Cannot read NUM_LAND_CAT and LANDUSEF dimensions\n{err}')
 
-            else:
-                #print(f"> Parent domain {info['dst_file'][:-5]}{i:02d}.nc "
-                #      f"already contains 41 LC classes")
-                print(f"> Parent domain d{i:02d}.nc already contains 41 LC classes")
-
-        except Exception:
+        else:
             print(f"WARNING: Parent domain {info['dst_file'][:-5]}{i:02d}.nc not found.\n"
                   f"Please make sure the parent domain files are in {info['io_dir']}\n"
                   f"Without this information, you will not be able to produce the boundary"
@@ -1337,6 +1340,8 @@ def checks_and_cleaning(info, ucp_table, nbui_max):
         os.remove(info['dst_gridinfo'])
     if os.path.exists(info['src_file_clean']):
         os.remove(info['src_file_clean'])
+    if os.path.exists(info['dst_lcz_params_tmp']):
+        os.remove(info['dst_lcz_params_tmp'])
 
     print(f"\n\n ----------- !! NOTE !! --------- \n"
           f" Set nbui_max to {nbui_max} during compilation, "
