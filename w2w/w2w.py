@@ -10,7 +10,7 @@ import os, sys
 import argparse
 from argparse import RawTextHelpFormatter
 import traceback
-from typing import Dict
+from typing import Dict, Any
 from scipy import stats
 from pyproj import CRS
 
@@ -88,7 +88,7 @@ def main(argv=None):
     )
     args = parser.parse_args(argv)
 
-    # check if a custom LUT was set and read it
+    # check if a custom LCZ UCP file was set and read it
     if args.lcz_ucp is not None:
         lookup_table = args.lcz_ucp
     else:
@@ -96,7 +96,56 @@ def main(argv=None):
             'w2w.resources',
         ).joinpath('LCZ_UCP_lookup.csv')
 
+    # Execute the functions
+    print("--> Set files structure")
+    info = create_info_dict(args)
     ucp_table = pd.read_csv(lookup_table, index_col=0)
+
+    print("--> Check LCZ integrity, in terms of "
+          "class labels, projection and extent")
+    check_lcz_integrity(
+        info=info,
+        LCZ_BAND=args.LCZ_BAND,
+    )
+
+    print("--> Replace WRF MODIS urban LC with surrounding natural LC")
+    wrf_remove_urban(
+        info=info,
+        NPIX_NLC=args.NPIX_NLC,
+    )
+
+    print("--> Create temporary WRF grid .tif file for resampling")
+    create_wrf_gridinfo(
+        info=info,
+    )
+
+    print("--> Create LCZ-based geo_em file")
+    nbui_max = create_lcz_params_file(
+        info=info,
+        FRC_THRESHOLD=args.FRC_THRESHOLD,
+        LCZ_NAT_MASK=True,
+        ucp_table=ucp_table,
+    )
+
+    print("--> Create LCZ-based urban extent geo_em file "
+          "(excluding other LCZ-based info)")
+    create_lcz_extent_file(
+        info=info,
+    )
+
+    print("--> Expanding land categories of parent domain(s) to 41")
+    expand_land_cat_parents(
+        info=info,
+    )
+
+    print("\n--> Start sanity check and clean-up ...")
+    checks_and_cleaning(
+        info=info,
+        ucp_table=ucp_table,
+        nbui_max=nbui_max,
+    )
+
+def create_info_dict(args) -> Dict:
 
     # Define output and tmp file(s), the latter is removed when done.
     src_file = os.path.join(
@@ -141,68 +190,7 @@ def main(argv=None):
         'BUILT_LCZ': args.built_lcz,
     }
 
-    # Execute the functions
-    print("Check LCZ integrity, in terms of class labels, projection and extent")
-    check_lcz_integrity(
-        info=info,
-        LCZ_BAND=args.LCZ_BAND,
-    )
-
-    print("Replace WRF MODIS urban LC with surrounding natural LC")
-    wrf_remove_urban(
-        info=info,
-        NPIX_NLC=args.NPIX_NLC,
-    )
-    print("")
-
-    print("Create temporary WRF grid .tif file for resampling")
-    create_wrf_gridinfo(
-        info=info,
-    )
-    print("")
-
-    print("+ FRC_URB2D, alter LU_INDEX, GREENFRAC and LANDUSEF")
-    frc_mask = add_frc_lu_index_2_wrf(
-        info=info,
-        FRC_THRESHOLD=args.FRC_THRESHOLD,
-        LCZ_NAT_MASK=True,
-        ucp_table=ucp_table,
-    )
-    print("")
-
-    print("+ LCZ-based UCP values into WRF's URB_PARAM")
-    nbui_max = add_urb_params_to_wrf(info=info, ucp_table=ucp_table)
-    print("")
-
-    print("Create LCZ-based urban extent file (excluding other LCZ-based info).")
-    create_extent_file(
-        info=info,
-        frc_mask=frc_mask,
-    )
-    print("")
-
-    print("Expanding land categories of parent domain(s) to 41:")
-    expand_land_cat_parents(
-        info=info,
-    )
-    print("")
-    print("******************************")
-    print(f"Set nbui_max to {nbui_max} during compilation, "
-          "in order to optimize memory storage.")
-    print("******************************")
-    print("")
-
-    print("Start sanity check and clean-up ...")
-    checks_and_cleaning(info=info, ucp_table=ucp_table)
-    print("")
-    print("********* All done ***********")
-
-
-
-# Overall function that tests the LCZ integrity, including:
-# - check LCZ classes, change if needed
-# - check projection system, change if needed
-# - check extent
+    return info
 
 def _replace_lcz_number(lcz, lcz_to_change):
 
@@ -225,6 +213,9 @@ def _replace_lcz_number(lcz, lcz_to_change):
 
 def _check_lcz_wrf_extent(lcz, wrf) -> None:
 
+    ERROR = '\033[0;31m'
+    ENDC = '\033[0m'
+
     # Get bounding box coordinates
     lcz_xmin, lcz_ymin, lcz_xmax, lcz_ymax = lcz.rio.bounds()
     wrf_xmin, wrf_ymin, wrf_xmax, wrf_ymax = \
@@ -235,12 +226,12 @@ def _check_lcz_wrf_extent(lcz, wrf) -> None:
     if not (wrf_xmin > lcz_xmin ) & (wrf_xmax < lcz_xmax ) & \
            (wrf_ymin > lcz_ymin) & (wrf_ymax < lcz_ymax):
 
-        message = "ERROR: LCZ domain should be larger than WRF domain " \
-                  "in all directions.\n" \
+        message = f"{ERROR}ERROR: LCZ domain should be larger than " \
+                  "WRF domain in all directions.\n" \
                   "LCZ bounds (xmin, ymin, xmax, ymax): " \
                  f"{lcz_xmin, lcz_ymin, lcz_xmax, lcz_ymax}\n" \
                   "WRF bounds (xmin, ymin, xmax, ymax): "\
-                 f"{wrf_xmin, wrf_ymin, wrf_xmax, wrf_ymax}"
+                 f"{wrf_xmin, wrf_ymin, wrf_xmax, wrf_ymax}{ENDC}"
         print(message)
         sys.exit(1)
     else:
@@ -276,7 +267,7 @@ def check_lcz_integrity(info: Dict[str, str], LCZ_BAND: int):
             lcz=lcz,
             lcz_to_change=lcz_100,
         )
-        print("> LCZ class labels renamed from 1 to 17.")
+        print("> LCZ class labels renamed from 1 to 17")
     else:
         print("> LCZ labels as expected (1 to 17)")
 
@@ -285,7 +276,7 @@ def check_lcz_integrity(info: Dict[str, str], LCZ_BAND: int):
         lcz = lcz.rio.reproject("EPSG:4326")
         lcz.data = xr.where(lcz.data > 0, lcz.data, 0)
         lcz.data = lcz.data.astype(np.int32)
-        print("> LCZ map reprojected to WGS84 (EPSG:4326).")
+        print("> LCZ map reprojected to WGS84 (EPSG:4326)")
     else:
         print("> LCZ provided as WGS84 (EPSG:4326)")
 
@@ -295,6 +286,26 @@ def check_lcz_integrity(info: Dict[str, str], LCZ_BAND: int):
     # Write clean LCZ to file, used in all subsequent routines.
     lcz.rio.to_raster(info['src_file_clean'], dtype=np.int32)
 
+
+def _calc_distance_coord(
+        lat1,lon1,lat2,lon2
+):
+
+    '''Calculate distance using coordinates
+       This uses the spherical law of cosines
+    '''
+
+    earth_radius=6371000 #Earth radius in m
+    lat1r = lat1*np.pi/180.
+    lat2r = lat2*np.pi/180.
+    lon1r = lon1*np.pi/180.
+    lon2r = lon2*np.pi/180.
+
+    d = np.arccos(np.sin(lat1r)*np.sin(lat2r) +
+                  np.cos(lat1r)*np.cos(lat2r)*
+                  np.cos(lon2r-lon1r))*earth_radius
+
+    return d
 
 def wrf_remove_urban(
         info,
@@ -322,12 +333,12 @@ def wrf_remove_urban(
         for j in dst_data.west_east:
             if luse.isel(south_north=i,west_east=j) == 13:
 
-                dis = calc_distance_coord(
-                                         lat.where((luse!=13) & (luse!=17) & (luse!=21)),
-                                         lon.where((luse!=13) & (luse!=17) & (luse!=21)),
-                                         lat.isel(south_north=i,west_east=j),
-                                         lon.isel(south_north=i,west_east=j)
-                                         )
+                dis = _calc_distance_coord(
+                         lat.where((luse!=13) & (luse!=17) & (luse!=21)),
+                         lon.where((luse!=13) & (luse!=17) & (luse!=21)),
+                         lat.isel(south_north=i,west_east=j),
+                         lon.isel(south_north=i,west_east=j)
+                         )
 
                 disflat = dis.stack(gridpoints=('south_north','west_east'))\
                     .reset_index('gridpoints').drop_vars(['south_north','west_east'])
@@ -343,35 +354,35 @@ def wrf_remove_urban(
 
             if luf.isel(south_north=i,west_east=j,land_cat=12)>0.:
                 if orig_num_land_cat>20: #USING MODIS_LAKE
-                    dis = calc_distance_coord(
-                                             lat.where(
-                                                        (luf.isel(land_cat=12)==0.) &
-                                                        (luf.isel(land_cat=16)==0.) &
-                                                        (luf.isel(land_cat=20)==0.)
-                                                      ),
+                    dis = _calc_distance_coord(
+                             lat.where(
+                                        (luf.isel(land_cat=12)==0.) &
+                                        (luf.isel(land_cat=16)==0.) &
+                                        (luf.isel(land_cat=20)==0.)
+                                      ),
 
-                                             lon.where(
-                                                        (luf.isel(land_cat=12)==0.) &
-                                                        (luf.isel(land_cat=16)==0.) &
-                                                        (luf.isel(land_cat=20)==0.)
-                                                      ),
-                                             lat.isel(south_north=i,west_east=j),
-                                             lon.isel(south_north=i,west_east=j)
-                                             )
+                             lon.where(
+                                        (luf.isel(land_cat=12)==0.) &
+                                        (luf.isel(land_cat=16)==0.) &
+                                        (luf.isel(land_cat=20)==0.)
+                                      ),
+                             lat.isel(south_north=i,west_east=j),
+                             lon.isel(south_north=i,west_east=j)
+                             )
                 else: #USING MODIS (NO LAKES)
-                    dis = calc_distance_coord(
-                                             lat.where(
-                                                        (luf.isel(land_cat=12)==0.) &
-                                                        (luf.isel(land_cat=16)==0.)
-                                                      ),
+                    dis = _calc_distance_coord(
+                             lat.where(
+                                        (luf.isel(land_cat=12)==0.) &
+                                        (luf.isel(land_cat=16)==0.)
+                                      ),
 
-                                             lon.where(
-                                                        (luf.isel(land_cat=12)==0.) &
-                                                        (luf.isel(land_cat=16)==0.)
-                                                      ),
-                                             lat.isel(south_north=i,west_east=j),
-                                             lon.isel(south_north=i,west_east=j)
-                                             )
+                             lon.where(
+                                        (luf.isel(land_cat=12)==0.) &
+                                        (luf.isel(land_cat=16)==0.)
+                                      ),
+                             lat.isel(south_north=i,west_east=j),
+                             lon.isel(south_north=i,west_east=j)
+                             )
 
                 disflat = dis.stack(gridpoints=('south_north','west_east'))\
                     .reset_index('gridpoints').drop_vars(['south_north','west_east'])
@@ -411,7 +422,7 @@ def create_wrf_gridinfo(info: Dict[str, str]) -> None:
     da_lu.rio.write_crs("epsg:4326", inplace=True)
     da_lu.rio.to_raster(info['dst_gridinfo'])
 
-def _get_SW_BW(ucp_table):
+def _get_SW_BW(ucp_table) -> Any:
 
     '''Get Street and Building Width'''
 
@@ -424,6 +435,23 @@ def _get_SW_BW(ucp_table):
 
     return SW, BW
 
+def _get_lcz_arr(src_data, info)-> Any:
+
+    ''' Get LCZ data as array, setting non-built pixels to 0'''
+
+    # Get mask of selected built LCZs
+    lcz_urb_mask = xr.DataArray(
+        np.in1d(src_data, info['BUILT_LCZ']).reshape(src_data.shape),
+        dims=src_data.dims, coords=src_data.coords
+    )
+
+    # Get LCZ class values only.
+    lcz_arr = src_data.data.astype(np.int32)
+
+    # Set LCZ classes not in BUILT_LCZ to 0
+    lcz_arr[~lcz_urb_mask] = 0
+
+    return lcz_arr
 
 def _ucp_resampler(
         info,
@@ -431,9 +459,10 @@ def _ucp_resampler(
         RESAMPLE_TYPE,
         ucp_table,
         **kwargs,
-):
+)-> Any:
 
-    '''Helper function to resample lcz ucp data to WRF grid'''
+    '''Helper function to resample lcz ucp data ('FRC_URB2D', 'MH_URB2D',
+    'STDH_URB2D', 'LB_URB2D', 'LF_URB2D', 'LP_URB2D') to WRF grid'''
 
     # Read gridded data: LCZ and WRF grid
     src_data = rxr.open_rasterio(info['src_file_clean'])[0, :, :]
@@ -464,16 +493,7 @@ def _ucp_resampler(
         lookup = ucp_table[ucp_key].loc[info['BUILT_LCZ']]
 
     # Get mask of selected built LCZs
-    lcz_urb_mask = xr.DataArray(
-        np.in1d(src_data, info['BUILT_LCZ']).reshape(src_data.shape),
-        dims=src_data.dims, coords=src_data.coords
-    )
-
-    # Get LCZ class values only.
-    lcz_arr = src_data.data.astype(np.int32)
-
-    # Set LCZ classes not in BUILT_LCZ to 0
-    lcz_arr[~lcz_urb_mask] = 0
+    lcz_arr = _get_lcz_arr(src_data, info)
 
     # Make replacer object to map UCP values on LCZ class values
     replacer = np.zeros((max(info['BUILT_LCZ']) + 1,), object)
@@ -514,12 +534,13 @@ def _hgt_resampler(
         info,
         RESAMPLE_TYPE,
         ucp_table,
-):
+)-> Any:
 
-    '''Helper function to resample lcz ucp data to WRF grid'''
+    '''Helper function to resample HGT_URB2D (=Area Weighted
+    Mean Building Height ) data to WRF grid'''
 
     # Read gridded data: LCZ and WRF grid
-    src_data = rxr.open_rasterio(info['src_file'])[0, :, :]
+    src_data = rxr.open_rasterio(info['src_file_clean'])[0, :, :]
     dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
 
     # Street width extracted from S02012 Building heighht and H2W.
@@ -531,16 +552,7 @@ def _hgt_resampler(
     lookup_denom = BW.loc[info['BUILT_LCZ']] ** 2
 
     # Get mask of selected built LCZs
-    lcz_urb_mask = xr.DataArray(
-        np.in1d(src_data, info['BUILT_LCZ']).reshape(src_data.shape),
-        dims=src_data.dims, coords=src_data.coords
-    )
-
-    # Get LCZ class values only.
-    lcz_arr = src_data.data.astype(np.int32)
-
-    # Set LCZ classes not in BUILT_LCZ to 0
-    lcz_arr[~lcz_urb_mask] = 0
+    lcz_arr = _get_lcz_arr(src_data, info)
 
     # Make replacer object for nominator
     replacer_nom = np.zeros((max(info['BUILT_LCZ']) + 1,), object)
@@ -591,33 +603,62 @@ def _hgt_resampler(
 
     return hgt_urb2d
 
-def _scale_hi(
-        array,
-):
+def _get_truncated_normal_sample(lcz_i,
+                                 ucp_table,
+                                 SAMPLE_SIZE=100000) -> Any:
 
-    ''' Helper function to scale HI_URB2D to 100%'''
+    ''' Helper function to return bounded normal distribution sample'''
 
-    return [(float(i) / sum(array) * 100.0) for i in array]
+    # Create instance of a truncated normal distribution
+    low = ucp_table['MH_URB2D_MIN'].loc[lcz_i]
+    mean = ucp_table['MH_URB2D'].loc[lcz_i]
+    upp = ucp_table['MH_URB2D_MAX'].loc[lcz_i]
+    sd = (ucp_table['MH_URB2D_MAX'].loc[lcz_i] -
+            ucp_table['MH_URB2D_MIN'].loc[lcz_i]) / 4
 
-def _get_truncated_normal(
-        mean,
-        sd,
-        low,
-        upp,
-):
+    hi_inst = truncnorm(
+        (low - mean) / sd, (upp - mean) / sd, loc=mean, scale=sd
+    )
 
-    ''' Helper function to return bounded normal distribution'''
+    # populate with large enough sample for accuracy
+    hi_sample = hi_inst.rvs(SAMPLE_SIZE)
 
-    return truncnorm(
-        (low - mean) / sd, (upp - mean) / sd, loc=mean, scale=sd)
+    return hi_sample
+
+def _check_hi_values(lcz_i, hi_sample, ucp_table, ERROR_MARGIN) -> None:
+
+    hi_metrics = [
+        'MH_URB2D_MIN',
+        'MH_URB2D_MAX',
+        'MH_URB2D',
+    ]
+    # Produce warning if approximated HI_URB2D distribution metrics
+    # are not as expected: using a ERROR_MARGIN % marging here.
+    for hi_metric in hi_metrics:
+
+        if hi_metric == 'MH_URB2D_MIN':
+            hi_sample_values = hi_sample.min()
+        elif hi_metric == 'MH_URB2D_MAX':
+            hi_sample_values = hi_sample.max()
+        elif hi_metric == 'MH_URB2D':
+            hi_sample_values = hi_sample.mean()
+
+        if not ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN) < \
+               hi_sample_values < \
+               ucp_table[hi_metric].loc[lcz_i] * (1 + ERROR_MARGIN):
+            print(f"WARNING: {hi_metric} distribution not in "
+                  f"expected range ({ERROR_MARGIN*100}% marging) for LCZ class {lcz_i}: "
+                  f"modelled: {np.round(hi_sample_values, 2)} | "
+                  f"expected: ["
+                  f"{np.round(ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN),2)} - "
+                  f"{np.round(ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN),2)}]")
 
 def _compute_hi_distribution(
         info,
         ucp_table,
-        SAMPLE_SIZE=5000000,
-        DIST_MARGIN=0.15,
-        # HI_THRES_MIN=5,
-):
+        SAMPLE_SIZE=100000,
+        ERROR_MARGIN=0.05,
+) -> Any:
 
     ''' Helper function to compute building height distribution'''
 
@@ -635,61 +676,39 @@ def _compute_hi_distribution(
         # LCZ 15 = paved, and considered to have no buildings (values = 0%)
         if not i == 15:
 
-            # Create instance of a truncated normal distribution
-            hi_inst = _get_truncated_normal(
-                mean=ucp_table['MH_URB2D'].loc[i],
-                sd=(ucp_table['MH_URB2D_MAX'].loc[i]-
-                    ucp_table['MH_URB2D_MIN'].loc[i])/4,
-                low=ucp_table['MH_URB2D_MIN'].loc[i],
-                upp=ucp_table['MH_URB2D_MAX'].loc[i]
+            # Make the sample
+            hi_sample = _get_truncated_normal_sample(
+                lcz_i=i,
+                ucp_table=ucp_table,
+                SAMPLE_SIZE=SAMPLE_SIZE,
             )
 
-            # populate with large enough sample for accuracy
-            hi_sample = hi_inst.rvs(SAMPLE_SIZE)
-
-            # Produce warning if approximated HI_URB2D distribution metrics
-            # are not as expected: using a DIST_MARGIN % marging here.
-            hi_metric = 'MH_URB2D_MIN'
-            if not ucp_table[hi_metric].loc[i] * (1-DIST_MARGIN) < \
-                hi_sample.min() < \
-                ucp_table[hi_metric].loc[i] * (1+DIST_MARGIN):
-                print("WARNING: MIN of HI_URB2D distribution not in "
-                      f"expected range ({DIST_MARGIN}% marging) for LCZ class {i}: "
-                      f"modelled: {np.round(hi_sample.min(),2)} | "
-                      f"expected: [{(ucp_table[hi_metric].loc[i] * (1-DIST_MARGIN)).round(2)} - "
-                      f"{(ucp_table[hi_metric].loc[i] * (1-DIST_MARGIN)).round(2)}]")
-
-            hi_metric = 'MH_URB2D_MAX'
-            if not ucp_table[hi_metric].loc[i] * (1-DIST_MARGIN) < \
-                hi_sample.max() < \
-                ucp_table[hi_metric].loc[i] * (1+DIST_MARGIN):
-                print("WARNING: MAX of HI_URB2D distribution not in "
-                      f"expected range ({DIST_MARGIN}% marging) for LCZ class {i}: "
-                      f"modelled: {np.round(hi_sample.max(),2)} | "
-                      f"expected: [{(ucp_table[hi_metric].loc[i] * (1-DIST_MARGIN)).round(2)} - "
-                      f"{(ucp_table[hi_metric].loc[i] * (1+DIST_MARGIN)).round(2)}]")
-
-            hi_metric = 'MH_URB2D'
-            if not ucp_table[hi_metric].loc[i] * (1-DIST_MARGIN) < \
-                hi_sample.mean() < \
-                ucp_table[hi_metric].loc[i] * (1+DIST_MARGIN):
-                print("WARNING: MEAN of HI_URB2D distribution not in "
-                      f"expected range ({DIST_MARGIN}% marging) for LCZ class {i}: "
-                      f"modelled: {np.round(hi_sample.mean(),2)} | "
-                      f"expected: [{(ucp_table[hi_metric].loc[i] * (1-DIST_MARGIN)).round(2)} - "
-                      f"{(ucp_table[hi_metric].loc[i] * (1+DIST_MARGIN)).round(2)}]")
+            # Check if values are within expected bounds.
+            _check_hi_values(
+                lcz_i=i,
+                hi_sample=hi_sample,
+                ucp_table=ucp_table,
+                ERROR_MARGIN=ERROR_MARGIN,
+            )
 
             # Count the values within pre-set bins
-            cnt = np.histogram(hi_sample, bins=np.arange(0,76,5))[0]
-            cnt = cnt/(SAMPLE_SIZE/100) # Convert to %
+            count_bins = np.histogram(hi_sample, bins=np.arange(0,76,5))[0]
+            count_bins = count_bins/(SAMPLE_SIZE/100) # Convert to %
 
             # Add to dataframe
-            df_hi.loc[i,:] = cnt
+            df_hi.loc[i,:] = count_bins
 
         # Set nans to zero
         df_hi = df_hi.fillna(0)
 
     return df_hi
+
+def _scale_hi(array) -> Any:
+
+    ''' Helper function to scale HI_URB2D to 100%'''
+
+    scaled_array = [(float(i) / sum(array) * 100.0) for i in array]
+    return scaled_array
 
 def _hi_resampler(
         info,
@@ -701,20 +720,11 @@ def _hi_resampler(
     '''Helper function to resample ucp HI_URB2D_URB2D data to WRF grid'''
 
     # Read gridded data: LCZ and WRF grid
-    src_data = rxr.open_rasterio(info['src_file'])[0, :, :]
+    src_data = rxr.open_rasterio(info['src_file_clean'])[0, :, :]
     dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
 
     # Get mask of selected built LCZs
-    lcz_urb_mask = xr.DataArray(
-        np.in1d(src_data, info['BUILT_LCZ']).reshape(src_data.shape),
-        dims=src_data.dims, coords=src_data.coords
-    )
-
-    # Get LCZ class values only.
-    lcz_arr = src_data.data.astype(np.int32)
-
-    # Set LCZ classes not in BUILT_LCZ to 0
-    lcz_arr[~lcz_urb_mask] = 0
+    lcz_arr = _get_lcz_arr(src_data, info)
 
     # Compute the building height densities.
     df_hi = _compute_hi_distribution(info, ucp_table=ucp_table)
@@ -725,7 +735,7 @@ def _hi_resampler(
     # Loop over the 15 height density classes.
     for hi_i in range(df_hi.shape[1]):
 
-        print(f"Working on height interval {df_hi.columns[hi_i]} ...")
+        #print(f"Working on height interval {df_hi.columns[hi_i]} ...")
         lookup = df_hi.iloc[:, hi_i].loc[info['BUILT_LCZ']]
 
         # Make replacer object to map UCP values on LCZ class values
@@ -776,11 +786,11 @@ def _lcz_resampler(
         LCZ_NAT_MASK,
 ):
 
-    '''Helper function to resample lcz classes to WRF grid'''
+    '''Helper function to resample lcz classes to WRF grid using majority'''
 
     # Read required gridded data, LCZ, WRF grid, and
     # original WRF (for original MODIS urban mask)
-    src_data = rxr.open_rasterio(info['src_file'])[0, :, :]
+    src_data = rxr.open_rasterio(info['src_file_clean'])[0, :, :]
     dst_grid = rxr.open_rasterio(info['dst_gridinfo'])
 
     # Mask natural LCZs before majority filtering.
@@ -846,7 +856,8 @@ def _adjust_greenfrac_landusef(
     )
 
     # Copy values from original file
-    landusef_new[:orig_num_land_cat,:,:] = dst_data['LANDUSEF'][0, :orig_num_land_cat, :, :]
+    landusef_new[:orig_num_land_cat,:,:] = \
+        dst_data['LANDUSEF'][0, :orig_num_land_cat, :, :]
 
     # First set all values to zero for urban mask
     landusef_new[:, frc_mask] = 0 # First all to 0, so sum remains 1 in the end
@@ -879,7 +890,7 @@ def _adjust_greenfrac_landusef(
     return dst_data
 
 
-def add_frc_lu_index_2_wrf(
+def _add_frc_lu_index_2_wrf(
         info,
         FRC_THRESHOLD,
         LCZ_NAT_MASK,
@@ -899,8 +910,8 @@ def add_frc_lu_index_2_wrf(
         info=info,
         ucp_key=ucp_key,
         RESAMPLE_TYPE='average',
-        FRC_THRESHOLD = FRC_THRESHOLD,
-        ucp_table=ucp_table
+        ucp_table=ucp_table,
+        FRC_THRESHOLD=FRC_THRESHOLD,
     )
 
     # Add to geo_em* that that has no MODIS urban
@@ -935,21 +946,13 @@ def add_frc_lu_index_2_wrf(
     # Also adjust GREENFRAC and LANDUSEF
     dst_data = _adjust_greenfrac_landusef(info, dst_data, frc_mask)
 
-    # Save to final _lcz_params file
-    if os.path.exists(info['dst_lcz_params_file']):
-        os.remove(info['dst_lcz_params_file'])
-    dst_data.to_netcdf(info['dst_lcz_params_file'])
-
-    return frc_mask
+    return dst_data
 
 
-def _initialize_urb_param(
-        info,
-):
+def _initialize_urb_param(dst_data):
 
     ''' Helper function to initialize URB_PARAM in WRF geo_em file'''
 
-    dst_data = xr.open_dataset(info['dst_lcz_params_file'])
     URB_PARAM = np.zeros([1, 132,
                           len(dst_data.south_north),
                           len(dst_data.west_east)])
@@ -967,13 +970,23 @@ def _initialize_urb_param(
 
     return dst_data
 
-def add_urb_params_to_wrf(info, ucp_table):
+def create_lcz_params_file(info, FRC_THRESHOLD, LCZ_NAT_MASK, ucp_table):
 
-    ''' Map, aggregate and add lcz-based UCP values to WRF'''
+    '''
+    Create a domain file with all LCZ-based information:
+    Map, aggregate and add lcz-based UCP values to the inner geo_em file.
+    '''
+
+    dst_data = _add_frc_lu_index_2_wrf(
+        info=info,
+        FRC_THRESHOLD=FRC_THRESHOLD,
+        LCZ_NAT_MASK=LCZ_NAT_MASK,
+        ucp_table=ucp_table,
+    )
 
     # Initialize empty URB_PARAM in final wrf file,
     # with all zeros and proper attributes
-    dst_final = _initialize_urb_param(info)
+    dst_final = _initialize_urb_param(dst_data=dst_data)
 
     # get frc_mask, to only set values where FRC_URB2D > 0.
     frc_mask = dst_final.FRC_URB2D.values[0,:,:] != 0
@@ -993,7 +1006,7 @@ def add_urb_params_to_wrf(info, ucp_table):
 
     for ucp_key in ucp_dict.keys():
 
-        print(f"Processing {ucp_key} ...")
+        print(f"> Processing {ucp_key} ...")
 
         # Obtain aggregated LCZ-based UCP values
         if ucp_key in ['MH_URB2D', 'STDH_URB2D', 'LB_URB2D',
@@ -1023,16 +1036,20 @@ def add_urb_params_to_wrf(info, ucp_table):
             # for WUDAPT LCZs they are considered all equal
             for i in range(4):
                 ucp_res.values[:, frc_mask == 0] = 0
-                dst_final['URB_PARAM'][:, ucp_dict[ucp_key]-1+i, :, :] = ucp_res
+                dst_final['URB_PARAM'][:, (ucp_dict[ucp_key] - 1 + i), :, :] = ucp_res
         if ucp_key == 'HI_URB2D':
             ucp_res[:,frc_mask==0] = 0
             dst_final['URB_PARAM'][0, (ucp_dict[ucp_key] - 1):, :, :] = ucp_res
         else:
             ucp_res.values[:, frc_mask == 0] = 0
-            dst_final['URB_PARAM'].values[0, ucp_dict[ucp_key] - 1, :,:] = ucp_res
+            dst_final['URB_PARAM'].values[0, (ucp_dict[ucp_key] - 1), :,:] = ucp_res
 
     # Make sure URB_PARAM is float32
     dst_final['URB_PARAM'] = dst_final.URB_PARAM.astype('float32')
+
+    # Expand attribute title
+    att_title = dst_final.attrs['TITLE']
+    dst_final.attrs['TITLE'] = f"{att_title}, perturbed by W2W"
 
     # Add/Change some additional global attributes,
     # including NBUI_MAX = max. nr. of HI intervals over the grid
@@ -1044,11 +1061,13 @@ def add_urb_params_to_wrf(info, ucp_table):
     for key in glob_attrs.keys():
         dst_final.attrs[key] = np.intc(glob_attrs[key])
 
-    #TODO: add final repo link when done.
     #Add DESCRIPTION in attrs, referring to tool
-    gh_repo = 'https://github.com/matthiasdemuzere/wrf-lcz-KL'
+    gh_ref = "Demuzere, M., Argüeso, D., Zonato, A., & Kittner, J. (2021). \n" \
+             "W2W: A Python package that injects WUDAPT's Local Climate Zone \n" \
+             "information in WRF [Computer software]. \n" \
+             "https://github.com/matthiasdemuzere/w2w"
     dst_final.attrs['DESCRIPTION'] = \
-        f"W2W.py tool used to create geo_em*.nc file: {gh_repo}"
+        f"W2W.py tool used to create geo_em*.nc file:\n {gh_ref}"
 
     # Save back to file
     if os.path.exists(info['dst_lcz_params_file']):
@@ -1057,33 +1076,17 @@ def add_urb_params_to_wrf(info, ucp_table):
 
     return nbui_max
 
-def calc_distance_coord(
-        lat1,lon1,lat2,lon2
-):
 
-    '''Calculate distance using coordinates
-       This uses the spherical law of cosines
+def create_lcz_extent_file(info) -> None:
+
+    '''
+    Create a domain file with an LCZ-based urban extent
+    (excluding other LCZ-based info)
     '''
 
-    earth_radius=6371000 #Earth radius in m
-    lat1r = lat1*np.pi/180.
-    lat2r = lat2*np.pi/180.
-    lon1r = lon1*np.pi/180.
-    lon2r = lon2*np.pi/180.
-
-    d = np.arccos(np.sin(lat1r)*np.sin(lat2r) + np.cos(lat1r)*np.cos(lat2r)*np.cos(lon2r-lon1r))*earth_radius
-
-    return d
-
-
-def create_extent_file(
-        info,
-        frc_mask,
-):
-
-    '''Create a domain file with an LCZ-based urban extent (excluding other LCZ-based info)'''
-
     dst_params = xr.open_dataset(info['dst_lcz_params_file'])
+    frc_mask = dst_params.FRC_URB2D.values[0, :, :] != 0
+
     dst_extent = dst_params.copy()
 
     dst_data_orig = xr.open_dataset(info['dst_file'])
@@ -1138,227 +1141,239 @@ def expand_land_cat_parents(
 
         ifile = f"{info['dst_file'][:-5]}{i:02d}.nc"
 
-        try:
+        if os.path.exists(ifile):
+
             da = xr.open_dataset(ifile)
 
-        except Exception:
-            print(f"WARNING: Parent domain {info['dst_file'][:-5]}{i:02d}.nc not found.\n"
-                  f"Please make sure the parent domain files are in {info['io_dir']}\n"
-                  f"Without this information, you will not be able to produce the boundary"
-                  f"conditions with real.exe.")
-
-        if int(da.attrs['NUM_LAND_CAT']) != 41:
-
             try:
-                orig_num_land_cat = da.attrs['NUM_LAND_CAT']
-                # Set number of land categories to 41
-                da.attrs['NUM_LAND_CAT'] = np.intc(41)
+                if int(da.attrs['NUM_LAND_CAT']) != 41:
 
-                # Create new landusef array with expanded dimensions
-                landusef_new = np.zeros(
-                    (1, 41, da.LANDUSEF.shape[2], da.LANDUSEF.shape[3])
-                )
-                landusef_new[:, :orig_num_land_cat, :, :] = da['LANDUSEF'].values
+                    orig_num_land_cat = da.attrs['NUM_LAND_CAT']
+                    # Set number of land categories to 41
+                    da.attrs['NUM_LAND_CAT'] = np.intc(41)
 
-                # First store orginal attributes, then drop variable
-                luf_attrs = da.LANDUSEF.attrs
-                da = da.drop_vars('LANDUSEF')
+                    # Create new landusef array with expanded dimensions
+                    landusef_new = np.zeros(
+                        (1, 41, da.LANDUSEF.shape[2], da.LANDUSEF.shape[3])
+                    )
+                    landusef_new[:, :orig_num_land_cat, :, :] = da['LANDUSEF'].values
 
-                # Add back to data-array, including (altered) attributes
-                da['LANDUSEF'] = (
-                    ('Time', 'land_cat', 'south_north', 'west_east'),
-                    landusef_new
-                )
-                da['LANDUSEF'] = da.LANDUSEF.astype('float32')
+                    # First store orginal attributes, then drop variable
+                    luf_attrs = da.LANDUSEF.attrs
+                    da = da.drop_vars('LANDUSEF')
 
-                luf_attrs['description'] = 'Noah-modified 41-category IGBP-MODIS landuse'
-                for key in luf_attrs.keys():
-                    da['LANDUSEF'].attrs[key] = luf_attrs[key]
+                    # Add back to data-array, including (altered) attributes
+                    da['LANDUSEF'] = (
+                        ('Time', 'land_cat', 'south_north', 'west_east'),
+                        landusef_new
+                    )
+                    da['LANDUSEF'] = da.LANDUSEF.astype('float32')
 
-                ofile = ifile.replace('.nc', '_41.nc')
-                da.to_netcdf(ofile)
+                    luf_attrs['description'] = 'Noah-modified 41-category ' \
+                                               'IGBP-MODIS landuse'
+                    for key in luf_attrs.keys():
+                        da['LANDUSEF'].attrs[key] = luf_attrs[key]
 
+                    ofile = ifile.replace('.nc', '_41.nc')
+                    da.to_netcdf(ofile)
+
+                else:
+                    # print(f"> Parent domain {info['dst_file'][:-5]}{i:02d}.nc "
+                    #      f"already contains 41 LC classes")
+                    print(f"> Parent domain d{i:02d}.nc already contains 41 LC classes")
             except Exception:
                 err = traceback.format_exc()
-                print(f'Cannot read change NUM_LAND_CAT and LANDUSEF dimensions\n{err}')
+                print(f'Cannot read NUM_LAND_CAT and LANDUSEF dimensions\n{err}')
 
         else:
-            print(f"Parent domain {info['dst_file'][:-5]}{i:02d}.nc "
-                  f"already contains 41 LC classes")
+            print(f"WARNING: Parent domain {info['dst_file'][:-5]}{i:02d}.nc"
+                  f" not found.\n"
+                  f"Please make sure the parent domain files are "
+                  f"in {info['io_dir']}\n"
+                  f"Without this information, you will not be able to produce "
+                  f"the boundary conditions with real.exe.")
 
 
-def checks_and_cleaning(info, ucp_table):
+def checks_and_cleaning(info, ucp_table, nbui_max):
 
     'Sanity checks and cleaning'
 
-    print(f"Check 1: Urban class removed from "
-          f"{info['dst_nu_file'].split('/')[-1]}?")
+    OKGREEN = "\033[0;32m"
+    WARNING = '\033[0;35m'
+    ENDC = '\033[0m'
+
+    base_text = f"> Check 1: Urban class removed from " \
+          f"{info['dst_nu_file'].split('/')[-1]}?"
     ifile = info['dst_nu_file']
     da = xr.open_dataset(ifile)
     if 13 in da.LU_INDEX.values:
-        print(f"WARNING: Urban land use still present")
+        print(f"{base_text}\n{WARNING} WARNING: Urban land use "
+              f"still present {ENDC}")
     else:
-        print(f"OK")
-    print("")
+        print(f"{base_text}{OKGREEN} OK {ENDC}")
 
-    print(f"Check 2: LCZ Urban extent present in "
-          f"{info['dst_lcz_extent_file'].split('/')[-1]}?")
+    base_text = f"> Check 2: LCZ Urban extent present in " \
+          f"{info['dst_lcz_extent_file'].split('/')[-1]}?"
     ifile = info['dst_lcz_extent_file']
     da = xr.open_dataset(ifile)
-    if 13 in da.LU_INDEX.values:
-        print(f"OK")
+    if not 13 in da.LU_INDEX.values:
+        print(f"{base_text}\n{WARNING} WARNING: LCZ-based urban "
+              f"extent missing {ENDC}")
     else:
-        print(f"WARNING: LCZ-based urban extent missing")
-    print("")
+        print(f"{base_text}{OKGREEN} OK {ENDC}")
 
-    print(f"Check 3: Urban LCZ classes exists in "
-          f"{info['dst_lcz_params_file'].split('/')[-1]}?")
+
+    base_text = f"> Check 3: Urban LCZ classes exists in " \
+          f"{info['dst_lcz_params_file'].split('/')[-1]}?"
     ifile = info['dst_lcz_params_file']
     da = xr.open_dataset(ifile)
     if 13 in da.LU_INDEX.values:
-        print(f"WARNING: Urban extent still defined via LU_INDEX = 13?")
+        print(f"{base_text}\n{WARNING} WARNING: Urban extent still "
+              f"defined via LU_INDEX = 13? {ENDC}")
     else:
         LU_values = np.unique(da.LU_INDEX.values.flatten())
         LCZs = [int(i) for i in list(LU_values[LU_values >= 31] - 30)]
-        print(f"OK: LCZ Classes ({LCZs}) present")
-    print("")
+        print(f"{base_text}{OKGREEN} OK: LCZ Classes ({LCZs}) "
+              f"present {ENDC}")
 
-    print(f"Check 4: URB_PARAMS matrix present in file "
-          f"{info['dst_lcz_params_file'].split('/')[-1]}?")
+    base_text = f"> Check 4: FRC_URB2D present in " \
+          f"{info['dst_lcz_params_file'].split('/')[-1]}?"
     ifile = info['dst_lcz_params_file']
     da = xr.open_dataset(ifile)
-    if not 'URB_PARAM' in list(da.keys()):
-        print(f"WARNING: URB_PARAM matrix not present")
-    else:
-        print(f"OK")
-    print("")
-
-    print(f"Check 5: FRC_URB2D present in "
-          f"{info['dst_lcz_params_file'].split('/')[-1]}?")
-    ifile = info['dst_lcz_params_file']
-    da = xr.open_dataset(ifile)
-    if not 'FRC_URB2D' in list(da.keys()):
-        print(f"WARNING: FRC_URB2D not present in {ifile}")
+    if 'FRC_URB2D' not in list(da.keys()):
+        print(f"{base_text}\n{WARNING} WARNING: FRC_URB2D not "
+              f"present in {ifile} {ENDC}")
+        frc_urb2d_present = 'NO'
     else:
         FRC_URB2D = da.FRC_URB2D.values
-        print(f"OK: FRC_URB2D values range between "
-              f"{'{:0.2f}'.format(FRC_URB2D.min())} and "
-              f"{'{:0.2f}'.format(FRC_URB2D.max())}")
-    print("")
+        print(f"{base_text}{OKGREEN} OK: FRC_URB2D values "
+              f"range between {'{:0.2f}'.format(FRC_URB2D.min())} and "
+              f"{'{:0.2f}'.format(FRC_URB2D.max())} {ENDC}")
+        frc_urb2d_present = 'YES'
 
-    print("Check 6: Do URB_PARAM variable values follow expected range in "
-          f"{info['dst_lcz_params_file'].split('/')[-1]}?")
+    base_text = f"> Check 5: URB_PARAMS matrix present in file " \
+          f"{info['dst_lcz_params_file'].split('/')[-1]}?"
     ifile = info['dst_lcz_params_file']
     da = xr.open_dataset(ifile)
-
-    ucp_dict = {
-        'LP_URB2D'  : {
-            'index': 91,
-            'range': [0,1]
-        },
-        'MH_URB2D'  : {
-            'index': 92,
-            'range': [0, ucp_table['MH_URB2D'].max() + ucp_table['MH_URB2D'].std()]
-        },
-        'HGT_URB2D' : {
-            'index': 94,
-            'range': [0, ucp_table['MH_URB2D'].max() + ucp_table['MH_URB2D'].std()]
-        },
-        'LB_URB2D'  : {
-            'index': 95,
-            'range': [0, 5]
-        },
-        'LF_URB2D'  : {
-            'index': 96,
-            'range': [0, 5]
-        },
-        'LF_URB2D'  : {
-            'index': 97,
-            'range': [0, 5]
-        },
-        'LF_URB2D'  : {
-            'index': 98,
-            'range': [0, 5]
-        },
-        'LF_URB2D'  : {
-            'index': 99,
-            'range': [0, 5]
-        },
-    }
-
-    def _check_range(darr, exp_range):
-
-        total_len = len(darr)
-        sel_len = ((darr >= exp_range[0]) & (darr <= exp_range[1])).sum(axis=0)
-
-        if not (total_len - sel_len == 0):
-            return -1
-        else:
-            return 0
-
-    for ucp_key in ucp_dict.keys():
-
-        darr = da.URB_PARAM[0,ucp_dict[ucp_key]['index']-1,:,:].values.flatten()
-        exp_range = ucp_dict[ucp_key]['range']
-
-        result = _check_range(darr, exp_range)
-
-        if result == -1:
-            print(f"WARNING: {ucp_key} exceeds expected value range")
-        else:
-            print(f"OK for {ucp_key}")
-    print("")
-
-    print("Check 7: Does HI_URB2D sum to 100% for urban pixels "
-          f"in {info['dst_lcz_params_file'].split('/')[-1]}?")
-    da = xr.open_dataset(info['dst_lcz_params_file'])
-    hi_sum = da.URB_PARAM[0, 117:, :, :].sum(axis=0)
-    hi_sum = hi_sum.where(hi_sum != 0, drop=True)
-
-    if np.nanmax(np.abs((100 - hi_sum).values)) > 0.1:
-        print(f"WARNING: Not all pixels have sum HI_URB2D == 100%")
+    if 'URB_PARAM' not in list(da.keys()):
+        print(f"{base_text}\n{WARNING} WARNING: URB_PARAM matrix not "
+              f"present {ENDC}")
+        urb_param_present = 'NO'
     else:
-        print(f"OK")
-    print("")
+        print(f"{base_text}{OKGREEN} OK {ENDC}")
+        urb_param_present = 'YES'
 
-    print("Check 8: Do FRC_URB and LCZs (from LU_INDEX) cover same extent "
-          f"in {info['dst_lcz_params_file'].split('/')[-1]}?")
-    frc_urb2d = xr.open_dataset(info['dst_lcz_params_file']).FRC_URB2D
-    lu_index = xr.open_dataset(info['dst_lcz_params_file']).LU_INDEX
-    frc_urb_res = xr.where(frc_urb2d != 0, 1, 0)
-    lu_index_res = xr.where(lu_index >= 31, 1, 0)
+    if urb_param_present == 'YES':
+        base_text = "> Check 6: Do URB_PARAM variable values follow expected " \
+              f"range in {info['dst_lcz_params_file'].split('/')[-1]}?"
+        ifile = info['dst_lcz_params_file']
+        da = xr.open_dataset(ifile)
 
-    if int((frc_urb_res - lu_index_res).sum()) != 0:
-        print(f"WARNING: FRC_URB and LCZs in LU_INDEX "
-              f"do not cover same extent")
-    else:
-        print(f"OK")
-    print("")
+        # URB PAR Indices: https://ral.ucar.edu/sites/default/files/public/product-tool/NUDAPT_44_Documentation.pdf
+        ucp_dict = {
+            'LP_URB2D'  : {
+                'index': 91,
+                'range': [0,1]
+            },
+            'MH_URB2D'  : {
+                'index': 92,
+                'range': [0, ucp_table['MH_URB2D'].max() + ucp_table['MH_URB2D'].std()]
+            },
+            'STDH_URB2D': {
+                'index': 93,
+                'range': [0, ucp_table['MH_URB2D_MAX'].max() + ucp_table['MH_URB2D'].std()]
+            },
+            'HGT_URB2D' : {
+                'index': 94,
+                'range': [0, ucp_table['MH_URB2D'].max() + ucp_table['MH_URB2D'].std()]
+            },
+            'LB_URB2D'  : {
+                'index': 95,
+                'range': [0, 5]
+            },
+            'LF_URB2D' : {
+                'index': 96,
+                'range': [0, 5]
+            },
+        }
 
-    print("Check 9: Extent and # urban pixels same for "
-          "*_extent.nc and *_params.nc output file?")
+        def _check_range(darr, exp_range):
+
+            total_len = len(darr)
+            sel_len = ((darr >= exp_range[0]) & (darr <= exp_range[1])).sum(axis=0)
+
+            if not (total_len - sel_len == 0):
+                return -1
+            else:
+                return 0
+
+        print(base_text)
+        for ucp_key in ucp_dict.keys():
+
+            darr = da.URB_PARAM[0,ucp_dict[ucp_key]['index']-1,:,:].values.flatten()
+            exp_range = ucp_dict[ucp_key]['range']
+
+            result = _check_range(darr, exp_range)
+
+            if result == -1:
+                print(f"{WARNING} WARNING: {ucp_key} exceeds "
+                      f"expected value range {ENDC}")
+            else:
+                print(f"{OKGREEN}   + OK for {ucp_key} {ENDC}")
+
+        base_text = "> Check 7: Does HI_URB2D sum to 100% for urban pixels " \
+              f"in {info['dst_lcz_params_file'].split('/')[-1]}?"
+        da = xr.open_dataset(info['dst_lcz_params_file'])
+        hi_sum = da.URB_PARAM[0, 117:, :, :].sum(axis=0)
+        hi_sum = hi_sum.where(hi_sum != 0, drop=True)
+
+        if np.nanmax(np.abs((100 - hi_sum).values)) > 0.1:
+            print(f"{base_text}\n{WARNING} WARNING: Not all pixels "
+                  f"have sum HI_URB2D == 100% {ENDC}")
+        else:
+            print(f"{base_text}{OKGREEN} OK {ENDC}")
+
+    if frc_urb2d_present == 'YES':
+        base_text = "> Check 8: Do FRC_URB and LCZs (from LU_INDEX) cover same extent " \
+              f"in {info['dst_lcz_params_file'].split('/')[-1]}?"
+        frc_urb2d = xr.open_dataset(info['dst_lcz_params_file']).FRC_URB2D
+        lu_index = xr.open_dataset(info['dst_lcz_params_file']).LU_INDEX
+        frc_urb_res = xr.where(frc_urb2d != 0, 1, 0)
+        lu_index_res = xr.where(lu_index >= 31, 1, 0)
+
+        if int((frc_urb_res - lu_index_res).sum()) != 0:
+            print(f"{base_text}\n{WARNING} WARNING: FRC_URB and LCZs in "
+                  f"LU_INDEX do not cover same extent {ENDC}")
+        else:
+            print(f"{base_text}{OKGREEN} OK {ENDC}")
+
+    base_text = "> Check 9: Extent and # urban pixels same for " \
+          "*_extent.nc and *_params.nc output file?"
     da_e = xr.open_dataset(info['dst_lcz_extent_file'])
     da_p = xr.open_dataset(info['dst_lcz_params_file'])
     da_e_res = xr.where(da_e.LU_INDEX == 13, 1,0)
     da_p_res = xr.where(da_p.LU_INDEX >=31, 1,0)
 
     if int((da_p_res - da_e_res).sum()) != 0:
-        print(f"WARNING: Different # urban pixels (or extent) "
+        print(f"{base_text}\n {WARNING} WARNING: Different "
+              f"# urban pixels (or extent) "
               f"according to LU_INDEX: "
               f" - extent: {int(da_e_res.sum().values)}"
-              f" - params: {int(da_p_res.sum().values)}"
+              f" - params: {int(da_p_res.sum().values)} {ENDC}"
               )
     else:
-        print(f"OK, urban extent the same. \n"
-              f"Both files have {int(da_p_res.sum().values)} "
-              f"urban pixels according to LU_INDEX")
+        print(f"{base_text}{OKGREEN} OK, urban extent the same "
+              f"({int(da_p_res.sum().values)}) {ENDC}")
 
-    print("")
-    print('Cleaning up ...')
+    print('> Cleaning up ... all done!')
     if os.path.exists(info['dst_gridinfo']):
         os.remove(info['dst_gridinfo'])
     if os.path.exists(info['src_file_clean']):
         os.remove(info['src_file_clean'])
+
+    print(f"\n\n ----------- !! NOTE !! --------- \n"
+          f" Set nbui_max to {nbui_max} during compilation, "
+          f"in order to optimize memory storage.\n\n")
 
 ###############################################################################
 ##### __main__  scope
