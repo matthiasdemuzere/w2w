@@ -101,7 +101,8 @@ def main(argv=None):
     info = create_info_dict(args)
     ucp_table = pd.read_csv(lookup_table, index_col=0)
 
-    print("--> Check LCZ integrity, in terms of class labels, projection and extent")
+    print("--> Check LCZ integrity, in terms of "
+          "class labels, projection and extent")
     check_lcz_integrity(
         info=info,
         LCZ_BAND=args.LCZ_BAND,
@@ -126,7 +127,8 @@ def main(argv=None):
         ucp_table=ucp_table,
     )
 
-    print("--> Create LCZ-based urban extent geo_em file (excluding other LCZ-based info)")
+    print("--> Create LCZ-based urban extent geo_em file "
+          "(excluding other LCZ-based info)")
     create_lcz_extent_file(
         info=info,
     )
@@ -225,8 +227,8 @@ def _check_lcz_wrf_extent(lcz, wrf) -> None:
     if not (wrf_xmin > lcz_xmin ) & (wrf_xmax < lcz_xmax ) & \
            (wrf_ymin > lcz_ymin) & (wrf_ymax < lcz_ymax):
 
-        message = f"{bcolors.ERROR}ERROR: LCZ domain should be larger than WRF domain " \
-                  "in all directions.\n" \
+        message = f"{bcolors.ERROR}ERROR: LCZ domain should be larger than " \
+                  "WRF domain in all directions.\n" \
                   "LCZ bounds (xmin, ymin, xmax, ymax): " \
                  f"{lcz_xmin, lcz_ymin, lcz_xmax, lcz_ymax}\n" \
                   "WRF bounds (xmin, ymin, xmax, ymax): "\
@@ -301,7 +303,8 @@ def _calc_distance_coord(
     lon2r = lon2*np.pi/180.
 
     d = np.arccos(np.sin(lat1r)*np.sin(lat2r) +
-                  np.cos(lat1r)*np.cos(lat2r)*np.cos(lon2r-lon1r))*earth_radius
+                  np.cos(lat1r)*np.cos(lat2r)*
+                  np.cos(lon2r-lon1r))*earth_radius
 
     return d
 
@@ -332,11 +335,11 @@ def wrf_remove_urban(
             if luse.isel(south_north=i,west_east=j) == 13:
 
                 dis = _calc_distance_coord(
-                                         lat.where((luse!=13) & (luse!=17) & (luse!=21)),
-                                         lon.where((luse!=13) & (luse!=17) & (luse!=21)),
-                                         lat.isel(south_north=i,west_east=j),
-                                         lon.isel(south_north=i,west_east=j)
-                                         )
+                         lat.where((luse!=13) & (luse!=17) & (luse!=21)),
+                         lon.where((luse!=13) & (luse!=17) & (luse!=21)),
+                         lat.isel(south_north=i,west_east=j),
+                         lon.isel(south_north=i,west_east=j)
+                         )
 
                 disflat = dis.stack(gridpoints=('south_north','west_east'))\
                     .reset_index('gridpoints').drop_vars(['south_north','west_east'])
@@ -353,34 +356,34 @@ def wrf_remove_urban(
             if luf.isel(south_north=i,west_east=j,land_cat=12)>0.:
                 if orig_num_land_cat>20: #USING MODIS_LAKE
                     dis = _calc_distance_coord(
-                                             lat.where(
-                                                        (luf.isel(land_cat=12)==0.) &
-                                                        (luf.isel(land_cat=16)==0.) &
-                                                        (luf.isel(land_cat=20)==0.)
-                                                      ),
+                             lat.where(
+                                        (luf.isel(land_cat=12)==0.) &
+                                        (luf.isel(land_cat=16)==0.) &
+                                        (luf.isel(land_cat=20)==0.)
+                                      ),
 
-                                             lon.where(
-                                                        (luf.isel(land_cat=12)==0.) &
-                                                        (luf.isel(land_cat=16)==0.) &
-                                                        (luf.isel(land_cat=20)==0.)
-                                                      ),
-                                             lat.isel(south_north=i,west_east=j),
-                                             lon.isel(south_north=i,west_east=j)
-                                             )
+                             lon.where(
+                                        (luf.isel(land_cat=12)==0.) &
+                                        (luf.isel(land_cat=16)==0.) &
+                                        (luf.isel(land_cat=20)==0.)
+                                      ),
+                             lat.isel(south_north=i,west_east=j),
+                             lon.isel(south_north=i,west_east=j)
+                             )
                 else: #USING MODIS (NO LAKES)
                     dis = _calc_distance_coord(
-                                             lat.where(
-                                                        (luf.isel(land_cat=12)==0.) &
-                                                        (luf.isel(land_cat=16)==0.)
-                                                      ),
+                             lat.where(
+                                        (luf.isel(land_cat=12)==0.) &
+                                        (luf.isel(land_cat=16)==0.)
+                                      ),
 
-                                             lon.where(
-                                                        (luf.isel(land_cat=12)==0.) &
-                                                        (luf.isel(land_cat=16)==0.)
-                                                      ),
-                                             lat.isel(south_north=i,west_east=j),
-                                             lon.isel(south_north=i,west_east=j)
-                                             )
+                             lon.where(
+                                        (luf.isel(land_cat=12)==0.) &
+                                        (luf.isel(land_cat=16)==0.)
+                                      ),
+                             lat.isel(south_north=i,west_east=j),
+                             lon.isel(south_north=i,west_east=j)
+                             )
 
                 disflat = dis.stack(gridpoints=('south_north','west_east'))\
                     .reset_index('gridpoints').drop_vars(['south_north','west_east'])
@@ -647,7 +650,8 @@ def _check_hi_values(lcz_i, hi_sample, ucp_table, ERROR_MARGIN) -> None:
             print(f"WARNING: {hi_metric} distribution not in "
                   f"expected range ({ERROR_MARGIN*100}% marging) for LCZ class {lcz_i}: "
                   f"modelled: {np.round(hi_sample_values, 2)} | "
-                  f"expected: [{np.round(ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN),2)} - "
+                  f"expected: ["
+                  f"{np.round(ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN),2)} - "
                   f"{np.round(ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN),2)}]")
 
 def _compute_hi_distribution(
@@ -853,7 +857,8 @@ def _adjust_greenfrac_landusef(
     )
 
     # Copy values from original file
-    landusef_new[:orig_num_land_cat,:,:] = dst_data['LANDUSEF'][0, :orig_num_land_cat, :, :]
+    landusef_new[:orig_num_land_cat,:,:] = \
+        dst_data['LANDUSEF'][0, :orig_num_land_cat, :, :]
 
     # First set all values to zero for urban mask
     landusef_new[:, frc_mask] = 0 # First all to 0, so sum remains 1 in the end
@@ -1075,7 +1080,10 @@ def create_lcz_params_file(info, FRC_THRESHOLD, LCZ_NAT_MASK, ucp_table):
 
 def create_lcz_extent_file(info) -> None:
 
-    '''Create a domain file with an LCZ-based urban extent (excluding other LCZ-based info)'''
+    '''
+    Create a domain file with an LCZ-based urban extent
+    (excluding other LCZ-based info)
+    '''
 
     dst_params = xr.open_dataset(info['dst_lcz_params_file'])
     frc_mask = dst_params.FRC_URB2D.values[0, :, :] != 0
@@ -1162,7 +1170,8 @@ def expand_land_cat_parents(
                     )
                     da['LANDUSEF'] = da.LANDUSEF.astype('float32')
 
-                    luf_attrs['description'] = 'Noah-modified 41-category IGBP-MODIS landuse'
+                    luf_attrs['description'] = 'Noah-modified 41-category ' \
+                                               'IGBP-MODIS landuse'
                     for key in luf_attrs.keys():
                         da['LANDUSEF'].attrs[key] = luf_attrs[key]
 
@@ -1178,10 +1187,12 @@ def expand_land_cat_parents(
                 print(f'Cannot read NUM_LAND_CAT and LANDUSEF dimensions\n{err}')
 
         else:
-            print(f"WARNING: Parent domain {info['dst_file'][:-5]}{i:02d}.nc not found.\n"
-                  f"Please make sure the parent domain files are in {info['io_dir']}\n"
-                  f"Without this information, you will not be able to produce the boundary"
-                  f"conditions with real.exe.")
+            print(f"WARNING: Parent domain {info['dst_file'][:-5]}{i:02d}.nc"
+                  f" not found.\n"
+                  f"Please make sure the parent domain files are "
+                  f"in {info['io_dir']}\n"
+                  f"Without this information, you will not be able to produce "
+                  f"the boundary conditions with real.exe.")
 
 
 def checks_and_cleaning(info, ucp_table, nbui_max):
@@ -1198,125 +1209,145 @@ def checks_and_cleaning(info, ucp_table, nbui_max):
     ifile = info['dst_nu_file']
     da = xr.open_dataset(ifile)
     if 13 in da.LU_INDEX.values:
-        print(f"{base_text}\n{bcolors.WARNING}WARNING: Urban land use still present{bcolors.ENDC}")
+        print(f"{base_text}\n{bcolors.WARNING} WARNING: Urban land use "
+              f"still present {bcolors.ENDC}")
     else:
-        print(f"{base_text}{bcolors.OKGREEN} OK{bcolors.ENDC}")
+        print(f"{base_text}{bcolors.OKGREEN} OK {bcolors.ENDC}")
 
     base_text = f"> Check 2: LCZ Urban extent present in " \
           f"{info['dst_lcz_extent_file'].split('/')[-1]}?"
     ifile = info['dst_lcz_extent_file']
     da = xr.open_dataset(ifile)
-    if 13 in da.LU_INDEX.values:
-        print(f"{base_text}{bcolors.OKGREEN} OK{bcolors.ENDC}")
+    if not 13 in da.LU_INDEX.values:
+        print(f"{base_text}\n{bcolors.WARNING} WARNING: LCZ-based urban "
+              f"extent missing {bcolors.ENDC}")
     else:
-        print(f"{base_text}\n{bcolors.WARNING}WARNING: LCZ-based urban extent missing{bcolors.ENDC}")
+        print(f"{base_text}{bcolors.OKGREEN} OK {bcolors.ENDC}")
+
 
     base_text = f"> Check 3: Urban LCZ classes exists in " \
           f"{info['dst_lcz_params_file'].split('/')[-1]}?"
     ifile = info['dst_lcz_params_file']
     da = xr.open_dataset(ifile)
     if 13 in da.LU_INDEX.values:
-        print(f"{base_text}\n{bcolors.WARNING}WARNING: Urban extent still defined via LU_INDEX = 13?{bcolors.ENDC}")
+        print(f"{base_text}\n{bcolors.WARNING} WARNING: Urban extent still "
+              f"defined via LU_INDEX = 13? {bcolors.ENDC}")
     else:
         LU_values = np.unique(da.LU_INDEX.values.flatten())
         LCZs = [int(i) for i in list(LU_values[LU_values >= 31] - 30)]
-        print(f"{base_text}{bcolors.OKGREEN} OK: LCZ Classes ({LCZs}) present{bcolors.ENDC}")
+        print(f"{base_text}{bcolors.OKGREEN} OK: LCZ Classes ({LCZs}) "
+              f"present {bcolors.ENDC}")
 
-    base_text = f"> Check 4: URB_PARAMS matrix present in file " \
+    base_text = f"> Check 4: FRC_URB2D present in " \
           f"{info['dst_lcz_params_file'].split('/')[-1]}?"
     ifile = info['dst_lcz_params_file']
     da = xr.open_dataset(ifile)
-    if not 'URB_PARAM' in list(da.keys()):
-        print(f"{base_text}\n{bcolors.WARNING}WARNING: URB_PARAM matrix not present{bcolors.ENDC}")
-    else:
-        print(f"{base_text}{bcolors.OKGREEN} OK{bcolors.ENDC}")
-
-    base_text = f"> Check 5: FRC_URB2D present in " \
-          f"{info['dst_lcz_params_file'].split('/')[-1]}?"
-    ifile = info['dst_lcz_params_file']
-    da = xr.open_dataset(ifile)
-    if not 'FRC_URB2D' in list(da.keys()):
-        print(f"{base_text}\n{bcolors.WARNING}WARNING: FRC_URB2D not present in {ifile}{bcolors.ENDC}")
+    if 'FRC_URB2D' not in list(da.keys()):
+        print(f"{base_text}\n{bcolors.WARNING} WARNING: FRC_URB2D not "
+              f"present in {ifile} {bcolors.ENDC}")
+        frc_urb2d_present = 'NO'
     else:
         FRC_URB2D = da.FRC_URB2D.values
-        print(f"{base_text}{bcolors.OKGREEN} OK: FRC_URB2D values range between "
-              f"{'{:0.2f}'.format(FRC_URB2D.min())} and "
-              f"{'{:0.2f}'.format(FRC_URB2D.max())}{bcolors.ENDC}")
+        print(f"{base_text}{bcolors.OKGREEN} OK: FRC_URB2D values "
+              f"range between {'{:0.2f}'.format(FRC_URB2D.min())} and "
+              f"{'{:0.2f}'.format(FRC_URB2D.max())} {bcolors.ENDC}")
+        frc_urb2d_present = 'YES'
 
-    base_text = "> Check 6: Do URB_PARAM variable values follow expected range in " \
+    base_text = f"> Check 5: URB_PARAMS matrix present in file " \
           f"{info['dst_lcz_params_file'].split('/')[-1]}?"
     ifile = info['dst_lcz_params_file']
     da = xr.open_dataset(ifile)
-
-    ucp_dict = {
-        'LP_URB2D'  : {
-            'index': 91,
-            'range': [0,1]
-        },
-        'MH_URB2D'  : {
-            'index': 92,
-            'range': [0, ucp_table['MH_URB2D'].max() + ucp_table['MH_URB2D'].std()]
-        },
-        'HGT_URB2D' : {
-            'index': 94,
-            'range': [0, ucp_table['MH_URB2D'].max() + ucp_table['MH_URB2D'].std()]
-        },
-        'LB_URB2D'  : {
-            'index': 95,
-            'range': [0, 5]
-        },
-        'LF_URB2D' : {
-            'index': 96,
-            'range': [0, 5]
-        },
-    }
-
-    def _check_range(darr, exp_range):
-
-        total_len = len(darr)
-        sel_len = ((darr >= exp_range[0]) & (darr <= exp_range[1])).sum(axis=0)
-
-        if not (total_len - sel_len == 0):
-            return -1
-        else:
-            return 0
-
-    print(base_text)
-    for ucp_key in ucp_dict.keys():
-
-        darr = da.URB_PARAM[0,ucp_dict[ucp_key]['index']-1,:,:].values.flatten()
-        exp_range = ucp_dict[ucp_key]['range']
-
-        result = _check_range(darr, exp_range)
-
-        if result == -1:
-            print(f"{bcolors.WARNING}WARNING: {ucp_key} exceeds expected value range{bcolors.ENDC}")
-        else:
-            print(f"{bcolors.OKGREEN}   + OK for {ucp_key}{bcolors.ENDC}")
-
-    base_text = "> Check 7: Does HI_URB2D sum to 100% for urban pixels " \
-          f"in {info['dst_lcz_params_file'].split('/')[-1]}?"
-    da = xr.open_dataset(info['dst_lcz_params_file'])
-    hi_sum = da.URB_PARAM[0, 117:, :, :].sum(axis=0)
-    hi_sum = hi_sum.where(hi_sum != 0, drop=True)
-
-    if np.nanmax(np.abs((100 - hi_sum).values)) > 0.1:
-        print(f"{base_text}\n{bcolors.WARNING}WARNING: Not all pixels have sum HI_URB2D == 100%{bcolors.ENDC}")
+    if 'URB_PARAM' not in list(da.keys()):
+        print(f"{base_text}\n{bcolors.WARNING} WARNING: URB_PARAM matrix not "
+              f"present {bcolors.ENDC}")
+        urb_param_present = 'NO'
     else:
-        print(f"{base_text}{bcolors.OKGREEN} OK{bcolors.ENDC}")
+        print(f"{base_text}{bcolors.OKGREEN} OK {bcolors.ENDC}")
+        urb_param_present = 'YES'
 
-    base_text = "> Check 8: Do FRC_URB and LCZs (from LU_INDEX) cover same extent " \
-          f"in {info['dst_lcz_params_file'].split('/')[-1]}?"
-    frc_urb2d = xr.open_dataset(info['dst_lcz_params_file']).FRC_URB2D
-    lu_index = xr.open_dataset(info['dst_lcz_params_file']).LU_INDEX
-    frc_urb_res = xr.where(frc_urb2d != 0, 1, 0)
-    lu_index_res = xr.where(lu_index >= 31, 1, 0)
+    if urb_param_present == 'YES':
+        base_text = "> Check 6: Do URB_PARAM variable values follow expected " \
+              f"range in {info['dst_lcz_params_file'].split('/')[-1]}?"
+        ifile = info['dst_lcz_params_file']
+        da = xr.open_dataset(ifile)
 
-    if int((frc_urb_res - lu_index_res).sum()) != 0:
-        print(f"{base_text}\n{bcolors.WARNING}WARNING: FRC_URB and LCZs in LU_INDEX "
-              f"do not cover same extent{bcolors.ENDC}")
-    else:
-        print(f"{base_text}{bcolors.OKGREEN} OK{bcolors.ENDC}")
+        # URB PAR Indices: https://ral.ucar.edu/sites/default/files/public/product-tool/NUDAPT_44_Documentation.pdf
+        ucp_dict = {
+            'LP_URB2D'  : {
+                'index': 91,
+                'range': [0,1]
+            },
+            'MH_URB2D'  : {
+                'index': 92,
+                'range': [0, ucp_table['MH_URB2D'].max() + ucp_table['MH_URB2D'].std()]
+            },
+            'STDH_URB2D': {
+                'index': 93,
+                'range': [0, ucp_table['MH_URB2D_MAX'].max() + ucp_table['MH_URB2D'].std()]
+            },
+            'HGT_URB2D' : {
+                'index': 94,
+                'range': [0, ucp_table['MH_URB2D'].max() + ucp_table['MH_URB2D'].std()]
+            },
+            'LB_URB2D'  : {
+                'index': 95,
+                'range': [0, 5]
+            },
+            'LF_URB2D' : {
+                'index': 96,
+                'range': [0, 5]
+            },
+        }
+
+        def _check_range(darr, exp_range):
+
+            total_len = len(darr)
+            sel_len = ((darr >= exp_range[0]) & (darr <= exp_range[1])).sum(axis=0)
+
+            if not (total_len - sel_len == 0):
+                return -1
+            else:
+                return 0
+
+        print(base_text)
+        for ucp_key in ucp_dict.keys():
+
+            darr = da.URB_PARAM[0,ucp_dict[ucp_key]['index']-1,:,:].values.flatten()
+            exp_range = ucp_dict[ucp_key]['range']
+
+            result = _check_range(darr, exp_range)
+
+            if result == -1:
+                print(f"{bcolors.WARNING} WARNING: {ucp_key} exceeds "
+                      f"expected value range {bcolors.ENDC}")
+            else:
+                print(f"{bcolors.OKGREEN}   + OK for {ucp_key} {bcolors.ENDC}")
+
+        base_text = "> Check 7: Does HI_URB2D sum to 100% for urban pixels " \
+              f"in {info['dst_lcz_params_file'].split('/')[-1]}?"
+        da = xr.open_dataset(info['dst_lcz_params_file'])
+        hi_sum = da.URB_PARAM[0, 117:, :, :].sum(axis=0)
+        hi_sum = hi_sum.where(hi_sum != 0, drop=True)
+
+        if np.nanmax(np.abs((100 - hi_sum).values)) > 0.1:
+            print(f"{base_text}\n{bcolors.WARNING} WARNING: Not all pixels "
+                  f"have sum HI_URB2D == 100% {bcolors.ENDC}")
+        else:
+            print(f"{base_text}{bcolors.OKGREEN} OK {bcolors.ENDC}")
+
+    if frc_urb2d_present == 'YES':
+        base_text = "> Check 8: Do FRC_URB and LCZs (from LU_INDEX) cover same extent " \
+              f"in {info['dst_lcz_params_file'].split('/')[-1]}?"
+        frc_urb2d = xr.open_dataset(info['dst_lcz_params_file']).FRC_URB2D
+        lu_index = xr.open_dataset(info['dst_lcz_params_file']).LU_INDEX
+        frc_urb_res = xr.where(frc_urb2d != 0, 1, 0)
+        lu_index_res = xr.where(lu_index >= 31, 1, 0)
+
+        if int((frc_urb_res - lu_index_res).sum()) != 0:
+            print(f"{base_text}\n{bcolors.WARNING} WARNING: FRC_URB and LCZs in "
+                  f"LU_INDEX do not cover same extent {bcolors.ENDC}")
+        else:
+            print(f"{base_text}{bcolors.OKGREEN} OK {bcolors.ENDC}")
 
     base_text = "> Check 9: Extent and # urban pixels same for " \
           "*_extent.nc and *_params.nc output file?"
@@ -1326,22 +1357,21 @@ def checks_and_cleaning(info, ucp_table, nbui_max):
     da_p_res = xr.where(da_p.LU_INDEX >=31, 1,0)
 
     if int((da_p_res - da_e_res).sum()) != 0:
-        print(f"{base_text}\n {bcolors.WARNING} WARNING: Different # urban pixels (or extent) "
+        print(f"{base_text}\n {bcolors.WARNING} WARNING: Different "
+              f"# urban pixels (or extent) "
               f"according to LU_INDEX: "
               f" - extent: {int(da_e_res.sum().values)}"
-              f" - params: {int(da_p_res.sum().values)}{bcolors.ENDC}"
+              f" - params: {int(da_p_res.sum().values)} {bcolors.ENDC}"
               )
     else:
         print(f"{base_text}{bcolors.OKGREEN} OK, urban extent the same "
-              f"({int(da_p_res.sum().values)}){bcolors.ENDC}")
+              f"({int(da_p_res.sum().values)}) {bcolors.ENDC}")
 
     print('> Cleaning up ... all done!')
     if os.path.exists(info['dst_gridinfo']):
         os.remove(info['dst_gridinfo'])
     if os.path.exists(info['src_file_clean']):
         os.remove(info['src_file_clean'])
-    if os.path.exists(info['dst_lcz_params_tmp']):
-        os.remove(info['dst_lcz_params_tmp'])
 
     print(f"\n\n ----------- !! NOTE !! --------- \n"
           f" Set nbui_max to {nbui_max} during compilation, "
