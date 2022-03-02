@@ -724,6 +724,10 @@ def _check_hi_values(
     ucp_table: pd.DataFrame,
     ERROR_MARGIN: float,
 ) -> None:
+
+    WARNING = '\033[0;35m'
+    ENDC = '\033[0m'
+
     hi_metrics = [
         'MH_URB2D_MIN',
         'MH_URB2D_MAX',
@@ -746,12 +750,12 @@ def _check_hi_values(
             < ucp_table[hi_metric].loc[lcz_i] * (1 + ERROR_MARGIN)
         ):
             print(
-                f'WARNING: {hi_metric} distribution not in '
+                f'{WARNING}WARNING: {hi_metric} distribution not in '
                 f'expected range ({ERROR_MARGIN*100}% marging) for LCZ class {lcz_i}: '
                 f'modelled: {np.round(hi_sample_values, 2)} | '
                 f'expected: ['
                 f'{np.round(ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN),2)} - '
-                f'{np.round(ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN),2)}]'
+                f'{np.round(ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN),2)}]{ENDC}'
             )
 
 
@@ -1250,6 +1254,9 @@ def create_lcz_extent_file(info: Info) -> None:
 
 def expand_land_cat_parents(info: Info) -> None:
 
+    WARNING = '\033[0;35m'
+    ENDC = '\033[0m'
+
     # Get final domain number
     domain_nr = int(info.dst_file[-5:-3])
 
@@ -1305,12 +1312,12 @@ def expand_land_cat_parents(info: Info) -> None:
 
         else:
             print(
-                f'WARNING: Parent domain {info.dst_file[:-5]}{i:02d}.nc'
+                f'{WARNING}WARNING: Parent domain {info.dst_file[:-5]}{i:02d}.nc'
                 f' not found.\n'
                 f'Please make sure the parent domain files are '
                 f'in {info.io_dir}\n'
                 f'Without this information, you will not be able to produce '
-                f'the boundary conditions with real.exe.'
+                f'the boundary conditions with real.exe.{ENDC}'
             )
 
 
