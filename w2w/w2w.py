@@ -125,30 +125,37 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             'w2w.resources',
         ).joinpath('LCZ_UCP_lookup.csv')
 
+    # Aesthetics, main prints in bold
+    FBOLD = "\033[1m"
+    FEND = "\033[0m"
+
     # Execute the functions
-    print('--> Set data, arguments and files')
+    print(f'{FBOLD}--> Set data, arguments and files {FEND}')
     info = Info.from_argparse(args)
     ucp_table = pd.read_csv(lookup_table, index_col=0)
     LCZ_BAND = _get_lcz_band(info=info, args=args)
 
-    print('--> Check LCZ integrity, in terms of ' 'class labels, projection and extent')
+    print(f'{FBOLD}--> Check LCZ integrity, in terms of '
+          f'class labels, projection and extent{FEND}')
     check_lcz_integrity(
         info=info,
         LCZ_BAND=LCZ_BAND,
     )
 
-    print('--> Replace WRF MODIS urban LC with surrounding natural LC')
+    print(f'{FBOLD}--> Replace WRF MODIS urban LC with '
+          f'surrounding natural LC{FEND}')
     wrf_remove_urban(
         info=info,
         NPIX_NLC=args.NPIX_NLC,
     )
 
-    print('--> Create temporary WRF grid .tif file for resampling')
+    print(f'{FBOLD}--> Create temporary WRF grid .tif file '
+          f'for resampling{FEND}')
     create_wrf_gridinfo(
         info=info,
     )
 
-    print('--> Create LCZ-based geo_em file')
+    print(f'{FBOLD}--> Create LCZ-based geo_em file{FEND}')
     nbui_max = create_lcz_params_file(
         info=info,
         FRC_THRESHOLD=args.FRC_THRESHOLD,
@@ -157,19 +164,20 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     )
 
     print(
-        '--> Create LCZ-based urban extent geo_em file '
-        '(excluding other LCZ-based info)'
+        f'{FBOLD}--> Create LCZ-based urban extent geo_em file '
+        f'(excluding other LCZ-based info){FEND}'
     )
     create_lcz_extent_file(
         info=info,
     )
 
-    print('--> Expanding land categories of parent domain(s) to 41')
+    print(f'{FBOLD}--> Expanding land categories of parent '
+          f'domain(s) to 41{FEND}')
     expand_land_cat_parents(
         info=info,
     )
 
-    print('\n--> Start sanity check and clean-up ...')
+    print(f'{FBOLD}\n--> Start sanity check and clean-up ...{FEND}')
     checks_and_cleaning(
         info=info,
         ucp_table=ucp_table,
