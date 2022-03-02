@@ -85,8 +85,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         metavar='',
         type=int,
         dest='LCZ_BAND',
-        help='Band to use from LCZ GeoTIFF file:   \n'
-        '* 0: first band (DEFAULT) \n '
+        help='Band to use from LCZ GeoTIFF file:\n'
+        '* 0: first band (DEFAULT)\n'
         '* 1: second band, for maps produced with the LCZ Generator\n'
         '* X: any other band can be selected by providing an integer (0-indexed)',
         default=0,
@@ -126,8 +126,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         ).joinpath('LCZ_UCP_lookup.csv')
 
     # Aesthetics, main prints in bold
-    FBOLD = "\033[1m"
-    FEND = "\033[0m"
+    FBOLD = '\033[1m'
+    FEND = '\033[0m'
 
     # Execute the functions
     print(f'{FBOLD}--> Set data, arguments and files {FEND}')
@@ -135,22 +135,24 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ucp_table = pd.read_csv(lookup_table, index_col=0)
     LCZ_BAND = _get_lcz_band(info=info, args=args)
 
-    print(f'{FBOLD}--> Check LCZ integrity, in terms of '
-          f'class labels, projection and extent{FEND}')
+    print(
+        f'{FBOLD}--> Check LCZ integrity, in terms of '
+        f'class labels, projection and extent{FEND}'
+    )
     check_lcz_integrity(
         info=info,
         LCZ_BAND=LCZ_BAND,
     )
 
-    print(f'{FBOLD}--> Replace WRF MODIS urban LC with '
-          f'surrounding natural LC{FEND}')
+    print(
+        f'{FBOLD}--> Replace WRF MODIS urban LC with ' f'surrounding natural LC{FEND}'
+    )
     wrf_remove_urban(
         info=info,
         NPIX_NLC=args.NPIX_NLC,
     )
 
-    print(f'{FBOLD}--> Create temporary WRF grid .tif file '
-          f'for resampling{FEND}')
+    print(f'{FBOLD}--> Create temporary WRF grid .tif file ' f'for resampling{FEND}')
     create_wrf_gridinfo(
         info=info,
     )
@@ -171,8 +173,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         info=info,
     )
 
-    print(f'{FBOLD}--> Expanding land categories of parent '
-          f'domain(s) to 41{FEND}')
+    print(f'{FBOLD}--> Expanding land categories of parent ' f'domain(s) to 41{FEND}')
     expand_land_cat_parents(
         info=info,
     )
@@ -327,8 +328,23 @@ def check_lcz_integrity(info: Info, LCZ_BAND: int) -> None:
         _clean.tif lcz file, used in the remainder of the tool.
     '''
 
+    ERROR = '\033[0;31m'
+    ENDC = '\033[0m'
+
     # Read the data
-    lcz = rxr.open_rasterio(info.src_file)[LCZ_BAND, :, :]
+    try:
+        lcz = rxr.open_rasterio(info.src_file)[LCZ_BAND, :, :]
+    except Exception:
+        err = traceback.format_exc()
+        print(
+            f'{ERROR}ERROR: Can not read the requested LCZ_BAND {LCZ_BAND} '
+            f'from the LCZ GeoTIFF\n'
+            f'Make sure to set a proper -l argument. \n\n'
+            f'{err}\n'
+            f'Exiting ...{ENDC}'
+        )        
+        sys.exit(1)
+
     wrf = xr.open_dataset(info.dst_file)
 
     # If any of [101, 102, 103, 104, 105, 106, 107] is in the lcz tif file.

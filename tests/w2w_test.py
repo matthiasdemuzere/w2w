@@ -179,6 +179,26 @@ def test_replace_lcz_number_ok(info_mock):
     ]
 
 
+def test_check_lcz_integrity_exit_lcz_band(capsys, info_mock, tmpdir):
+    info = info_mock(
+        {
+            'src_file': 'sample_data/lcz_zaragoza.tif',
+            'src_file_clean': os.path.join(tmpdir, 'lcz_zaragoza_clean.tif'),
+            'dst_file': 'sample_data/geo_em.d04.nc',
+        }
+    )
+    args = argparse.Namespace(
+        LCZ_BAND=5,
+    )
+    LCZ_BAND = _get_lcz_band(info=info, args=args)
+
+    with pytest.raises(SystemExit):
+        check_lcz_integrity(info=info, LCZ_BAND=LCZ_BAND)
+
+    out, _ = capsys.readouterr()
+    assert 'ERROR: Can not read the requested LCZ_BAND' in out
+
+
 def test_check_lcz_integrity_lcz_numbers_as_expected(capsys, tmpdir, info_mock):
 
     info = info_mock(
