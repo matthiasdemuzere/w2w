@@ -20,6 +20,7 @@ from w2w.w2w import _check_hi_values
 from w2w.w2w import _check_lcz_wrf_extent
 from w2w.w2w import _compute_hi_distribution
 from w2w.w2w import _get_lcz_arr
+from w2w.w2w import _get_lcz_band
 from w2w.w2w import _get_SW_BW
 from w2w.w2w import _get_truncated_normal_sample
 from w2w.w2w import _hgt_resampler
@@ -88,6 +89,59 @@ def test_create_info_dict():
 
     # Last entry is list of built LCZs
     assert info.BUILT_LCZ == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+
+def test_get_lcz_band_lcz_generator(info_mock, capsys):
+    info = info_mock(
+        {
+            'src_file': 'testing/lcz_zaragoza_with_long_name.tif',
+        }
+    )
+    args = argparse.Namespace(
+        LCZ_BAND=0,
+    )
+
+    LCZ_BAND = _get_lcz_band(info, args)
+    out, _ = capsys.readouterr()
+
+    assert (
+        'Seems you are using a LCZ map produced by https://lcz-generator.rub.de/' in out
+    )
+    assert LCZ_BAND == 1
+
+
+def test_get_lcz_band_default_no_args(info_mock, capsys):
+    info = info_mock(
+        {
+            'src_file': 'sample_data/lcz_zaragoza.tif',
+        }
+    )
+    args = argparse.Namespace(
+        LCZ_BAND=None,
+    )
+
+    LCZ_BAND = _get_lcz_band(info, args)
+    out, _ = capsys.readouterr()
+
+    assert ' -l (--lcz_band) argument is not set.' in out
+    assert LCZ_BAND == 0
+
+
+def test_get_lcz_band_default_with_args(info_mock, capsys):
+    info = info_mock(
+        {
+            'src_file': 'sample_data/lcz_zaragoza.tif',
+        }
+    )
+    args = argparse.Namespace(
+        LCZ_BAND=5,
+    )
+
+    LCZ_BAND = _get_lcz_band(info, args)
+    out, _ = capsys.readouterr()
+
+    assert f'> Using layer {LCZ_BAND} of the LCZ GeoTIFF' in out
+    assert LCZ_BAND == 5
 
 
 def test_replace_lcz_number_ok(info_mock):

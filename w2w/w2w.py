@@ -85,8 +85,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         metavar='',
         type=int,
         dest='LCZ_BAND',
-        help='Band to use from LCZ file (DEFAULT: 0). '
-        'For maps produced with LCZ Generator, use 1',
+        help='Band to use from LCZ GeoTIFF file:   \n'
+        '* 0: first band (DEFAULT) \n '
+        '* 1: second band, for maps produced with the LCZ Generator\n'
+        '* X: any other band can be selected by providing an integer (0-indexed)',
         default=0,
     )
     parser.add_argument(
@@ -124,14 +126,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         ).joinpath('LCZ_UCP_lookup.csv')
 
     # Execute the functions
-    print('--> Set files structure')
+    print('--> Set data, arguments and files')
     info = Info.from_argparse(args)
     ucp_table = pd.read_csv(lookup_table, index_col=0)
+    LCZ_BAND = _get_lcz_band(info=info, args=args)
 
     print('--> Check LCZ integrity, in terms of ' 'class labels, projection and extent')
     check_lcz_integrity(
         info=info,
-        LCZ_BAND=args.LCZ_BAND,
+        LCZ_BAND=LCZ_BAND,
     )
 
     print('--> Replace WRF MODIS urban LC with surrounding natural LC')
@@ -215,6 +218,38 @@ class Info(NamedTuple):
             ),
             BUILT_LCZ=args.built_lcz,
         )
+
+
+def _get_lcz_band(info: Info, args: argparse.Namespace) -> int:
+
+    # Read the file
+    lcz = rxr.open_rasterio(info.src_file)
+
+    # Check if 'lczFilter' is part of attributes. If so, band = 1
+    if 'long_name' in lcz.attrs and 'lczFilter' in lcz.attrs['long_name']:
+        LCZ_BAND = 1
+        print(
+            '> Seems you are using a LCZ map produced by '
+            'https://lcz-generator.rub.de/ \n'
+            '> I therefor use the Gaussian filtered default '
+            "'LczFilter' layer"
+        )
+    # If no argument provided, LCZ_BAND defaults to 0
+    elif not args.LCZ_BAND:
+        LCZ_BAND = 0
+        print(
+            '> -l (--lcz_band) argument is not set. \n'
+            '> Defaulting to using the first layer of the LCZ GeoTIFF'
+        )
+    # If argument provided, use LCZ_BAND = argument
+    else:
+        LCZ_BAND = args.LCZ_BAND
+        print(
+            '> -l (--lcz_band) argument is set. \n'
+            f'> Using layer {LCZ_BAND} of the LCZ GeoTIFF'
+        )
+
+    return int(LCZ_BAND)
 
 
 def _replace_lcz_number(
@@ -312,6 +347,10 @@ def check_lcz_integrity(info: Info, LCZ_BAND: int) -> None:
 
     # Check if LCZ map exceeds domain of geo_em file in all directions
     _check_lcz_wrf_extent(lcz, wrf)
+
+    # Change long_name attribute
+    if 'long_name' in lcz.attrs:
+        lcz.attrs['long_name'] = 'LCZ'
 
     # Write clean LCZ to file, used in all subsequent routines.
     lcz.rio.to_raster(info.src_file_clean, dtype=np.int32)
