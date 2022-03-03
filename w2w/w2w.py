@@ -243,22 +243,15 @@ def _get_lcz_band(info: Info, args: argparse.Namespace) -> int:
             '> I therefor use the Gaussian filtered default '
             "'LczFilter' layer"
         )
-    # If no argument provided, LCZ_BAND defaults to 0
-    elif not args.LCZ_BAND:
-        LCZ_BAND = 0
-        print(
-            '> -l (--lcz_band) argument is not set. \n'
-            '> Defaulting to using the first layer of the LCZ GeoTIFF'
-        )
-    # If argument provided, use LCZ_BAND = argument
+    # use LCZ_BAND = argument, can be the default 0 or a custom band
     else:
         LCZ_BAND = args.LCZ_BAND
         print(
-            '> -l (--lcz_band) argument is set. \n'
-            f'> Using layer {LCZ_BAND} of the LCZ GeoTIFF'
+            f'> Using layer {LCZ_BAND} of the LCZ GeoTIFF. '
+            'Can be changed with -l (--lcz-band)'
         )
 
-    return int(LCZ_BAND)
+    return LCZ_BAND
 
 
 def _replace_lcz_number(
@@ -334,7 +327,7 @@ def check_lcz_integrity(info: Info, LCZ_BAND: int) -> None:
     # Read the data
     try:
         lcz = rxr.open_rasterio(info.src_file)[LCZ_BAND, :, :]
-    except Exception:
+    except IndexError:
         err = traceback.format_exc()
         print(
             f'{ERROR}ERROR: Can not read the requested LCZ_BAND {LCZ_BAND} '
@@ -342,7 +335,7 @@ def check_lcz_integrity(info: Info, LCZ_BAND: int) -> None:
             f'Make sure to set a proper -l argument. \n\n'
             f'{err}\n'
             f'Exiting ...{ENDC}'
-        )        
+        )
         sys.exit(1)
 
     wrf = xr.open_dataset(info.dst_file)
