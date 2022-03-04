@@ -52,8 +52,7 @@ In order to use the tool, two input files are required:
 
    * Extract your ROI from the continental-scale LCZ maps for Europe [@Demuzere2019] or the United States [@Demuzere2020] (see [here](https://www.wudapt.org/lcz-maps/) for more info).
    * Check if your ROI is already covered by the many LCZ maps available in the [submission table](https://lcz-generator.rub.de/submissions) of the LCZ Generator.
-   * Use the [LCZ Generator](https://lcz-generator.rub.de/) to make an LCZ map for your ROI. See also [here](https://www.wudapt.org/create-lcz-classification/) for more information. When using LCZ maps produced with the LCZ Generator, use $-l 1$, in order to use the Gaussian filtered LCZ map results.
-
+   * Use the [LCZ Generator](https://lcz-generator.rub.de/) to make a LCZ map for your ROI. See also [here](https://www.wudapt.org/create-lcz-classification/) for more information. When using LCZ maps produced with the LCZ Generator, by default the Gaussian filtered LCZ map is used ($-l = 1$).
 
 # Workflow
 The goal of the Python-based `W2W` tool is to obtain a WRF domain file (*geo_em.d0X.nc*) that contains the built LCZ classes and their corresponding urban canopy parameters relevant for all urban parameterizations embedded in WRF: the single layer urban canopy model (Noah/SLUCM, @Kusaka2001), the Building Environment Parameterization (BEP, @Martilli2002), and BEP+BEM (Building Energy Model, @Salamanca2010).

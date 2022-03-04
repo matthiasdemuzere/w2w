@@ -85,8 +85,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         metavar='',
         type=int,
         dest='LCZ_BAND',
-        help='Band to use from LCZ file (DEFAULT: 0). '
-        'For maps produced with LCZ Generator, use 1',
+        help='Band to use from LCZ GeoTIFF file:\n'
+        '* 0: first band (DEFAULT)\n'
+        '* 1: second band, for maps produced with the LCZ Generator\n'
+        '* X: any other band can be selected by providing an integer (0-indexed)',
         default=0,
     )
     parser.add_argument(
@@ -123,29 +125,39 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             'w2w.resources',
         ).joinpath('LCZ_UCP_lookup.csv')
 
+    # Aesthetics, main prints in bold
+    FBOLD = '\033[1m'
+    FEND = '\033[0m'
+
     # Execute the functions
-    print('--> Set files structure')
+    print(f'{FBOLD}--> Set data, arguments and files {FEND}')
     info = Info.from_argparse(args)
     ucp_table = pd.read_csv(lookup_table, index_col=0)
+    LCZ_BAND = _get_lcz_band(info=info, args=args)
 
-    print('--> Check LCZ integrity, in terms of ' 'class labels, projection and extent')
+    print(
+        f'{FBOLD}--> Check LCZ integrity, in terms of '
+        f'class labels, projection and extent{FEND}'
+    )
     check_lcz_integrity(
         info=info,
-        LCZ_BAND=args.LCZ_BAND,
+        LCZ_BAND=LCZ_BAND,
     )
 
-    print('--> Replace WRF MODIS urban LC with surrounding natural LC')
+    print(
+        f'{FBOLD}--> Replace WRF MODIS urban LC with ' f'surrounding natural LC{FEND}'
+    )
     wrf_remove_urban(
         info=info,
         NPIX_NLC=args.NPIX_NLC,
     )
 
-    print('--> Create temporary WRF grid .tif file for resampling')
+    print(f'{FBOLD}--> Create temporary WRF grid .tif file ' f'for resampling{FEND}')
     create_wrf_gridinfo(
         info=info,
     )
 
-    print('--> Create LCZ-based geo_em file')
+    print(f'{FBOLD}--> Create LCZ-based geo_em file{FEND}')
     nbui_max = create_lcz_params_file(
         info=info,
         FRC_THRESHOLD=args.FRC_THRESHOLD,
@@ -154,19 +166,19 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     )
 
     print(
-        '--> Create LCZ-based urban extent geo_em file '
-        '(excluding other LCZ-based info)'
+        f'{FBOLD}--> Create LCZ-based urban extent geo_em file '
+        f'(excluding other LCZ-based info){FEND}'
     )
     create_lcz_extent_file(
         info=info,
     )
 
-    print('--> Expanding land categories of parent domain(s) to 41')
+    print(f'{FBOLD}--> Expanding land categories of parent ' f'domain(s) to 41{FEND}')
     expand_land_cat_parents(
         info=info,
     )
 
-    print('\n--> Start sanity check and clean-up ...')
+    print(f'{FBOLD}\n--> Start sanity check and clean-up ...{FEND}')
     checks_and_cleaning(
         info=info,
         ucp_table=ucp_table,
@@ -215,6 +227,31 @@ class Info(NamedTuple):
             ),
             BUILT_LCZ=args.built_lcz,
         )
+
+
+def _get_lcz_band(info: Info, args: argparse.Namespace) -> int:
+
+    # Read the file
+    lcz = rxr.open_rasterio(info.src_file)
+
+    # Check if 'lczFilter' is part of attributes. If so, band = 1
+    if 'long_name' in lcz.attrs and 'lczFilter' in lcz.attrs['long_name']:
+        LCZ_BAND = 1
+        print(
+            '> Seems you are using a LCZ map produced by '
+            'https://lcz-generator.rub.de/ \n'
+            '> I therefor use the Gaussian filtered default '
+            "'LczFilter' layer"
+        )
+    # use LCZ_BAND = argument, can be the default 0 or a custom band
+    else:
+        LCZ_BAND = args.LCZ_BAND
+        print(
+            f'> Using layer {LCZ_BAND} of the LCZ GeoTIFF. '
+            'Can be changed with -l (--lcz-band)'
+        )
+
+    return LCZ_BAND
 
 
 def _replace_lcz_number(
@@ -284,8 +321,23 @@ def check_lcz_integrity(info: Info, LCZ_BAND: int) -> None:
         _clean.tif lcz file, used in the remainder of the tool.
     '''
 
+    ERROR = '\033[0;31m'
+    ENDC = '\033[0m'
+
     # Read the data
-    lcz = rxr.open_rasterio(info.src_file)[LCZ_BAND, :, :]
+    try:
+        lcz = rxr.open_rasterio(info.src_file)[LCZ_BAND, :, :]
+    except IndexError:
+        err = traceback.format_exc()
+        print(
+            f'{ERROR}ERROR: Can not read the requested LCZ_BAND {LCZ_BAND} '
+            f'from the LCZ GeoTIFF\n'
+            f'Make sure to set a proper -l argument. \n\n'
+            f'{err}\n'
+            f'Exiting ...{ENDC}'
+        )
+        sys.exit(1)
+
     wrf = xr.open_dataset(info.dst_file)
 
     # If any of [101, 102, 103, 104, 105, 106, 107] is in the lcz tif file.
@@ -312,6 +364,10 @@ def check_lcz_integrity(info: Info, LCZ_BAND: int) -> None:
 
     # Check if LCZ map exceeds domain of geo_em file in all directions
     _check_lcz_wrf_extent(lcz, wrf)
+
+    # Change long_name attribute
+    if 'long_name' in lcz.attrs:
+        lcz.attrs['long_name'] = 'LCZ'
 
     # Write clean LCZ to file, used in all subsequent routines.
     lcz.rio.to_raster(info.src_file_clean, dtype=np.int32)
@@ -685,6 +741,10 @@ def _check_hi_values(
     ucp_table: pd.DataFrame,
     ERROR_MARGIN: float,
 ) -> None:
+
+    WARNING = '\033[0;35m'
+    ENDC = '\033[0m'
+
     hi_metrics = [
         'MH_URB2D_MIN',
         'MH_URB2D_MAX',
@@ -707,12 +767,12 @@ def _check_hi_values(
             < ucp_table[hi_metric].loc[lcz_i] * (1 + ERROR_MARGIN)
         ):
             print(
-                f'WARNING: {hi_metric} distribution not in '
+                f'{WARNING}WARNING: {hi_metric} distribution not in '
                 f'expected range ({ERROR_MARGIN*100}% marging) for LCZ class {lcz_i}: '
                 f'modelled: {np.round(hi_sample_values, 2)} | '
                 f'expected: ['
                 f'{np.round(ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN),2)} - '
-                f'{np.round(ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN),2)}]'
+                f'{np.round(ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN),2)}]{ENDC}'
             )
 
 
@@ -1211,6 +1271,9 @@ def create_lcz_extent_file(info: Info) -> None:
 
 def expand_land_cat_parents(info: Info) -> None:
 
+    WARNING = '\033[0;35m'
+    ENDC = '\033[0m'
+
     # Get final domain number
     domain_nr = int(info.dst_file[-5:-3])
 
@@ -1266,12 +1329,12 @@ def expand_land_cat_parents(info: Info) -> None:
 
         else:
             print(
-                f'WARNING: Parent domain {info.dst_file[:-5]}{i:02d}.nc'
+                f'{WARNING}WARNING: Parent domain {info.dst_file[:-5]}{i:02d}.nc'
                 f' not found.\n'
                 f'Please make sure the parent domain files are '
                 f'in {info.io_dir}\n'
                 f'Without this information, you will not be able to produce '
-                f'the boundary conditions with real.exe.'
+                f'the boundary conditions with real.exe.{ENDC}'
             )
 
 

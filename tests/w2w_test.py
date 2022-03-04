@@ -20,6 +20,7 @@ from w2w.w2w import _check_hi_values
 from w2w.w2w import _check_lcz_wrf_extent
 from w2w.w2w import _compute_hi_distribution
 from w2w.w2w import _get_lcz_arr
+from w2w.w2w import _get_lcz_band
 from w2w.w2w import _get_SW_BW
 from w2w.w2w import _get_truncated_normal_sample
 from w2w.w2w import _hgt_resampler
@@ -90,6 +91,51 @@ def test_create_info_dict():
     assert info.BUILT_LCZ == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 
+def test_get_lcz_band_lcz_generator(info_mock, capsys):
+    info = info_mock({'src_file': 'testing/lcz_zaragoza_with_long_name.tif'})
+    args = argparse.Namespace(LCZ_BAND=0)
+
+    LCZ_BAND = _get_lcz_band(info, args)
+    out, _ = capsys.readouterr()
+
+    assert (
+        'Seems you are using a LCZ map produced by https://lcz-generator.rub.de/' in out
+    )
+    assert LCZ_BAND == 1
+
+
+@pytest.mark.parametrize(
+    ('arg', 'exp'),
+    (
+        pytest.param([], 0, id='default is used'),
+        pytest.param(['--lcz-band', '5'], 5, id='custom band'),
+    ),
+)
+def test_main_lcz_band_arg(arg, exp, info_mock, capsys, tmpdir):
+    input_dir = tmpdir.mkdir('input')
+    input_files = (
+        'geo_em.d01.nc',
+        'geo_em.d03.nc',
+        'geo_em.d03.nc',
+        'geo_em.d04.nc',
+        'lcz_zaragoza.tif',
+    )
+    for f in input_files:
+        shutil.copy(os.path.join('sample_data', f), input_dir)
+
+    # this is a workaround, to exit early and don't run the entire program
+    with mock.patch.object(
+        w2w.w2w, 'check_lcz_integrity', side_effect=SystemExit(0)
+    ) as m:
+        with pytest.raises(SystemExit):
+            with tmpdir.as_cwd():
+                main(['input', 'lcz_zaragoza.tif', 'geo_em.d04.nc', *arg])
+
+    assert m.call_args[1]['LCZ_BAND'] == exp
+    out, _ = capsys.readouterr()
+    assert f'Using layer {exp} of the LCZ' in out
+
+
 def test_replace_lcz_number_ok(info_mock):
     info = info_mock(
         {
@@ -125,6 +171,24 @@ def test_replace_lcz_number_ok(info_mock):
     ]
 
 
+def test_check_lcz_integrity_exit_lcz_band(capsys, info_mock, tmpdir):
+    info = info_mock(
+        {
+            'src_file': 'sample_data/lcz_zaragoza.tif',
+            'src_file_clean': os.path.join(tmpdir, 'lcz_zaragoza_clean.tif'),
+            'dst_file': 'sample_data/geo_em.d04.nc',
+        }
+    )
+    args = argparse.Namespace(LCZ_BAND=5)
+    LCZ_BAND = _get_lcz_band(info=info, args=args)
+
+    with pytest.raises(SystemExit):
+        check_lcz_integrity(info=info, LCZ_BAND=LCZ_BAND)
+
+    out, _ = capsys.readouterr()
+    assert 'ERROR: Can not read the requested LCZ_BAND' in out
+
+
 def test_check_lcz_integrity_lcz_numbers_as_expected(capsys, tmpdir, info_mock):
 
     info = info_mock(
@@ -155,6 +219,22 @@ def test_check_lcz_integrity_crs_changed(capsys, tmpdir, info_mock):
     out, _ = capsys.readouterr()
     assert 'LCZ map reprojected to WGS84 (EPSG:4326)' in out
     assert os.listdir(tmpdir) == ['Shanghai_clean.tif']
+
+
+def test_check_lcz_integrity_long_name_is_set(tmpdir, info_mock):
+    info = info_mock(
+        {
+            'src_file': 'testing/lcz_zaragoza_with_long_name.tif',
+            'src_file_clean': os.path.join(
+                tmpdir, 'lcz_zaragoza_with_long_name_clean.tif'
+            ),
+            'dst_file': 'sample_data/geo_em.d04.nc',
+        }
+    )
+    LCZ_BAND = 0
+    check_lcz_integrity(info=info, LCZ_BAND=LCZ_BAND)
+    new_raster = rxr.open_rasterio(info.src_file_clean)
+    assert new_raster.long_name == 'LCZ'
 
 
 def test_check_lcz_wrf_extent_lcz_too_small(capsys, info_mock):
