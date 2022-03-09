@@ -117,7 +117,7 @@ The files provided as output by `W2W` allow a wide range of applications, includ
 
 * urbanization, by running WRF with the default geo_em.d0X.nc and the geo_em.d0X_NoUrban.nc files (see for example @Li2020 and @Hirsch2021).
 * an improved urban land cover extent description, by running WRF with the default geo_em.d0X.nc and the geo_em.d0X_LCZ_extent.nc files (similar to for example @Bhati2018 and @Mallard2018).
-* a more detailed (LCZ-based) urban description, by running WRF with the default geo_em.d0X.nc and the geo_em.d0X_LCZ_params.nc files (see for example @Brousse2016, @Hammerberg2018, @Molnar2019, @Wong2019, @Patel2020, @Zonato2020, @Ribeiro2021, @Hirsch2021 and @Patel2021).
+* a more detailed (LCZ-based) urban description, by running WRF with the default geo_em.d0X.nc and the geo_em.d0X_LCZ_params.nc files (see for example @Brousse2016, @Hammerberg2018, @Molnar2019, @Wong2019, @Patel2020, @Zonato2020, @Ribeiro2021, @Hirsch2021 and @Patel2022).
 
 
 # Important notes
