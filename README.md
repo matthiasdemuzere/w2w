@@ -43,13 +43,22 @@ Requirements
    * Check if your region of interest is already covered by the many LCZ maps available in the [LCZ Generator submission table](https://lcz-generator.rub.de/submissions).
    * Use the [LCZ Generator](https://lcz-generator.rub.de/) to make an LCZ map for your region of interest. In case the geo_em.d0**X**.nc domain is larger than ~ 2.5 x 2.5°, the LCZ Generator will fail. In that case, please contact [Matthias Demuzere](mailto:matthias.demuzere@rub.de) for support.
 
-**Important notes**:
-* Also the geo_em.d0[**0 to X**].nc file(s) of the parent domain(s) should be available in the same INPUT_DIRECTORY. This is needed because the `w2w.py` routine will check whether `NUM_LAND_CAT` is set to 41 in all these parent domain files. If that is not the case, this will be fixed.
-* Your LCZ .tif and geo_em*.d0X.nc files should live in the same directory.
-* Also, this directory should be writeable by the user.
-* In case you use an LCZ map produced by the LCZ Generator, make sure to use `-lcz_band 1`. As such, the best-quality gaussian filtered LCZ map will be used in the process (see [Demuzere et al. (2021)](https://doi.org/10.3389/fenvs.2021.637455) for more info).
 
-Additional arguments to be used:
+Important notes
+-------
+* Your LCZ .tif and geo_em*.d0X.nc files should both live in the INPUT_DIRECTORY.
+* Also, this INPUT_DIRECTORY should be writeable by the user.
+* Also the geo_em.d0[**0 to X**].nc file(s) of the parent domain(s) should be available in the INPUT_DIRECTORY. This is needed because the `w2w.py` routine will check whether `NUM_LAND_CAT` is set to 41 in all these parent domain files. If that is not the case, this will be fixed by writing out adjusted geo_em.d0[**0 to X**]_41.nc files.
+* In case you use an LCZ map produced by the LCZ Generator, by default `-lcz_band 1` will be used, which is the best-quality gaussian filtered LCZ map (see [Demuzere et al. (2021)](https://doi.org/10.3389/fenvs.2021.637455) for more info).
+* Once the adjusted **geo_em.d0X.nc files** are created (geo_em.d01_41.nc, ..., geo_em.d0X_NoUrban.nc, geo_em.d0X_LCZ_extent.nc, geo_em.d0X_LCZ_params.nc), make sure to rename them (e.g. rename geo_em.d01_41.nc to geo_em.d01.nc, or geo_em.d04_LCZ_params.nc to geo_em.d04.nc) before using them as input to the metgrid.exe module. See documentation for more info.
+* The outputs of this tool have only been tested with the most recent [WRF version 4.3.x](https://github.com/wrf-model/WRF/releases/tag/v4.3). So we advise you to work with this version as well, which is now able to ingest the urban LCZ classes by default.
+
+
+Arguments
+-------
+
+* Additional arguments to be used:
+
 ```
 -b --built-lcz = LCZ classes considered as urban (DEFAULT: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 -l --lcz-band = Band to use from LCZ file (DEFAULT: 0). For maps produced with LCZ Generator, use 1
@@ -57,9 +66,11 @@ Additional arguments to be used:
 -n --npix-nlc = Number of pixels to use for sampling neighbouring natural land cover (DEFAULT: 45)
 --lcz-ucp = Specify a custom lookup table for the LCZ-based Urban Canopy Parameters
 ```
-### Using a custom lookup table for the LCZ-based urban canopy parameters
 
-- A table must have this this format (indentation optional). The table displayed below is the default table
+* Using a custom lookup table for the LCZ-based urban canopy parameters
+
+  - you can create a custom csv-file based on this format and use it specifying it with the `--lcz-ucp` flag. For the example: `w2w ./sample_data lcz_zaragoza.tif geo_em.d04.nc --lcz-ucp path/to/custom_lcz_ucp.csv`
+  - A table must have this this format (indentation optional). The table displayed below is the default table.
 
 ```csv
    ,FRC_URB2D ,MH_URB2D_MIN ,MH_URB2D ,MH_URB2D_MAX ,BLDFR_URB2D ,H2W
@@ -81,18 +92,12 @@ Additional arguments to be used:
 16 ,0         ,0            ,0        ,0            ,0           ,0
 17 ,0         ,0            ,0        ,0            ,0           ,0
 ```
-- you can create a custom csv-file based on this format and use it specifying it with the `--lcz-ucp` flag. For the example: `w2w ./sample_data lcz_zaragoza.tif geo_em.d04.nc --lcz-ucp path/to/custom_lcz_ucp.csv`
 
 
 Documentation & citation
 -------
 A citable documentation is in preparation for [The Journal of Open Source Software](https://joss.theoj.org/). The draft version can be accessed [here](https://github.com/matthiasdemuzere/w2w/blob/main/JOSS/paper.pdf).
 
-Important Notes
--------
-- This is a first version of the tool, that is currently still being tested. So please use with caution, and file an issue in case something does not work for you.
-- The outputs of this tool have only been tested with the most recent [WRF version 4.3.x](https://github.com/wrf-model/WRF/releases/tag/v4.3). So we advise you to work with this version as well, which is now able to ingest the urban LCZ classes by default.
-- Once the adjusted **geo_em.d0X.nc files** are created (geo_em.d0X_NoUrban.nc, geo_em.d0X_LCZ_extent.nc, geo_em.d0X_LCZ_params.nc), make sure to rename them (e.g. rename geo_em.d04_LCZ_params.nc to geo_em.d04.nc) before using them as input to the metgrid.exe module. See documentation for more info.
 
 Background context
 -------
