@@ -55,7 +55,7 @@ In order to use the tool, two input files are required:
    * Use the [LCZ Generator](https://lcz-generator.rub.de/) to make a LCZ map for your ROI. See also [here](https://www.wudapt.org/create-lcz-classification/) for more information. When using LCZ maps produced with the LCZ Generator, by default the Gaussian filtered LCZ map is used ($-l = 1$).
 
 # Workflow
-The goal of the Python-based `W2W` tool is to obtain a WRF domain file (*geo_em.d0X.nc*) that contains the built LCZ classes and their corresponding urban canopy parameters relevant for all urban parameterizations embedded in WRF: the single layer urban canopy model (Noah/SLUCM, @Kusaka2001), the Building Environment Parameterization (BEP, @Martilli2002), and BEP+BEM (Building Energy Model, @Salamanca2010).
+The goal of the Python-based `W2W` tool is to obtain an inner WRF domain file (*geo_em.d0X.nc*) that contains the built LCZ classes and their corresponding urban canopy parameters relevant for all urban parameterizations embedded in WRF: the single layer urban canopy model (Noah/SLUCM, @Kusaka2001), the Building Environment Parameterization (BEP, @Martilli2002), and BEP+BEM (Building Energy Model, @Salamanca2010).
 
 To get to that point, a number of sequential steps are required:
 
@@ -100,13 +100,13 @@ In addition:
 In a final step, some global attributes are adjusted in the resulting netcdf files:
 
 * NBUI_MAX is added as a global attribute, reflecting the maximum amount of HI_URB2D classes that are not 0 across the model domain. This parameter can be used when compiling WRF, to optimize memory storage.
-* NUM_LAND_CAT is set to 41, to reflect the addition of 10 (or 11) built LCZ classes. This is not only done for the highest resolution domain file (e.g. d04), but also for **all of its lower-resolution parent domain files (e.g. d01, d02, d03)**. As such, make sure these files are also available in the input data directory.
+* NUM_LAND_CAT is set to 41, to reflect the addition of 10 (or 11) built LCZ classes. This is not only done for the highest resolution domain file (e.g. d04), but also for **all of its lower-resolution parent domain files (e.g. d01, d02, d03)**. As such, make sure these files are also available in the input data directory. In case the parent domain files have  NUM_CAT_LAND $\neq$ 41, new parent domain files will be written to your drive with the extension `_41`.
 
-Resulting output: **geo_em.d0X_LCZ_params.nc**
+Resulting output: **geo_em.d0X_LCZ_params.nc** (and **geo_em.d0X_41.nc**)
 
 
 # Integration in WRF's preprocessing
- The current tool is designed to work with the geo_em.d0X files produced by geogrid.exe, which is available in the WRF Preprocessing System (WPS). WPS needs to be at a version >3.8, in order to incorporate the urban geometrical parameters in the `URB_PARAM` matrix [@Glotfelty2013]. The user should run geogrid.exe using its default settings, which will provide the various geo_em.d0X.nc files containing the static data fields. No additional variables are required, neither in the namelist.wps nor within the GEOGRID.TBL table. The `W2W` tool (\autoref{fig:w2w_workflow}) reads the standard geo_em.d0X.nc files (for all the domains) and produces the aforementioned **geo_em.d0X_LCZ_params.nc** files. The user should then simply rename these files to the standard name for each of the domains (e.g. geo_em.d04_LCZ_params.nc to geo_em.d04.nc), which will serve as input to the metgrid.exe module (\autoref{fig:w2w_workflow}).
+ The current tool is designed to work with the geo_em.d0X files produced by geogrid.exe, which is available in the WRF Preprocessing System (WPS). WPS needs to be at a version >3.8, in order to incorporate the urban geometrical parameters in the `URB_PARAM` matrix [@Glotfelty2013]. The user should run geogrid.exe using its default settings, which will provide the various geo_em.d0X.nc files containing the static data fields. No additional variables are required, neither in the namelist.wps nor within the GEOGRID.TBL table. The `W2W` tool (\autoref{fig:w2w_workflow}) reads the standard geo_em.d0X.nc files (for all the domains) and produces the aforementioned **geo_em.d0X_LCZ_params.nc** files. The user should then simply rename these files to the standard name for each of the domains (e.g. rename geo_em.d01_41.nc to geo_em.d01.nc, geo_em.d04_LCZ_params.nc to geo_em.d04.nc, ...), which will serve as input to the metgrid.exe module (\autoref{fig:w2w_workflow}).
 
 ![Modified workflow to set-up and run a WRF simulations including urban parameters derived from LCZs using W2W.\label{fig:w2w_workflow}](w2w_workflow.jpg)
 
