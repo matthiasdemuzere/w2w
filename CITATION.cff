@@ -3,7 +3,7 @@ title: "W2W: A Python package that injects WUDAPT's Local Climate Zone informati
 message: 'If you use this software, please cite it as below.'
 type: software
 authors:
-  - given-names: Mattias
+  - given-names: Matthias
     family-names: Demuzere
     email: matthias.demuzere@rub.de
     affiliation: Urban Climatology Group, Department of Geography, Ruhr-University Bochum, Bochum, Germany
@@ -23,8 +23,8 @@ authors:
     email: jonas.kittner@rub.de
     affiliation: Urban Climatology Group, Department of Geography, Ruhr-University Bochum, Bochum, Germany
     orcid: 0000-0003-1881-7716
-version: v0.1.1
-date-released: 24-11-2021
+version: v0.2.0
+date-released: 26-03-2022
 license: MIT
 repository-code: 'https://github.com/matthiasdemuzere/w2w'
 url: 'https://www.wudapt.org/wudapt-to-wrf/'
