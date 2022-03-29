@@ -137,59 +137,65 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     # Execute the functions
     print(f'{FBOLD}--> Set data, arguments and files {FEND}')
-    info = Info.from_argparse(args)
-    ucp_table = pd.read_csv(lookup_table, index_col=0)
-    LCZ_BAND = _get_lcz_band(info=info, args=args)
+    with tempfile.TemporaryDirectory() as tmp:
+        info = Info.from_argparse(args, tmpdir=tmp)
+        ucp_table = pd.read_csv(lookup_table, index_col=0)
+        LCZ_BAND = _get_lcz_band(info=info, args=args)
 
-    print(
-        f'{FBOLD}--> Check LCZ integrity, in terms of '
-        f'class labels, projection and extent{FEND}'
-    )
-    check_lcz_integrity(
-        info=info,
-        LCZ_BAND=LCZ_BAND,
-    )
+        print(
+            f'{FBOLD}--> Check LCZ integrity, in terms of '
+            f'class labels, projection and extent{FEND}'
+        )
+        check_lcz_integrity(
+            info=info,
+            LCZ_BAND=LCZ_BAND,
+        )
 
-    print(
-        f'{FBOLD}--> Replace WRF MODIS urban LC with ' f'surrounding natural LC{FEND}'
-    )
-    wrf_remove_urban(
-        info=info,
-        NPIX_NLC=args.NPIX_NLC,
-    )
+        print(
+            f'{FBOLD}--> Replace WRF MODIS urban LC with '
+            f'surrounding natural LC{FEND}'
+        )
+        wrf_remove_urban(
+            info=info,
+            NPIX_NLC=args.NPIX_NLC,
+        )
 
-    print(f'{FBOLD}--> Create temporary WRF grid .tif file ' f'for resampling{FEND}')
-    create_wrf_gridinfo(
-        info=info,
-    )
+        print(
+            f'{FBOLD}--> Create temporary WRF grid .tif file ' f'for resampling{FEND}'
+        )
+        create_wrf_gridinfo(
+            info=info,
+        )
 
-    print(f'{FBOLD}--> Create LCZ-based geo_em file{FEND}')
-    nbui_max = create_lcz_params_file(
-        info=info,
-        FRC_THRESHOLD=args.FRC_THRESHOLD,
-        LCZ_NAT_MASK=True,
-        ucp_table=ucp_table,
-    )
+        print(f'{FBOLD}--> Create LCZ-based geo_em file{FEND}')
+        nbui_max = create_lcz_params_file(
+            info=info,
+            FRC_THRESHOLD=args.FRC_THRESHOLD,
+            LCZ_NAT_MASK=True,
+            ucp_table=ucp_table,
+        )
 
-    print(
-        f'{FBOLD}--> Create LCZ-based urban extent geo_em file '
-        f'(excluding other LCZ-based info){FEND}'
-    )
-    create_lcz_extent_file(
-        info=info,
-    )
+        print(
+            f'{FBOLD}--> Create LCZ-based urban extent geo_em file '
+            f'(excluding other LCZ-based info){FEND}'
+        )
+        create_lcz_extent_file(
+            info=info,
+        )
 
-    print(f'{FBOLD}--> Expanding land categories of parent ' f'domain(s) to 41{FEND}')
-    expand_land_cat_parents(
-        info=info,
-    )
+        print(
+            f'{FBOLD}--> Expanding land categories of parent ' f'domain(s) to 41{FEND}'
+        )
+        expand_land_cat_parents(
+            info=info,
+        )
 
-    print(f'{FBOLD}\n--> Start sanity check and clean-up ...{FEND}')
-    checks_and_cleaning(
-        info=info,
-        ucp_table=ucp_table,
-        nbui_max=nbui_max,
-    )
+        print(f'{FBOLD}\n--> Start sanity check and clean-up ...{FEND}')
+        checks_and_cleaning(
+            info=info,
+            ucp_table=ucp_table,
+            nbui_max=nbui_max,
+        )
     return 0
 
 
@@ -209,13 +215,13 @@ class Info(NamedTuple):
     BUILT_LCZ: List[int]
 
     @classmethod
-    def from_argparse(cls, args: argparse.Namespace) -> 'Info':
+    def from_argparse(cls, args: argparse.Namespace, *, tmpdir: str) -> 'Info':
         # Define output and tmp file(s), the latter is removed when done.
         return cls(
             io_dir=args.io_dir,
             src_file=os.path.join(args.io_dir, args.lcz_file),
             src_file_clean=os.path.join(
-                args.io_dir, args.lcz_file.replace('.tif', '_clean.tif')
+                tmpdir, args.lcz_file.replace('.tif', '_clean.tif')
             ),
             dst_file=os.path.join(args.io_dir, args.wrf_file),
             dst_nu_file=os.path.join(
@@ -223,7 +229,7 @@ class Info(NamedTuple):
             ),
             # TMP file, will be removed
             dst_gridinfo=os.path.join(
-                args.io_dir, args.wrf_file.replace('.nc', '_gridinfo.tif')
+                tmpdir, args.wrf_file.replace('.nc', '_gridinfo.tif')
             ),
             dst_lcz_extent_file=os.path.join(
                 args.io_dir, args.wrf_file.replace('.nc', '_LCZ_extent.nc')
@@ -509,8 +515,6 @@ def wrf_remove_urban(
     dst_data.GREENFRAC.values[0, :] = newgreenf[:]
 
     # Save to final _lcz_params file
-    if os.path.exists(info.dst_nu_file):
-        os.remove(info.dst_nu_file)
     dst_data.to_netcdf(info.dst_nu_file)
 
 
@@ -1219,8 +1223,6 @@ def create_lcz_params_file(
     ] = f'W2W.py tool used to create geo_em*.nc file:\n {gh_ref}'
 
     # Save back to file
-    if os.path.exists(info.dst_lcz_params_file):
-        os.remove(info.dst_lcz_params_file)
     dst_final.to_netcdf(info.dst_lcz_params_file)
 
     return nbui_max
@@ -1542,12 +1544,6 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
             f'{base_text}{OKGREEN} OK, urban extent the same '
             f'({int(da_p_res.sum().values)}) {ENDC}'
         )
-
-    print('> Cleaning up ... all done!')
-    if os.path.exists(info.dst_gridinfo):
-        os.remove(info.dst_gridinfo)
-    if os.path.exists(info.src_file_clean):
-        os.remove(info.src_file_clean)
 
     print(
         f'\n\n ----------- !! NOTE !! --------- \n'

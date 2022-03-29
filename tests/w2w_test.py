@@ -73,14 +73,14 @@ def test_create_info_dict():
         io_dir='input/directory',
         built_lcz=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     )
-    info = Info.from_argparse(args)
+    info = Info.from_argparse(args, tmpdir='tmpdir')
     # info is Dict, with 9 keys
     assert len(info) == 9
 
     # Three files are tifs
-    assert info.dst_gridinfo == 'input/directory/wrf_file_gridinfo.tif'
+    assert info.dst_gridinfo == 'tmpdir/wrf_file_gridinfo.tif'
     assert info.src_file == 'input/directory/lcz_file.tif'
-    assert info.src_file_clean == 'input/directory/lcz_file_clean.tif'
+    assert info.src_file_clean == 'tmpdir/lcz_file_clean.tif'
 
     # 4 files are netcdf files
     assert info.dst_file == 'input/directory/wrf_file.nc'
