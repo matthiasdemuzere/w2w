@@ -39,7 +39,7 @@ The Python-based WUDAPT-to-WRF (`W2W`) package is developed in this context, and
 # Statement of need
 Since the pioneering work of @Brousse2016 and @Martilli2016, the level-0 WUDAPT information, the Local Climate Zone maps, have been used increasingly in WRF.
 
-We expect this trend to continue, because of two recent developments: 1) the creation of city-wide LCZ maps is now easier than ever with the launch of the LCZ Generator web application [@Demuzere2021], and 2) WRF versions > 4.3 [@Skamarock2021] are able to ingest 10 or 11 built classes (corresponding to WUDAPT's LCZs) by default, whereas previous WRF versions required manual code changes (see @Martilli2016, @Zonato2021a and @Zonato2021b for more information).
+We expect this trend to continue, because of three recent developments: 1) the creation of city-wide LCZ maps is now easier than ever with the launch of the LCZ Generator web application [@Demuzere2021], 2) the availability of a global LCZ map [@Demuzere2022], and 3) WRF versions > 4.3 [@Skamarock2021] are able to ingest 10 or 11 built classes (corresponding to WUDAPT's LCZs) by default, whereas previous WRF versions required manual code changes (see @Martilli2016, @Zonato2021a and @Zonato2021b for more information).
 
 Because of these developments, an improved, Python-based, WUDAPT-to-WRF (`W2W`) routine is presented here, so as to make the translation of LCZ-based parameters better and more simple.
 
@@ -50,9 +50,9 @@ In order to use the tool, two input files are required:
 
 2.  A **Local Climate Zone map** (.tif) file that is slightly bigger than the domain extent of the geo_em.d0X.nc file. There are a number of ways to obtain an LCZ map for your region of interest (ROI):
 
-   * Extract your ROI from the continental-scale LCZ maps for Europe [@Demuzere2019] or the United States [@Demuzere2020] (see [here](https://www.wudapt.org/lcz-maps/) for more info).
+   * Extract your ROI from the global LCZ map [@Demuzere2022], or the continental-scale LCZ maps for Europe [@Demuzere2019] or the United States [@Demuzere2020] (see also [here](https://www.wudapt.org/lcz-maps/) for more info).
    * Check if your ROI is already covered by the many LCZ maps available in the [submission table](https://lcz-generator.rub.de/submissions) of the LCZ Generator.
-   * Use the [LCZ Generator](https://lcz-generator.rub.de/) to make a LCZ map for your ROI. See also [here](https://www.wudapt.org/create-lcz-classification/) for more information. When using LCZ maps produced with the LCZ Generator, by default the Gaussian filtered LCZ map is used ($-l = 1$).
+   * Use the [LCZ Generator](https://lcz-generator.rub.de/) to make your own LCZ map for your ROI. See also [here](https://www.wudapt.org/create-lcz-classification/) for more information. When using LCZ maps produced with the LCZ Generator, by default the Gaussian filtered LCZ map is used ($-l = 1$).
 
 # Workflow
 The goal of the Python-based `W2W` tool is to obtain an inner WRF domain file (*geo_em.d0X.nc*) that contains the built LCZ classes and their corresponding urban canopy parameters relevant for all urban parameterizations embedded in WRF: the single layer urban canopy model (Noah/SLUCM, @Kusaka2001), the Building Environment Parameterization (BEP, @Martilli2002), and BEP+BEM (Building Energy Model, @Salamanca2010).
@@ -121,6 +121,7 @@ The files provided as output by `W2W` allow a wide range of applications, includ
 
 
 # Important notes
+* Make sure to set `use_wudapt_lcz=1` (default is 0) and `num_land_cat=41` (default is 21) in WRF's `namelist.input` when using the LCZ-based urban canopy parameters.
 * The LCZ-based urban canopy parameter values provided in `LCZ_UCP_default.csv` and `URBPARM_LCZ.TBL` are universal and generic, and might not be appropriate for your ROI. If available, please adjust the urban canopy parameters values according to the characteristics of your ROI. A custom csv file can be specified using the `--lcz-ucp path/to/custom_file.csv` flag.
 * It is advised to use this tool with urban parameterization options BEP or BEP+BEM (`sf_urban_physics = 2 or 3`, respectively). In case you use this tool with the SLUCM model (`sf_urban_physics = 1`), make sure your lowest model level is above the highest building height. If not, real.exe will provide the following error message: `ZDC + Z0C + 2m is larger than the 1st WRF level - Stop in subroutine urban - change ZDC and Z0C`.
 * It is advised to use WRF versions > 4.3, that are able to ingest 10 or 11 built classes (corresponding to WUDAPT's LCZs) by default [@Skamarock2021], and WPS versions > 3.8, in order to incorporate the urban geometrical parameters in the `URB_PARAM` matrix [@Glotfelty2013].
