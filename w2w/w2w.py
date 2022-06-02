@@ -154,11 +154,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         NPIX_NLC=args.NPIX_NLC,
     )
 
-    print(f'{FBOLD}--> Create temporary WRF grid .tif file ' f'for resampling{FEND}')
-    create_wrf_gridinfo(
-        info=info,
-    )
-
     print(f'{FBOLD}--> Create LCZ-based geo_em file{FEND}')
     nbui_max = create_lcz_params_file(
         info=info,
@@ -537,7 +532,7 @@ def _get_wrf_grid_info(info: Info) -> Dict:
 
     wrf_transform = Affine.translation(x0 - dx / 2, y0 - dy / 2) * Affine.scale(dx, dy)
 
-    wrf_grid_info = {
+    wrf_grid_info: Dict[str, Dict[str, Any]] = {
         'crs': wrf_proj.to_proj4(),
         'transform': wrf_transform,
     }

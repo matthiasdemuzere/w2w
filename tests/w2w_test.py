@@ -51,7 +51,6 @@ def info_mock():
             'src_file_clean': '',
             'dst_file': '',
             'dst_nu_file': '',
-            'dst_gridinfo': '',
             'dst_lcz_extent_file': '',
             'dst_lcz_params_file': '',
             'BUILT_LCZ': [],
@@ -75,11 +74,10 @@ def test_create_info_dict():
         built_lcz=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     )
     info = Info.from_argparse(args)
-    # info is Dict, with 9 keys
-    assert len(info) == 9
+    # info is Dict, with 8 keys
+    assert len(info) == 8
 
-    # Three files are tifs
-    assert info.dst_gridinfo == 'input/directory/wrf_file_gridinfo.tif'
+    # Two files are tifs
     assert info.src_file == 'input/directory/lcz_file.tif'
     assert info.src_file_clean == 'input/directory/lcz_file_clean.tif'
 
@@ -453,7 +451,6 @@ def test_ucp_resampler_output_values_per_paramater(
         {
             'src_file': 'sample_data/lcz_zaragoza.tif',
             'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
-            'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         }
     )
@@ -478,7 +475,6 @@ def test_ucp_resampler_output_values_per_paramater_frc_threshold(info_mock):
         {
             'src_file': 'sample_data/lcz_zaragoza.tif',
             'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
-            'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         }
     )
@@ -505,7 +501,6 @@ def test_hgt_resampler_output_values(info_mock):
         {
             'src_file': 'sample_data/lcz_zaragoza.tif',
             'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
-            'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         }
     )
@@ -653,7 +648,6 @@ def test_hi_resampler(info_mock):
     info = info_mock(
         {
             'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
-            'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         }
     )
@@ -708,7 +702,6 @@ def test_lcz_resampler_lcz_nat_mask_on_off_with_lcz15(
     info = info_mock(
         {
             'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
-            'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15],
         }
     )
@@ -735,7 +728,6 @@ def test_add_frc_lu_index_2_wrf(info_mock):
             'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
             'dst_file': 'sample_data/geo_em.d04.nc',
             'dst_nu_file': 'testing/geo_em.d04_NoUrban.nc',
-            'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         }
     )
@@ -827,7 +819,6 @@ def test_create_lcz_params_file_attrs_type(
             'src_file_clean': os.path.join(input_dir, 'lcz_zaragoza_clean.tif'),
             'dst_file': os.path.join(input_dir, 'geo_em.d04.nc'),
             'dst_nu_file': os.path.join(input_dir, 'geo_em.d04_NoUrban.nc'),
-            'dst_gridinfo': os.path.join(input_dir, 'geo_em.d04_gridinfo.tif'),
             'dst_lcz_params_file': os.path.join(input_dir, 'geo_em.d04_LCZ_params.tif'),
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         }
@@ -866,7 +857,6 @@ def test_create_lcz_extent_file(tmpdir, info_mock):
             'dst_lcz_extent_file': os.path.join(tmpdir, 'geo_em.d04_LCZ_extent.nc'),
             'dst_file': 'sample_data/geo_em.d04.nc',
             'dst_nu_file': 'testing/geo_em.d04_NoUrban.nc',
-            'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         }
     )
@@ -1021,7 +1011,6 @@ def test_checks_and_cleaning_sample_data_all_ok(capsys, tmpdir, info_mock):
             'src_file_clean': os.path.join(input_dir, 'lcz_zaragoza_clean.tif'),
             'dst_file': os.path.join(input_dir, 'geo_em.d04.nc'),
             'dst_nu_file': os.path.join(input_dir, 'geo_em.d04_NoUrban.nc'),
-            'dst_gridinfo': os.path.join(input_dir, 'geo_em.d04_gridinfo.tif'),
             'dst_lcz_extent_file': os.path.join(input_dir, 'geo_em.d04_LCZ_extent.nc'),
             'dst_lcz_params_file': os.path.join(input_dir, 'geo_em.d04_LCZ_params.nc'),
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
@@ -1126,7 +1115,6 @@ def test_checks_and_cleaning_sample_data_check1to5_wrong(
             'src_file_clean': os.path.join(input_dir, 'lcz_zaragoza_clean.tif'),
             'dst_file': os.path.join(input_dir, 'geo_em.d04.nc'),
             'dst_nu_file': os.path.join(input_dir, 'geo_em.d04_NoUrban_dummy.nc'),
-            'dst_gridinfo': os.path.join(input_dir, 'geo_em.d04_gridinfo.tif'),
             'dst_lcz_extent_file': os.path.join(
                 input_dir, 'geo_em.d04_LCZ_extent_dummy.nc'
             ),
@@ -1181,7 +1169,6 @@ def test_checks_and_cleaning_sample_data_check6to9_wrong(
             'src_file_clean': os.path.join(input_dir, 'lcz_zaragoza_clean.tif'),
             'dst_file': os.path.join(input_dir, 'geo_em.d04.nc'),
             'dst_nu_file': os.path.join(input_dir, 'geo_em.d04_NoUrban_dummy.nc'),
-            'dst_gridinfo': os.path.join(input_dir, 'geo_em.d04_gridinfo.tif'),
             'dst_lcz_extent_file': os.path.join(
                 input_dir, 'geo_em.d04_LCZ_extent_dummy.nc'
             ),
