@@ -6,6 +6,7 @@ import rioxarray as rxr
 import rasterio
 import xarray as xr
 from rasterio.warp import reproject, Resampling
+from rasterio.transform import Affine
 from scipy.stats import mode, truncnorm
 import os, sys
 import argparse
@@ -21,7 +22,8 @@ from typing import Tuple
 from typing import Union
 from numpy.typing import NDArray
 from scipy import stats
-from pyproj import CRS
+import pyproj
+from pyproj import CRS, Transformer
 
 if sys.version_info >= (3, 9):  # pragma: >=3.9 cover
     import importlib.metadata as importlib_metadata
@@ -197,7 +199,6 @@ class Info(NamedTuple):
     src_file_clean: str
     dst_file: str
     dst_nu_file: str
-    dst_gridinfo: str
     dst_lcz_extent_file: str
     dst_lcz_params_file: str
     BUILT_LCZ: List[int]
@@ -214,10 +215,6 @@ class Info(NamedTuple):
             dst_file=os.path.join(args.io_dir, args.wrf_file),
             dst_nu_file=os.path.join(
                 args.io_dir, args.wrf_file.replace('.nc', '_NoUrban.nc')
-            ),
-            # TMP file, will be removed
-            dst_gridinfo=os.path.join(
-                args.io_dir, args.wrf_file.replace('.nc', '_gridinfo.tif')
             ),
             dst_lcz_extent_file=os.path.join(
                 args.io_dir, args.wrf_file.replace('.nc', '_LCZ_extent.nc')
@@ -508,25 +505,41 @@ def wrf_remove_urban(
     dst_data.to_netcdf(info.dst_nu_file)
 
 
-# Make WRF grid info available for Resampler (tmp file)
-def create_wrf_gridinfo(info: Info) -> None:
+# Get WRF grid info for Resampler
+# Inspired by: https://fabienmaussion.info/2018/01/06/wrf-projection/
+def _get_wrf_grid_info(info: Info) -> Dict:
 
-    # Read  gridded WRF data
-    dst_data = xr.open_dataset(info.dst_nu_file)
+    # Read gridded WRF data
+    dst_data = xr.open_dataset(info.dst_file)
 
-    # Create simpler WRF grid target.
-    da_lu = xr.Dataset(
-        {'LU_INDEX': (['y', 'x'], dst_data['LU_INDEX'][0, :, :].values)},
-        coords={
-            'y': dst_data.XLAT_M.values[0, :, 0],
-            'x': dst_data.XLONG_M.values[0, 0, :],
-        },
-    )
+    wrf_proj = pyproj.Proj(
+        proj='lcc',  # projection type: Lambert Conformal Conic
+        lat_1=dst_data.TRUELAT1, lat_2=dst_data.TRUELAT2,  # Cone intersects with the sphere
+        lat_0=dst_data.MOAD_CEN_LAT, lon_0=dst_data.STAND_LON,  # Center point
+        a=6370000, b=6370000)
+    wgs_proj = pyproj.Proj(proj='latlong', datum='WGS84')
 
-    # Add projection information as attributes, save and read back in.
-    da_lu.rio.write_crs('epsg:4326', inplace=True)
-    da_lu.rio.to_raster(info.dst_gridinfo)
+    # Make transform
+    transformer_wrf = Transformer.from_proj(wgs_proj, wrf_proj)
+    e, n = transformer_wrf.transform(dst_data.CEN_LON, dst_data.CEN_LAT)
 
+    # Grid parameters
+    dx, dy = dst_data.DX, dst_data.DY
+    nx, ny = dst_data.dims['west_east'], dst_data.dims['south_north']
+
+    # Down left corner of the domain
+    x0 = -(nx - 1) / 2. * dx + e
+    y0 = -(ny - 1) / 2. * dy + n
+
+    wrf_transform = Affine.translation(x0 - dx / 2, y0 - dy / 2) * \
+                    Affine.scale(dx, dy)
+
+    wrf_grid_info = {
+        'crs': wrf_proj.to_proj4(),
+        'transform': wrf_transform,
+    }
+
+    return wrf_grid_info
 
 def _get_SW_BW(ucp_table: pd.DataFrame) -> Tuple[pd.Series, pd.Series]:
 
@@ -573,9 +586,12 @@ def _ucp_resampler(
     '''Helper function to resample lcz ucp data ('FRC_URB2D', 'MH_URB2D',
     'STDH_URB2D', 'LB_URB2D', 'LF_URB2D', 'LP_URB2D') to WRF grid'''
 
-    # Read gridded data: LCZ and WRF grid
+    # Read gridded LCZ data
     src_data = rxr.open_rasterio(info.src_file_clean)[0, :, :]
-    dst_grid = rxr.open_rasterio(info.dst_gridinfo)
+
+    # Get WRF data and grid info
+    dst_data = xr.open_dataset(Info.dst_nu_file)
+    wrf_grid_info = _get_wrf_grid_info(Info)
 
     # Get Street and Building Width
     SW, BW = _get_SW_BW(ucp_table)
@@ -620,11 +636,11 @@ def _ucp_resampler(
     # Info: https://rasterio.readthedocs.io/en/latest/api/rasterio.warp.html?highlight=reproject(#rasterio.warp.reproject
     ucp_2_wrf = reproject(
         lcz_data_da,
-        dst_grid,
+        dst_data.LU_INDEX[0,:,:],
         src_transform=lcz_data_da.rio.transform(),
         src_crs=lcz_data_da.rio.crs,
-        dst_transform=dst_grid.rio.transform(),
-        dst_crs=dst_grid.rio.crs,
+        dst_transform=wrf_grid_info['transform'],
+        dst_crs=wrf_grid_info['crs'],
         resampling=Resampling[RESAMPLE_TYPE],
     )[0]
 
@@ -647,9 +663,12 @@ def _hgt_resampler(
     '''Helper function to resample HGT_URB2D (=Area Weighted
     Mean Building Height ) data to WRF grid'''
 
-    # Read gridded data: LCZ and WRF grid
+    # Read gridded LCZ data
     src_data = rxr.open_rasterio(info.src_file_clean)[0, :, :]
-    dst_grid = rxr.open_rasterio(info.dst_gridinfo)
+
+    # Get WRF data and grid info
+    dst_data = xr.open_dataset(Info.dst_nu_file)
+    wrf_grid_info = _get_wrf_grid_info(Info)
 
     # Street width extracted from S02012 Building heighht and H2W.
     SW, BW = _get_SW_BW(ucp_table)
@@ -686,22 +705,22 @@ def _hgt_resampler(
     # Get the aggregated values on WRF grid - nominator
     ucp_2_wrf_nom = reproject(
         lcz_data_da_nom,
-        dst_grid,
+        dst_data.LU_INDEX[0,:,:],
         src_transform=lcz_data_da_nom.rio.transform(),
         src_crs=lcz_data_da_nom.crs,
-        dst_transform=dst_grid.rio.transform(),
-        dst_crs=dst_grid.rio.crs,
+        dst_transform=wrf_grid_info['transform'],
+        dst_crs=wrf_grid_info['crs'],
         resampling=Resampling[RESAMPLE_TYPE],
     )[0].copy()
 
     # Get the aggregated values on WRF grid - nominator
     ucp_2_wrf_denom = reproject(
         lcz_data_da_denom,
-        dst_grid,
+        dst_data.LU_INDEX[0,:,:],
         src_transform=lcz_data_da_denom.rio.transform(),
         src_crs=lcz_data_da_denom.crs,
-        dst_transform=dst_grid.rio.transform(),
-        dst_crs=dst_grid.rio.crs,
+        dst_transform=wrf_grid_info['transform'],
+        dst_crs=wrf_grid_info['crs'],
         resampling=Resampling[RESAMPLE_TYPE],
     )[0].copy()
 
@@ -857,9 +876,12 @@ def _hi_resampler(
 
     '''Helper function to resample ucp HI_URB2D_URB2D data to WRF grid'''
 
-    # Read gridded data: LCZ and WRF grid
+    # Read gridded LCZ data
     src_data = rxr.open_rasterio(info.src_file_clean)[0, :, :]
-    dst_grid = rxr.open_rasterio(info.dst_gridinfo)
+
+    # Get WRF data and grid info
+    dst_data = xr.open_dataset(Info.dst_nu_file)
+    wrf_grid_info = _get_wrf_grid_info(Info)
 
     # Get mask of selected built LCZs
     lcz_arr = _get_lcz_arr(src_data, info)
@@ -868,7 +890,7 @@ def _hi_resampler(
     df_hi = _compute_hi_distribution(info, ucp_table=ucp_table)
 
     # Initialize array to store temp values
-    hi_arr = np.zeros((15, dst_grid.shape[1], dst_grid.shape[2]))
+    hi_arr = np.zeros((15, dst_data.LU_INDEX.shape[1], dst_data.LU_INDEX.shape[2]))
 
     # Loop over the 15 height density classes.
     for hi_i in range(df_hi.shape[1]):
@@ -891,11 +913,11 @@ def _hi_resampler(
         # Get the aggregated values on WRF grid
         ucp_2_wrf = reproject(
             lcz_data_da,
-            dst_grid,
+            dst_data.LU_INDEX[0,:,:],
             src_transform=lcz_data_da.rio.transform(),
             src_crs=lcz_data_da.rio.crs,
-            dst_transform=dst_grid.rio.transform(),
-            dst_crs=dst_grid.rio.crs,
+            dst_transform=wrf_grid_info['transform'],
+            dst_crs=wrf_grid_info['crs'],
             resampling=Resampling[RESAMPLE_TYPE],
         )[0]
 
@@ -927,10 +949,12 @@ def _lcz_resampler(
 
     '''Helper function to resample lcz classes to WRF grid using majority'''
 
-    # Read required gridded data, LCZ, WRF grid, and
-    # original WRF (for original MODIS urban mask)
+    # Read gridded LCZ data
     src_data = rxr.open_rasterio(info.src_file_clean)[0, :, :]
-    dst_grid = rxr.open_rasterio(info.dst_gridinfo)
+
+    # Get WRF data and grid info
+    dst_data = xr.open_dataset(Info.dst_nu_file)
+    wrf_grid_info = _get_wrf_grid_info(Info)
 
     # Mask natural LCZs before majority filtering.
     if LCZ_NAT_MASK:
@@ -938,11 +962,11 @@ def _lcz_resampler(
 
     lcz_2_wrf = reproject(
         src_data,
-        dst_grid,
+        dst_data.LU_INDEX[0,:,:],
         src_transform=src_data.rio.transform(),
         src_crs=src_data.rio.crs,
-        dst_transform=dst_grid.rio.transform(),
-        dst_crs=dst_grid.rio.crs,
+        dst_transform=wrf_grid_info['transform'],
+        dst_crs=wrf_grid_info['crs'],
         resampling=Resampling['mode'],
     )[0].values
 
@@ -1538,8 +1562,6 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
         )
 
     print('> Cleaning up ... all done!')
-    if os.path.exists(info.dst_gridinfo):
-        os.remove(info.dst_gridinfo)
     if os.path.exists(info.src_file_clean):
         os.remove(info.src_file_clean)
 
