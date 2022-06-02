@@ -364,15 +364,20 @@ def test_get_wrf_grid_info(info_mock):
     wrf_grid_info = _get_wrf_grid_info(info)
     assert type(wrf_grid_info) == dict
     assert list(wrf_grid_info.keys()) == ['crs', 'transform']
-    crs_string = '+proj=lcc +lat_0=46 +lon_0=5.84999990463257 ' \
-                 '+lat_1=46 +lat_2=46 +x_0=0 +y_0=0 +R=6370000 +units=m +no_defs'
+    crs_string = (
+        '+proj=lcc +lat_0=46 +lon_0=5.84999990463257 '
+        '+lat_1=46 +lat_2=46 +x_0=0 +y_0=0 +R=6370000 +units=m +no_defs'
+    )
     assert wrf_grid_info['crs'] == crs_string
     print(wrf_grid_info['transform'])
-    assert wrf_grid_info['transform'] == \
-           Affine(
-               1111.7747802734375, 0.0, -650182.3839430928,
-               0.0, 1111.7747802734375, -513738.83092773036,
-           )
+    assert wrf_grid_info['transform'] == Affine(
+        1111.7747802734375,
+        0.0,
+        -650182.3839430928,
+        0.0,
+        1111.7747802734375,
+        -513738.83092773036,
+    )
 
 
 def test_get_SW_BW():
@@ -685,14 +690,14 @@ def test_hi_resampler(info_mock):
     (
         (
             False,
-            np.array([30.0, 32.0, 35.0, 36.0, 38.0, 41.0, 42.0, 43.0, 44.0, 46.0]),
-            np.array([64, 11, 1, 20, 29, 8, 13, 4, 175, 44]),
+            np.array([32.0, 33.0, 35.0, 36.0, 38.0, 41.0, 42.0, 44.0, 46.0]),
+            np.array([12, 2, 1, 54, 66, 6, 2, 108, 4]),
         ),
-        # (
-        #     True,
-        #     np.array([30., 32., 33., 35., 36., 38., 39., 41.]),
-        #     np.array([64, 11, 2, 2, 68, 45, 9, 31]),
-        # ),
+        (
+            True,
+            np.array([32.0, 33.0, 35.0, 36.0, 38.0, 39.0, 41.0]),
+            np.array([12, 16, 2, 118, 99, 1, 7]),
+        ),
     ),
 )
 def test_lcz_resampler_lcz_nat_mask_on_off_with_lcz15(
@@ -818,7 +823,6 @@ def test_create_lcz_params_file_attrs_type(
     input_dir = tmpdir.mkdir('input')
     shutil.copy(os.path.join('sample_data', 'geo_em.d04.nc'), input_dir)
     shutil.copy(os.path.join('testing', 'lcz_zaragoza_clean.tif'), input_dir)
-    shutil.copy(os.path.join('testing', 'geo_em.d04_gridinfo.tif'), input_dir)
     shutil.copy(os.path.join('testing', 'geo_em.d04_NoUrban.nc'), input_dir)
 
     info = info_mock(
@@ -896,7 +900,7 @@ def test_create_lcz_extent_file(tmpdir, info_mock):
     assert 'URB_PARAM' not in list(dst_extent.data_vars)
 
     # Number of urban pixels within LANDUSEF[12]
-    assert np.sum(dst_extent['LANDUSEF'].data[0, 12, :, :] == 1) == 369
+    assert np.sum(dst_extent['LANDUSEF'].data[0, 12, :, :] == 1) == 255
 
 
 @pytest.mark.parametrize(
@@ -1008,7 +1012,6 @@ def test_checks_and_cleaning_sample_data_all_ok(capsys, tmpdir, info_mock):
     input_dir = tmpdir.mkdir('input')
     shutil.copy(os.path.join('sample_data', 'geo_em.d04.nc'), input_dir)
     shutil.copy(os.path.join('testing', 'lcz_zaragoza_clean.tif'), input_dir)
-    shutil.copy(os.path.join('testing', 'geo_em.d04_gridinfo.tif'), input_dir)
     shutil.copy(os.path.join('testing', 'geo_em.d04_NoUrban.nc'), input_dir)
     shutil.copy(os.path.join('testing', 'geo_em.d04_LCZ_extent.nc'), input_dir)
     shutil.copy(os.path.join('testing', 'geo_em.d04_LCZ_params.nc'), input_dir)
@@ -1112,7 +1115,6 @@ def test_checks_and_cleaning_sample_data_check1to5_wrong(
     input_dir = tmpdir.mkdir('input')
     shutil.copy(os.path.join('sample_data', 'geo_em.d04.nc'), input_dir)
     shutil.copy(os.path.join('testing', 'lcz_zaragoza_clean.tif'), input_dir)
-    shutil.copy(os.path.join('testing', 'geo_em.d04_gridinfo.tif'), input_dir)
     shutil.copy(os.path.join('testing', 'geo_em.d04_NoUrban_dummy.nc'), input_dir)
     shutil.copy(os.path.join('testing', 'geo_em.d04_LCZ_extent_dummy.nc'), input_dir)
     shutil.copy(os.path.join('testing', 'geo_em.d04_LCZ_params_dummy.nc'), input_dir)
@@ -1164,7 +1166,6 @@ def test_checks_and_cleaning_sample_data_check6to9_wrong(
     input_dir = tmpdir.mkdir('input')
     shutil.copy(os.path.join('sample_data', 'geo_em.d04.nc'), input_dir)
     shutil.copy(os.path.join('testing', 'lcz_zaragoza_clean.tif'), input_dir)
-    shutil.copy(os.path.join('testing', 'geo_em.d04_gridinfo.tif'), input_dir)
     shutil.copy(os.path.join('testing', 'geo_em.d04_NoUrban_dummy.nc'), input_dir)
     shutil.copy(os.path.join('testing', 'geo_em.d04_LCZ_extent_dummy.nc'), input_dir)
     shutil.copy(
