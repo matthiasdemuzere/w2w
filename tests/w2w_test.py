@@ -364,15 +364,20 @@ def test_get_wrf_grid_info(info_mock):
     wrf_grid_info = _get_wrf_grid_info(info)
     assert type(wrf_grid_info) == dict
     assert list(wrf_grid_info.keys()) == ['crs', 'transform']
-    crs_string = '+proj=lcc +lat_0=46 +lon_0=5.84999990463257 ' \
-                 '+lat_1=46 +lat_2=46 +x_0=0 +y_0=0 +R=6370000 +units=m +no_defs'
+    crs_string = (
+        '+proj=lcc +lat_0=46 +lon_0=5.84999990463257 '
+        '+lat_1=46 +lat_2=46 +x_0=0 +y_0=0 +R=6370000 +units=m +no_defs'
+    )
     assert wrf_grid_info['crs'] == crs_string
     print(wrf_grid_info['transform'])
-    assert wrf_grid_info['transform'] == \
-           Affine(
-               1111.7747802734375, 0.0, -650182.3839430928,
-               0.0, 1111.7747802734375, -513738.83092773036,
-           )
+    assert wrf_grid_info['transform'] == Affine(
+        1111.7747802734375,
+        0.0,
+        -650182.3839430928,
+        0.0,
+        1111.7747802734375,
+        -513738.83092773036,
+    )
 
 
 def test_get_SW_BW():
