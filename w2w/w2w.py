@@ -635,7 +635,7 @@ def _ucp_resampler(
     # Info: https://rasterio.readthedocs.io/en/latest/api/rasterio.warp.html?highlight=reproject(#rasterio.warp.reproject
     ucp_2_wrf = reproject(
         lcz_data_da,
-        dst_data.LU_INDEX[0, :, :],
+        dst_data.LU_INDEX,
         src_transform=lcz_data_da.rio.transform(),
         src_crs=lcz_data_da.rio.crs,
         dst_transform=wrf_grid_info['transform'],
@@ -704,7 +704,7 @@ def _hgt_resampler(
     # Get the aggregated values on WRF grid - nominator
     ucp_2_wrf_nom = reproject(
         lcz_data_da_nom,
-        dst_data.LU_INDEX[0, :, :],
+        dst_data.LU_INDEX,
         src_transform=lcz_data_da_nom.rio.transform(),
         src_crs=lcz_data_da_nom.crs,
         dst_transform=wrf_grid_info['transform'],
@@ -715,7 +715,7 @@ def _hgt_resampler(
     # Get the aggregated values on WRF grid - nominator
     ucp_2_wrf_denom = reproject(
         lcz_data_da_denom,
-        dst_data.LU_INDEX[0, :, :],
+        dst_data.LU_INDEX,
         src_transform=lcz_data_da_denom.rio.transform(),
         src_crs=lcz_data_da_denom.crs,
         dst_transform=wrf_grid_info['transform'],
@@ -912,7 +912,7 @@ def _hi_resampler(
         # Get the aggregated values on WRF grid
         ucp_2_wrf = reproject(
             lcz_data_da,
-            dst_data.LU_INDEX[0, :, :],
+            dst_data.LU_INDEX,
             src_transform=lcz_data_da.rio.transform(),
             src_crs=lcz_data_da.rio.crs,
             dst_transform=wrf_grid_info['transform'],
@@ -961,7 +961,7 @@ def _lcz_resampler(
 
     lcz_2_wrf = reproject(
         src_data,
-        dst_data.LU_INDEX[0, :, :],
+        dst_data.LU_INDEX,
         src_transform=src_data.rio.transform(),
         src_crs=src_data.rio.crs,
         dst_transform=wrf_grid_info['transform'],
