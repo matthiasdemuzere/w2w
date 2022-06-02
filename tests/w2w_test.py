@@ -437,11 +437,11 @@ def test_get_lcz_arr(info_mock):
 @pytest.mark.parametrize(
     ('ucp_key', 'data_sum', 'data_mean'),
     (
-        ('MH_URB2D', 2, 1.1429937),
-        ('STDH_URB2D', 2, 0.29812142),
-        ('LB_URB2D', 1, 0.15104416),
-        ('LF_URB2D', 1, 0.07032267),
-        ('LP_URB2D', 1, 0.08072148),
+        ('MH_URB2D', 2, 0.995202),
+        ('STDH_URB2D', 2, 0.2595552),
+        ('LB_URB2D', 1, 0.1313086),
+        ('LF_URB2D', 1, 0.061061),
+        ('LP_URB2D', 1, 0.0702476),
     ),
 )
 def test_ucp_resampler_output_values_per_paramater(
@@ -451,6 +451,8 @@ def test_ucp_resampler_output_values_per_paramater(
         {
             'src_file': 'sample_data/lcz_zaragoza.tif',
             'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
+            'dst_file': 'sample_data/geo_em.d04.nc',
+            'dst_nu_file': 'testing/geo_em.d04_NoUrban.nc',
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         }
     )
@@ -464,6 +466,7 @@ def test_ucp_resampler_output_values_per_paramater(
     # Parameters should be on WRF grid size
     assert ucp_res.shape == (1, 102, 162)
     # Per parameter, check # max values and non-0 domain average
+    print('HERE!!!!', np.sum(ucp_res.data == ucp_res.data.max()))
     assert np.sum(ucp_res.data == ucp_res.data.max()) == data_sum
     assert approx(np.mean(ucp_res.data[ucp_res.data > 0])) == data_mean
     # Make sure no nans are present.
