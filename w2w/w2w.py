@@ -514,9 +514,13 @@ def _get_wrf_grid_info(info: Info) -> Dict:
 
     wrf_proj = pyproj.Proj(
         proj='lcc',  # projection type: Lambert Conformal Conic
-        lat_1=dst_data.TRUELAT1, lat_2=dst_data.TRUELAT2,  # Cone intersects with the sphere
-        lat_0=dst_data.MOAD_CEN_LAT, lon_0=dst_data.STAND_LON,  # Center point
-        a=6370000, b=6370000)
+        lat_1=dst_data.TRUELAT1,
+        lat_2=dst_data.TRUELAT2,  # Cone intersects with the sphere
+        lat_0=dst_data.MOAD_CEN_LAT,
+        lon_0=dst_data.STAND_LON,  # Center point
+        a=6370000,
+        b=6370000,
+    )
     wgs_proj = pyproj.Proj(proj='latlong', datum='WGS84')
 
     # Make transform
@@ -528,11 +532,10 @@ def _get_wrf_grid_info(info: Info) -> Dict:
     nx, ny = dst_data.dims['west_east'], dst_data.dims['south_north']
 
     # Down left corner of the domain
-    x0 = -(nx - 1) / 2. * dx + e
-    y0 = -(ny - 1) / 2. * dy + n
+    x0 = -(nx - 1) / 2.0 * dx + e
+    y0 = -(ny - 1) / 2.0 * dy + n
 
-    wrf_transform = Affine.translation(x0 - dx / 2, y0 - dy / 2) * \
-                    Affine.scale(dx, dy)
+    wrf_transform = Affine.translation(x0 - dx / 2, y0 - dy / 2) * Affine.scale(dx, dy)
 
     wrf_grid_info = {
         'crs': wrf_proj.to_proj4(),
@@ -540,6 +543,7 @@ def _get_wrf_grid_info(info: Info) -> Dict:
     }
 
     return wrf_grid_info
+
 
 def _get_SW_BW(ucp_table: pd.DataFrame) -> Tuple[pd.Series, pd.Series]:
 
@@ -636,7 +640,7 @@ def _ucp_resampler(
     # Info: https://rasterio.readthedocs.io/en/latest/api/rasterio.warp.html?highlight=reproject(#rasterio.warp.reproject
     ucp_2_wrf = reproject(
         lcz_data_da,
-        dst_data.LU_INDEX[0,:,:],
+        dst_data.LU_INDEX[0, :, :],
         src_transform=lcz_data_da.rio.transform(),
         src_crs=lcz_data_da.rio.crs,
         dst_transform=wrf_grid_info['transform'],
@@ -705,7 +709,7 @@ def _hgt_resampler(
     # Get the aggregated values on WRF grid - nominator
     ucp_2_wrf_nom = reproject(
         lcz_data_da_nom,
-        dst_data.LU_INDEX[0,:,:],
+        dst_data.LU_INDEX[0, :, :],
         src_transform=lcz_data_da_nom.rio.transform(),
         src_crs=lcz_data_da_nom.crs,
         dst_transform=wrf_grid_info['transform'],
@@ -716,7 +720,7 @@ def _hgt_resampler(
     # Get the aggregated values on WRF grid - nominator
     ucp_2_wrf_denom = reproject(
         lcz_data_da_denom,
-        dst_data.LU_INDEX[0,:,:],
+        dst_data.LU_INDEX[0, :, :],
         src_transform=lcz_data_da_denom.rio.transform(),
         src_crs=lcz_data_da_denom.crs,
         dst_transform=wrf_grid_info['transform'],
@@ -913,7 +917,7 @@ def _hi_resampler(
         # Get the aggregated values on WRF grid
         ucp_2_wrf = reproject(
             lcz_data_da,
-            dst_data.LU_INDEX[0,:,:],
+            dst_data.LU_INDEX[0, :, :],
             src_transform=lcz_data_da.rio.transform(),
             src_crs=lcz_data_da.rio.crs,
             dst_transform=wrf_grid_info['transform'],
@@ -962,7 +966,7 @@ def _lcz_resampler(
 
     lcz_2_wrf = reproject(
         src_data,
-        dst_data.LU_INDEX[0,:,:],
+        dst_data.LU_INDEX[0, :, :],
         src_transform=src_data.rio.transform(),
         src_crs=src_data.rio.crs,
         dst_transform=wrf_grid_info['transform'],

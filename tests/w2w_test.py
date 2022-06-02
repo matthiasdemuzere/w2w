@@ -34,11 +34,12 @@ from w2w.w2w import check_lcz_integrity
 from w2w.w2w import checks_and_cleaning
 from w2w.w2w import create_lcz_extent_file
 from w2w.w2w import create_lcz_params_file
-#from w2w.w2w import create_wrf_gridinfo
 from w2w.w2w import expand_land_cat_parents
 from w2w.w2w import Info
 from w2w.w2w import main
 from w2w.w2w import wrf_remove_urban
+
+# from w2w.w2w import create_wrf_gridinfo
 
 
 @pytest.fixture
@@ -356,7 +357,8 @@ def test_wrf_remove_urban_output_already_exists_is_overwritten(tmpdir, info_mock
     wrf_remove_urban(info=info, NPIX_NLC=9)
     assert m_time_old != os.path.getmtime(info.dst_nu_file)
 
-#TODO: replace to test new _get_wrf_grid_info() function
+
+# TODO: replace to test new _get_wrf_grid_info() function
 # def test_create_wrf_gridinfo(tmpdir, info_mock):
 #     info = info_mock(
 #         {
