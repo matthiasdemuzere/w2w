@@ -109,7 +109,7 @@ def test_get_lcz_band_lcz_generator(info_mock, capsys):
         pytest.param(['--lcz-band', '5'], 5, id='custom band'),
     ),
 )
-def test_main_lcz_band_arg(arg, exp, info_mock, capsys, tmpdir):
+def test_main_lcz_band_arg(arg, exp, capsys, tmpdir):
     input_dir = tmpdir.mkdir('input')
     input_files = (
         'geo_em.d01.nc',
@@ -355,26 +355,24 @@ def test_wrf_remove_urban_output_already_exists_is_overwritten(tmpdir, info_mock
     assert m_time_old != os.path.getmtime(info.dst_nu_file)
 
 
-# TODO: replace to test new _get_wrf_grid_info() function
-# def test_create_wrf_gridinfo(tmpdir, info_mock):
-#     info = info_mock(
-#         {
-#             'dst_nu_file': 'testing/5by5.nc',
-#             'dst_gridinfo': os.path.join(tmpdir, 'dst_gridinfo.tif'),
-#         }
-#     )
-#     create_wrf_gridinfo(info)
-#     assert os.listdir(tmpdir) == ['dst_gridinfo.tif']
-#     tif = rxr.open_rasterio(info.dst_gridinfo)
-#     assert tif.rio.crs.to_proj4() == '+init=epsg:4326'
-#     assert tif.rio.transform() == Affine(
-#         0.01000213623046875,
-#         0.0,
-#         -1.4050254821777344,
-#         0.0,
-#         0.010000228881835938,
-#         41.480000495910645,
-#     )
+def test_get_wrf_grid_info(info_mock):
+    info = info_mock(
+        {
+            'dst_file': 'sample_data/geo_em.d04.nc',
+        }
+    )
+    wrf_grid_info = _get_wrf_grid_info(info)
+    assert type(wrf_grid_info) == dict
+    assert list(wrf_grid_info.keys()) == ['crs', 'transform']
+    crs_string = '+proj=lcc +lat_0=46 +lon_0=5.84999990463257 ' \
+                 '+lat_1=46 +lat_2=46 +x_0=0 +y_0=0 +R=6370000 +units=m +no_defs'
+    assert wrf_grid_info['crs'] == crs_string
+    print(wrf_grid_info['transform'])
+    assert wrf_grid_info['transform'] == \
+           Affine(
+               1111.7747802734375, 0.0, -650182.3839430928,
+               0.0, 1111.7747802734375, -513738.83092773036,
+           )
 
 
 def test_get_SW_BW():
