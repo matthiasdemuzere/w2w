@@ -502,7 +502,7 @@ def wrf_remove_urban(
 
 # Get WRF grid info for Resampler
 # Inspired by: https://fabienmaussion.info/2018/01/06/wrf-projection/
-def _get_wrf_grid_info(info: Info) -> Dict:
+def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
 
     # Read gridded WRF data
     dst_data = xr.open_dataset(info.dst_file)
@@ -589,8 +589,8 @@ def _ucp_resampler(
     src_data = rxr.open_rasterio(info.src_file_clean)[0, :, :]
 
     # Get WRF data and grid info
-    dst_data = xr.open_dataset(Info.dst_nu_file)
-    wrf_grid_info = _get_wrf_grid_info(Info)
+    dst_data = xr.open_dataset(info.dst_nu_file)
+    wrf_grid_info = _get_wrf_grid_info(info)
 
     # Get Street and Building Width
     SW, BW = _get_SW_BW(ucp_table)
@@ -666,8 +666,8 @@ def _hgt_resampler(
     src_data = rxr.open_rasterio(info.src_file_clean)[0, :, :]
 
     # Get WRF data and grid info
-    dst_data = xr.open_dataset(Info.dst_nu_file)
-    wrf_grid_info = _get_wrf_grid_info(Info)
+    dst_data = xr.open_dataset(info.dst_nu_file)
+    wrf_grid_info = _get_wrf_grid_info(info)
 
     # Street width extracted from S02012 Building heighht and H2W.
     SW, BW = _get_SW_BW(ucp_table)
@@ -879,8 +879,8 @@ def _hi_resampler(
     src_data = rxr.open_rasterio(info.src_file_clean)[0, :, :]
 
     # Get WRF data and grid info
-    dst_data = xr.open_dataset(Info.dst_nu_file)
-    wrf_grid_info = _get_wrf_grid_info(Info)
+    dst_data = xr.open_dataset(info.dst_nu_file)
+    wrf_grid_info = _get_wrf_grid_info(info)
 
     # Get mask of selected built LCZs
     lcz_arr = _get_lcz_arr(src_data, info)
@@ -952,8 +952,8 @@ def _lcz_resampler(
     src_data = rxr.open_rasterio(info.src_file_clean)[0, :, :]
 
     # Get WRF data and grid info
-    dst_data = xr.open_dataset(Info.dst_nu_file)
-    wrf_grid_info = _get_wrf_grid_info(Info)
+    dst_data = xr.open_dataset(info.dst_nu_file)
+    wrf_grid_info = _get_wrf_grid_info(info)
 
     # Mask natural LCZs before majority filtering.
     if LCZ_NAT_MASK:
