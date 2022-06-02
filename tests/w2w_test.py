@@ -23,6 +23,7 @@ from w2w.w2w import _get_lcz_arr
 from w2w.w2w import _get_lcz_band
 from w2w.w2w import _get_SW_BW
 from w2w.w2w import _get_truncated_normal_sample
+from w2w.w2w import _get_wrf_grid_info
 from w2w.w2w import _hgt_resampler
 from w2w.w2w import _hi_resampler
 from w2w.w2w import _initialize_urb_param
@@ -38,7 +39,6 @@ from w2w.w2w import expand_land_cat_parents
 from w2w.w2w import Info
 from w2w.w2w import main
 from w2w.w2w import wrf_remove_urban
-from w2w.w2w import _get_wrf_grid_info
 
 
 @pytest.fixture
@@ -685,7 +685,7 @@ def test_hi_resampler(info_mock):
     (
         (
             False,
-            np.array([30., 32., 35., 36., 38., 41., 42., 43., 44., 46.]),
+            np.array([30.0, 32.0, 35.0, 36.0, 38.0, 41.0, 42.0, 43.0, 44.0, 46.0]),
             np.array([64, 11, 1, 20, 29, 8, 13, 4, 175, 44]),
         ),
         # (
