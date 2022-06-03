@@ -516,11 +516,6 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
     # Projection depends on value of MAP_PROJ
     map_proj = int(dst_data.MAP_PROJ)
 
-    # define projections, inspired by salem and wrf-python
-    lat_1 = dst_data.TRUELAT1
-    lat_2 = dst_data.TRUELAT2
-    lon_0
-
     # Lambert Conformal Conic
     if map_proj == 1:
         wrf_proj = pyproj.Proj(
@@ -562,13 +557,18 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
     # Follow this: https://github.com/NCAR/wrf-python/blob/
     # 4a9ff241c8f3615b6a5c94e10a945e8a39bdea27/src/wrf/projection.py#L928
     elif map_proj == 6:
-        wrf_proj = pyproj.Proj(
-            proj='eqc',
-            units='m',
-            a=6370000,
-            b=6370000,
-            lon_0=dst_data.STAND_LON,
-        )
+        import wrf
+        from netCDF4 import Dataset
+        nc = Dataset(info.dst_file)
+        lu = wrf.getvar(nc, 'LU_INDEX')
+        wrf_proj = lu.projection
+        # wrf_proj = pyproj.Proj(
+        #     proj='eqc',
+        #     units='m',
+        #     a=6370000,
+        #     b=6370000,
+        #     lon_0=dst_data.STAND_LON,
+        # )
     else:
         message = (
             f'{ERROR}EXITING, WRF map_proj {map_proj} ' f'not implemented yet.{ENDC}'
