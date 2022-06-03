@@ -557,19 +557,21 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
     # Follow this: https://github.com/NCAR/wrf-python/blob/
     # 4a9ff241c8f3615b6a5c94e10a945e8a39bdea27/src/wrf/projection.py#L928
     elif map_proj == 6:
-        import wrf
-        from netCDF4 import Dataset
 
-        nc = Dataset(info.dst_file)
-        lu = wrf.getvar(nc, 'LU_INDEX')
-        wrf_proj = lu.projection.proj4()
-        # wrf_proj = pyproj.Proj(
-        #     proj='eqc',
-        #     units='m',
-        #     a=6370000,
-        #     b=6370000,
-        #     lon_0=dst_data.STAND_LON,
-        # )
+        # FAILS?
+        # import wrf
+        # from netCDF4 import Dataset
+        #
+        # nc = Dataset(info.dst_file)
+        # lu = wrf.getvar(nc, 'LU_INDEX')
+        # wrf_proj = lu.projection.proj4()
+        wrf_proj = pyproj.Proj(
+            proj='eqc',
+            units='m',
+            a=6370000,
+            b=6370000,
+            lon_0=dst_data.STAND_LON,
+        )
     else:
         message = (
             f'{ERROR}EXITING, WRF map_proj {map_proj} ' f'not implemented yet.{ENDC}'
@@ -595,16 +597,10 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
 
     wrf_transform = Affine.translation(x0 - dx / 2, y0 - dy / 2) * Affine.scale(dx, dy)
 
-    if map_proj == 6:
-        wrf_grid_info: Dict[str, Dict[str, Any]] = {
-            'crs': wrf_proj,
-            'transform': wrf_transform,
-        }
-    else:
-        wrf_grid_info: Dict[str, Dict[str, Any]] = {
-            'crs': wrf_proj.to_proj4(),
-            'transform': wrf_transform,
-        }
+    wrf_grid_info: Dict[str, Dict[str, Any]] = {
+        'crs': wrf_proj.to_proj4(),
+        'transform': wrf_transform,
+    }
 
     return wrf_grid_info
 
