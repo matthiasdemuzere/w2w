@@ -521,8 +521,6 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
     lat_2 = dst_data.TRUELAT2
     lon_0
 
-
-
     # Lambert Conformal Conic
     if map_proj == 1:
         wrf_proj = pyproj.Proj(
@@ -538,7 +536,7 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
     # Polar Stereographic
     elif map_proj == 2:
 
-        hemi = -90. if dst_data.TRUELAT1 < 0 else 90.
+        hemi = -90.0 if dst_data.TRUELAT1 < 0 else 90.0
 
         wrf_proj = pyproj.Proj(
             proj='stere',
