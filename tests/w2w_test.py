@@ -379,6 +379,7 @@ def test_get_wrf_grid_info(info_mock):
         4577176.609447704,
     )
 
+
 def test_get_wrf_grid_info_map_proj_gt_6(capsys, info_mock):
     info = info_mock(
         {
@@ -703,12 +704,12 @@ def test_hi_resampler(info_mock):
     (
         (
             False,
-            np.array([30., 32., 36., 38., 41., 42., 43., 44., 46.]),
+            np.array([30.0, 32.0, 36.0, 38.0, 41.0, 42.0, 43.0, 44.0, 46.0]),
             np.array([11, 11, 18, 38, 6, 1, 10, 146, 14]),
         ),
         (
             True,
-            np.array([30., 32., 33., 36., 38., 39., 41.]),
+            np.array([30.0, 32.0, 33.0, 36.0, 38.0, 39.0, 41.0]),
             np.array([11, 11, 7, 65, 61, 3, 20, 77]),
         ),
     ),

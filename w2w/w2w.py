@@ -568,8 +568,7 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
         )
     else:
         message = (
-            f'{ERROR}EXITING, WRF map_proj {map_proj} '
-            f'not implemented yet.{ENDC}'
+            f'{ERROR}EXITING, WRF map_proj {map_proj} ' f'not implemented yet.{ENDC}'
         )
         print(message)
         sys.exit(1)
