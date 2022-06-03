@@ -512,7 +512,7 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
     dst_data = xr.open_dataset(info.dst_file)
 
     # Projection depends on value of MAP_PROJ
-    map_proj = dst_data.MAP_PROJ
+    map_proj = int(dst_data.MAP_PROJ)
 
     # define projections, borrowed from the salem package:
     # shorturl.at/orEMU
@@ -520,11 +520,11 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
     # Lambert Conformal Conic
     if map_proj == 1:
         wrf_proj = pyproj.Proj(
-            proj='lcc',  # projection type: Lambert Conformal Conic
+            proj='lcc',
             lat_1=dst_data.TRUELAT1,
-            lat_2=dst_data.TRUELAT2,  # Cone intersects with the sphere
+            lat_2=dst_data.TRUELAT2,
             lat_0=dst_data.MOAD_CEN_LAT,
-            lon_0=dst_data.STAND_LON,  # Center point
+            lon_0=dst_data.STAND_LON,
             x_0=0,
             y_0=0,
             a=6370000,
@@ -533,10 +533,10 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
     # Polar Stereographic
     elif map_proj == 2:
         wrf_proj = pyproj.Proj(
-            proj='stere',  # projection type: Lambert Conformal Conic
+            proj='stere',
             lat_ts=dst_data.TRUELAT1,
             lat_0=90.0,
-            lon_0=dst_data.STAND_LON,  # Center point
+            lon_0=dst_data.STAND_LON,
             x_0=0,
             y_0=0,
             a=6370000,
@@ -545,9 +545,21 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
     # Mercator
     elif map_proj == 3:
         wrf_proj = pyproj.Proj(
-            proj='merc',  # projection type: Lambert Conformal Conic
+            proj='merc',
             lat_ts=dst_data.TRUELAT1,
-            lon_0=dst_data.STAND_LON,  # Center point
+            lon_0=dst_data.STAND_LON,
+            x_0=0,
+            y_0=0,
+            a=6370000,
+            b=6370000,
+        )
+
+    # Latlong - Equidistant Cylindrical
+    elif map_proj == 6:
+        wrf_proj = pyproj.Proj(
+            proj='eqc',
+            lat_ts=dst_data.TRUELAT1,
+            lon_0=dst_data.STAND_LON,
             x_0=0,
             y_0=0,
             a=6370000,
