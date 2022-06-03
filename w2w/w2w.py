@@ -578,7 +578,7 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
         sys.exit(1)
 
     # Make transform
-    transformer_wrf = Transformer.from_proj(wgs_proj, wrf_proj)
+    transformer_wrf = Transformer.from_proj(wgs_proj, wrf_proj.to_proj4())
     e, n = transformer_wrf.transform(dst_data.CEN_LON, dst_data.CEN_LAT)
 
     # Grid parameters
