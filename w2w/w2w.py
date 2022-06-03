@@ -562,7 +562,7 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
 
         nc = Dataset(info.dst_file)
         lu = wrf.getvar(nc, 'LU_INDEX')
-        wrf_proj = lu.projection
+        wrf_proj = lu.projection.proj4()
         # wrf_proj = pyproj.Proj(
         #     proj='eqc',
         #     units='m',
@@ -578,7 +578,7 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
         sys.exit(1)
 
     # Make transform
-    transformer_wrf = Transformer.from_proj(wgs_proj, wrf_proj.to_proj4())
+    transformer_wrf = Transformer.from_proj(wgs_proj, wrf_proj)
     e, n = transformer_wrf.transform(dst_data.CEN_LON, dst_data.CEN_LAT)
 
     # Grid parameters
@@ -595,10 +595,16 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
 
     wrf_transform = Affine.translation(x0 - dx / 2, y0 - dy / 2) * Affine.scale(dx, dy)
 
-    wrf_grid_info: Dict[str, Dict[str, Any]] = {
-        'crs': wrf_proj.to_proj4(),
-        'transform': wrf_transform,
-    }
+    if map_proj == 6:
+        wrf_grid_info: Dict[str, Dict[str, Any]] = {
+            'crs': wrf_proj,
+            'transform': wrf_transform,
+        }
+    else:
+        wrf_grid_info: Dict[str, Dict[str, Any]] = {
+            'crs': wrf_proj.to_proj4(),
+            'transform': wrf_transform,
+        }
 
     return wrf_grid_info
 
