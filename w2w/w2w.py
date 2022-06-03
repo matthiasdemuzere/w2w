@@ -556,7 +556,8 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
 
     else:
         message = (
-            f'{ERROR}WARNING: WRF MAP_RPOJ {map_proj} ' f'not implemented yet.{ENDC}'
+            f'{ERROR}WARNING: WRF MAP_RPOJ {map_proj} '
+            f'not implemented yet.{ENDC}'
         )
         print(message)
         sys.exit(1)
