@@ -504,8 +504,10 @@ def wrf_remove_urban(
 # Inspired by: https://fabienmaussion.info/2018/01/06/wrf-projection/
 def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
 
-    # Initialize WGS84 projection
+    ERROR = '\033[0;31m'
+    ENDC = '\033[0m'
 
+    # Initialize WGS84 projection
     wgs_proj = pyproj.Proj(proj='latlong', datum='WGS84')
 
     # Read gridded WRF data
@@ -553,7 +555,6 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
             a=6370000,
             b=6370000,
         )
-
     # Latlong - Equidistant Cylindrical
     elif map_proj == 6:
         wrf_proj = pyproj.Proj(
@@ -565,10 +566,10 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
             a=6370000,
             b=6370000,
         )
-
     else:
         message = (
-            f'{ERROR}WARNING: WRF MAP_RPOJ {map_proj} ' f'not implemented yet.{ENDC}'
+            f'{ERROR}EXITING, WRF map_proj {map_proj} '
+            f'not implemented yet.{ENDC}'
         )
         print(message)
         sys.exit(1)

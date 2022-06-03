@@ -365,19 +365,32 @@ def test_get_wrf_grid_info(info_mock):
     assert type(wrf_grid_info) == dict
     assert list(wrf_grid_info.keys()) == ['crs', 'transform']
     crs_string = (
-        '+proj=lcc +lat_0=46 +lon_0=5.84999990463257 '
-        '+lat_1=46 +lat_2=46 +x_0=0 +y_0=0 +R=6370000 +units=m +no_defs'
+        '+proj=eqc +lat_ts=46 +lat_0=0 +lon_0=5.84999990463257 '
+        '+x_0=0 +y_0=0 +R=6370000 +units=m +no_defs'
     )
     assert wrf_grid_info['crs'] == crs_string
     print(wrf_grid_info['transform'])
     assert wrf_grid_info['transform'] == Affine(
         1111.7747802734375,
         0.0,
-        -650182.3839430928,
+        -610200.9952783007,
         0.0,
         1111.7747802734375,
-        -513738.83092773036,
+        4577176.609447704,
     )
+
+def test_get_wrf_grid_info_map_proj_gt_6(capsys, info_mock):
+    info = info_mock(
+        {
+            'dst_file': 'testing/geo_em.d04_LU_GR_map_proj_7.nc',
+        }
+    )
+
+    with pytest.raises(SystemExit):
+        _get_wrf_grid_info(info)
+
+    out, _ = capsys.readouterr()
+    assert 'WRF map_proj 7' in out
 
 
 def test_get_SW_BW():
@@ -439,11 +452,11 @@ def test_get_lcz_arr(info_mock):
 @pytest.mark.parametrize(
     ('ucp_key', 'data_sum', 'data_mean'),
     (
-        ('MH_URB2D', 2, 0.995202),
-        ('STDH_URB2D', 2, 0.2595552),
-        ('LB_URB2D', 1, 0.1313086),
-        ('LF_URB2D', 1, 0.061061),
-        ('LP_URB2D', 1, 0.0702476),
+        ('MH_URB2D', 1, 0.9470687),
+        ('STDH_URB2D', 1, 0.2469926),
+        ('LB_URB2D', 1, 0.1251387),
+        ('LF_URB2D', 1, 0.0582738),
+        ('LP_URB2D', 1, 0.06686489),
     ),
 )
 def test_ucp_resampler_output_values_per_paramater(
@@ -496,7 +509,7 @@ def test_ucp_resampler_output_values_per_paramater_frc_threshold(info_mock):
     assert ucp_res.shape == (1, 102, 162)
     # Per parameter, check # max values and non-0 domain average
     assert np.sum(ucp_res.data == ucp_res.data.max()) == 1
-    assert approx(np.mean(ucp_res.data[ucp_res.data > 0])) == 0.432376
+    assert approx(np.mean(ucp_res.data[ucp_res.data > 0])) == 0.424159
     # Make sure no nans are present.
     np.sum(np.isnan(ucp_res.data)) == 0
 
@@ -525,8 +538,8 @@ def test_hgt_resampler_output_values(info_mock):
     assert ucp_res.shape == (1, 102, 162)
 
     # Check # max values and non-0 domain average
-    assert np.sum(ucp_res.data == ucp_res.data.max()) == 1
-    assert approx(np.mean(ucp_res.data[ucp_res.data > 0])) == 6.700552
+    assert np.sum(ucp_res.data == ucp_res.data.max()) == 6
+    assert approx(np.mean(ucp_res.data[ucp_res.data > 0])) == 6.6925626
 
     # Make sure no nans are present.
     assert np.sum(np.isnan(ucp_res.data)) == 0
@@ -690,13 +703,13 @@ def test_hi_resampler(info_mock):
     (
         (
             False,
-            np.array([32.0, 33.0, 35.0, 36.0, 38.0, 41.0, 42.0, 44.0, 46.0]),
-            np.array([12, 2, 1, 54, 66, 6, 2, 108, 4]),
+            np.array([30., 32., 36., 38., 41., 42., 43., 44., 46.]),
+            np.array([11, 11, 18, 38, 6, 1, 10, 146, 14]),
         ),
         (
             True,
-            np.array([32.0, 33.0, 35.0, 36.0, 38.0, 39.0, 41.0]),
-            np.array([12, 16, 2, 118, 99, 1, 7]),
+            np.array([30., 32., 33., 36., 38., 39., 41.]),
+            np.array([11, 11, 7, 65, 61, 3, 20, 77]),
         ),
     ),
 )
@@ -729,7 +742,7 @@ def test_lcz_resampler_lcz_nat_mask_on_off_with_lcz15(
     lcz_values_def, lcz_counts_def = np.unique(lcz_resampled, return_counts=True)
     print(lcz_values_def)
     print(lcz_counts_def)
-    assert (lcz_values_def == lcz_values).all()
+    assert (lcz_values_def[~np.isnan(lcz_values_def)] == lcz_values).all()
     assert (lcz_counts_def == lcz_counts).all()
 
 
@@ -766,7 +779,7 @@ def test_add_frc_lu_index_2_wrf(info_mock):
     assert (
         dst_data['GREENFRAC'][0, :, :, :].mean(axis=0)
         - dst_nu['GREENFRAC'][0, :, :, :].mean(axis=0)
-    ).data.min() == approx(-0.308318)
+    ).data.min() == approx(-0.22387472)
     assert (
         dst_data['GREENFRAC'][0, :, :, :].mean(axis=0)
         - dst_nu['GREENFRAC'][0, :, :, :].mean(axis=0)
