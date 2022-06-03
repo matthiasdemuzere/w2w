@@ -559,6 +559,7 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
     elif map_proj == 6:
         import wrf
         from netCDF4 import Dataset
+
         nc = Dataset(info.dst_file)
         lu = wrf.getvar(nc, 'LU_INDEX')
         wrf_proj = lu.projection
