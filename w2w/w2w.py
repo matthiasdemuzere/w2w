@@ -516,55 +516,59 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
     # Projection depends on value of MAP_PROJ
     map_proj = int(dst_data.MAP_PROJ)
 
-    # define projections, borrowed from the salem package:
-    # shorturl.at/orEMU
+    # define projections, inspired by salem and wrf-python
+    lat_1 = dst_data.TRUELAT1
+    lat_2 = dst_data.TRUELAT2
+    lon_0
+
+
 
     # Lambert Conformal Conic
     if map_proj == 1:
         wrf_proj = pyproj.Proj(
             proj='lcc',
+            units='m',
+            a=6370000,
+            b=6370000,
             lat_1=dst_data.TRUELAT1,
             lat_2=dst_data.TRUELAT2,
             lat_0=dst_data.MOAD_CEN_LAT,
             lon_0=dst_data.STAND_LON,
-            x_0=0,
-            y_0=0,
-            a=6370000,
-            b=6370000,
         )
     # Polar Stereographic
     elif map_proj == 2:
+
+        hemi = -90. if dst_data.TRUELAT1 < 0 else 90.
+
         wrf_proj = pyproj.Proj(
             proj='stere',
-            lat_ts=dst_data.TRUELAT1,
-            lat_0=90.0,
-            lon_0=dst_data.STAND_LON,
-            x_0=0,
-            y_0=0,
+            units='m',
             a=6370000,
             b=6370000,
+            lat_0=hemi,
+            lon_0=dst_data.STAND_LON,
+            lat_ts=dst_data.TRUELAT1,
         )
     # Mercator
     elif map_proj == 3:
         wrf_proj = pyproj.Proj(
             proj='merc',
-            lat_ts=dst_data.TRUELAT1,
-            lon_0=dst_data.STAND_LON,
-            x_0=0,
-            y_0=0,
+            units='m',
             a=6370000,
             b=6370000,
+            lon_0=dst_data.STAND_LON,
+            lat_ts=dst_data.TRUELAT1,
         )
     # Latlong - Equidistant Cylindrical
+    # Follow this: https://github.com/NCAR/wrf-python/blob/
+    # 4a9ff241c8f3615b6a5c94e10a945e8a39bdea27/src/wrf/projection.py#L928
     elif map_proj == 6:
         wrf_proj = pyproj.Proj(
             proj='eqc',
-            lat_ts=dst_data.TRUELAT1,
-            lon_0=dst_data.STAND_LON,
-            x_0=0,
-            y_0=0,
+            units='m',
             a=6370000,
             b=6370000,
+            lon_0=dst_data.STAND_LON,
         )
     else:
         message = (
