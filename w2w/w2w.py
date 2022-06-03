@@ -557,10 +557,10 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
             lon_0=dst_data.STAND_LON,
             lat_ts=dst_data.TRUELAT1,
         )
-    #TODO: not yet OK for eqc projection
-    #Latlong - Equidistant Cylindrical
-    #Follow this: https://github.com/NCAR/wrf-python/blob/
-    #4a9ff241c8f3615b6a5c94e10a945e8a39bdea27/src/wrf/projection.py#L928
+    # TODO: not yet OK for eqc projection
+    # Latlong - Equidistant Cylindrical
+    # Follow this: https://github.com/NCAR/wrf-python/blob/
+    # 4a9ff241c8f3615b6a5c94e10a945e8a39bdea27/src/wrf/projection.py#L928
     elif map_proj == 6:
         wrf_proj = pyproj.Proj(
             proj='eqc',
@@ -585,7 +585,7 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
     # https://github.com/fmaussion/salem/blob/
     # d3f2e5e340c2af36c84c82a9de6099c90fba12e8/salem/wrftools.py#L734
     dx, dy = dst_data.DX, dst_data.DY
-    nx, ny = dst_data.dims['west_east']-1, dst_data.dims['south_north']-1
+    nx, ny = dst_data.dims['west_east'] - 1, dst_data.dims['south_north'] - 1
 
     # Down left corner of the domain
     x0 = -(nx - 1) / 2.0 * dx + e
