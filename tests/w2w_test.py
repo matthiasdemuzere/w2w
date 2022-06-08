@@ -371,8 +371,12 @@ def test_get_wrf_grid_info(info_mock):
     assert wrf_grid_info['crs'] == crs_string
     print(wrf_grid_info['transform'])
     assert wrf_grid_info['transform'] == Affine(
-        1111.7747802734375, 0.0, -838835.115342933,
-        0.0, 1111.7747802734375, 4577176.609447704,
+        1111.7747802734375,
+        0.0,
+        -838835.115342933,
+        0.0,
+        1111.7747802734375,
+        4577176.609447704,
     )
 
 
@@ -686,12 +690,12 @@ def test_hi_resampler(info_mock):
     (
         (
             False,
-            np.array([32., 35., 36., 38., 41., 42., 43., 44., 46.]),
+            np.array([32.0, 35.0, 36.0, 38.0, 41.0, 42.0, 43.0, 44.0, 46.0]),
             np.array([14, 1, 23, 35, 9, 6, 5, 140, 22]),
         ),
         (
             True,
-            np.array([32., 33., 35., 36., 38., 41., np.nan]),
+            np.array([32.0, 33.0, 35.0, 36.0, 38.0, 41.0, np.nan]),
             np.array([14, 1, 1, 60, 44, 19, 116]),
         ),
     ),
@@ -725,7 +729,9 @@ def test_lcz_resampler_lcz_nat_mask_on_off_with_lcz15(
     lcz_values_def, lcz_counts_def = np.unique(lcz_resampled, return_counts=True)
     print(lcz_values_def)
     print(lcz_counts_def)
-    assert (lcz_values_def[~np.isnan(lcz_values_def)] == lcz_values[~np.isnan(lcz_values)]).all()
+    assert (
+        lcz_values_def[~np.isnan(lcz_values_def)] == lcz_values[~np.isnan(lcz_values)]
+    ).all()
     assert (lcz_counts_def == lcz_counts).all()
 
 
