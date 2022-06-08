@@ -504,9 +504,6 @@ def wrf_remove_urban(
 # Inspired by: https://fabienmaussion.info/2018/01/06/wrf-projection/
 def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
 
-    ERROR = '\033[0;31m'
-    ENDC = '\033[0m'
-
     # Initialize WGS84 projection
     wgs_proj = pyproj.Proj(proj='latlong', datum='WGS84')
 
@@ -530,9 +527,7 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
         )
     # Polar Stereographic
     elif map_proj == 2:
-
         hemi = -90.0 if dst_data.TRUELAT1 < 0 else 90.0
-
         wrf_proj = pyproj.Proj(
             proj='stere',
             units='m',
@@ -552,19 +547,10 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
             lon_0=dst_data.STAND_LON,
             lat_ts=dst_data.TRUELAT1,
         )
-    # TODO: not yet OK for eqc projection
     # Latlong - Equidistant Cylindrical
     # Follow this: https://github.com/NCAR/wrf-python/blob/
     # 4a9ff241c8f3615b6a5c94e10a945e8a39bdea27/src/wrf/projection.py#L928
     elif map_proj == 6:
-
-        # FAILS?
-        # import wrf
-        # from netCDF4 import Dataset
-        #
-        # nc = Dataset(info.dst_file)
-        # lu = wrf.getvar(nc, 'LU_INDEX')
-        # wrf_proj = lu.projection.proj4()
         wrf_proj = pyproj.Proj(
             proj='eqc',
             units='m',
@@ -572,20 +558,12 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
             b=6370000,
             lon_0=dst_data.STAND_LON,
         )
-    else:
-        message = (
-            f'{ERROR}EXITING, WRF map_proj {map_proj} ' f'not implemented yet.{ENDC}'
-        )
-        print(message)
-        sys.exit(1)
 
     # Make transform
     transformer_wrf = Transformer.from_proj(wgs_proj, wrf_proj)
     e, n = transformer_wrf.transform(dst_data.CEN_LON, dst_data.CEN_LAT)
 
     # Grid parameters
-    # TODO: is this correct?
-    print('>>>>>>>>>>> CHECK THIS ....')
     # https://github.com/fmaussion/salem/blob/
     # d3f2e5e340c2af36c84c82a9de6099c90fba12e8/salem/wrftools.py#L734
     dx, dy = dst_data.DX, dst_data.DY
