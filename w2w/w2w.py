@@ -502,7 +502,7 @@ def wrf_remove_urban(
 
 # Get WRF grid info for Resampler
 # Inspired by: https://fabienmaussion.info/2018/01/06/wrf-projection/
-def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
+def _get_wrf_grid_info(info: Info) -> Dict[str, Any]:
 
     # Initialize WGS84 projection
     wgs_proj = pyproj.Proj(proj='latlong', datum='WGS84')
@@ -575,7 +575,7 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Dict[str, Any]]:
 
     wrf_transform = Affine.translation(x0 - dx / 2, y0 - dy / 2) * Affine.scale(dx, dy)
 
-    wrf_grid_info: Dict[str, Dict[str, Any]] = {
+    wrf_grid_info = {
         'crs': wrf_proj.to_proj4(),
         'transform': wrf_transform,
     }

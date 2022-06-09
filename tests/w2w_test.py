@@ -252,7 +252,6 @@ def test_check_lcz_wrf_extent_lcz_too_small(capsys, info_mock):
 
     out, _ = capsys.readouterr()
     assert ('ERROR: LCZ domain should be larger than WRF domain') in out
-    # TODO maybe add the actual values to check they are correct
     assert (
         'ERROR: LCZ domain should be larger than WRF domain '
         'in all directions.\nLCZ bounds (xmin, ymin, xmax, ymax): '
@@ -340,7 +339,6 @@ def test_wrf_remove_urban(tmpdir, dst_file, dst_nu_file, info_mock):
     # the value at [4][0] is changed -- why?
     # assert sum(compare_luf.flatten()) == 3
 
-
 def test_wrf_remove_urban_output_already_exists_is_overwritten(tmpdir, info_mock):
     tmpdir.ensure('5by5_new.nc')
     info = info_mock(
@@ -362,21 +360,14 @@ def test_get_wrf_grid_info(info_mock):
         }
     )
     wrf_grid_info = _get_wrf_grid_info(info)
-    assert type(wrf_grid_info) == dict
-    assert list(wrf_grid_info.keys()) == ['crs', 'transform']
     crs_string = (
         '+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=5.84999990463257 '
         '+x_0=0 +y_0=0 +R=6370000 +units=m +no_defs'
     )
     assert wrf_grid_info['crs'] == crs_string
-    print(wrf_grid_info['transform'])
     assert wrf_grid_info['transform'] == Affine(
-        1111.7747802734375,
-        0.0,
-        -838835.115342933,
-        0.0,
-        1111.7747802734375,
-        4577176.609447704,
+        1111.7747802734375, 0.0, -838835.115342933,
+        0.0, 1111.7747802734375, 4577176.609447704,
     )
 
 
@@ -690,12 +681,12 @@ def test_hi_resampler(info_mock):
     (
         (
             False,
-            np.array([32.0, 35.0, 36.0, 38.0, 41.0, 42.0, 43.0, 44.0, 46.0]),
+            np.array([32., 35., 36., 38., 41., 42., 43., 44., 46.]),
             np.array([14, 1, 23, 35, 9, 6, 5, 140, 22]),
         ),
         (
             True,
-            np.array([32.0, 33.0, 35.0, 36.0, 38.0, 41.0, np.nan]),
+            np.array([32., 33., 35., 36., 38., 41., np.nan]),
             np.array([14, 1, 1, 60, 44, 19, 116]),
         ),
     ),
@@ -727,11 +718,7 @@ def test_lcz_resampler_lcz_nat_mask_on_off_with_lcz15(
     # With natural masking off, majority filtering also includes
     # Natural classes
     lcz_values_def, lcz_counts_def = np.unique(lcz_resampled, return_counts=True)
-    print(lcz_values_def)
-    print(lcz_counts_def)
-    assert (
-        lcz_values_def[~np.isnan(lcz_values_def)] == lcz_values[~np.isnan(lcz_values)]
-    ).all()
+    assert (lcz_values_def[~np.isnan(lcz_values_def)] == lcz_values[~np.isnan(lcz_values)]).all()
     assert (lcz_counts_def == lcz_counts).all()
 
 
