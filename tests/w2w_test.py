@@ -23,6 +23,7 @@ from w2w.w2w import _get_lcz_arr
 from w2w.w2w import _get_lcz_band
 from w2w.w2w import _get_SW_BW
 from w2w.w2w import _get_truncated_normal_sample
+from w2w.w2w import _get_wrf_grid_info
 from w2w.w2w import _hgt_resampler
 from w2w.w2w import _hi_resampler
 from w2w.w2w import _initialize_urb_param
@@ -34,7 +35,6 @@ from w2w.w2w import check_lcz_integrity
 from w2w.w2w import checks_and_cleaning
 from w2w.w2w import create_lcz_extent_file
 from w2w.w2w import create_lcz_params_file
-from w2w.w2w import create_wrf_gridinfo
 from w2w.w2w import expand_land_cat_parents
 from w2w.w2w import Info
 from w2w.w2w import main
@@ -50,7 +50,6 @@ def info_mock():
             'src_file_clean': '',
             'dst_file': '',
             'dst_nu_file': '',
-            'dst_gridinfo': '',
             'dst_lcz_extent_file': '',
             'dst_lcz_params_file': '',
             'BUILT_LCZ': [],
@@ -74,11 +73,10 @@ def test_create_info_dict():
         built_lcz=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     )
     info = Info.from_argparse(args)
-    # info is Dict, with 9 keys
-    assert len(info) == 9
+    # info is Dict, with 8 keys
+    assert len(info) == 8
 
-    # Three files are tifs
-    assert info.dst_gridinfo == 'input/directory/wrf_file_gridinfo.tif'
+    # Two files are tifs
     assert info.src_file == 'input/directory/lcz_file.tif'
     assert info.src_file_clean == 'input/directory/lcz_file_clean.tif'
 
@@ -111,7 +109,7 @@ def test_get_lcz_band_lcz_generator(info_mock, capsys):
         pytest.param(['--lcz-band', '5'], 5, id='custom band'),
     ),
 )
-def test_main_lcz_band_arg(arg, exp, info_mock, capsys, tmpdir):
+def test_main_lcz_band_arg(arg, exp, capsys, tmpdir):
     input_dir = tmpdir.mkdir('input')
     input_files = (
         'geo_em.d01.nc',
@@ -254,7 +252,6 @@ def test_check_lcz_wrf_extent_lcz_too_small(capsys, info_mock):
 
     out, _ = capsys.readouterr()
     assert ('ERROR: LCZ domain should be larger than WRF domain') in out
-    # TODO maybe add the actual values to check they are correct
     assert (
         'ERROR: LCZ domain should be larger than WRF domain '
         'in all directions.\nLCZ bounds (xmin, ymin, xmax, ymax): '
@@ -357,24 +354,25 @@ def test_wrf_remove_urban_output_already_exists_is_overwritten(tmpdir, info_mock
     assert m_time_old != os.path.getmtime(info.dst_nu_file)
 
 
-def test_create_wrf_gridinfo(tmpdir, info_mock):
+def test_get_wrf_grid_info(info_mock):
     info = info_mock(
         {
-            'dst_nu_file': 'testing/5by5.nc',
-            'dst_gridinfo': os.path.join(tmpdir, 'dst_gridinfo.tif'),
+            'dst_file': 'sample_data/geo_em.d04.nc',
         }
     )
-    create_wrf_gridinfo(info)
-    assert os.listdir(tmpdir) == ['dst_gridinfo.tif']
-    tif = rxr.open_rasterio(info.dst_gridinfo)
-    assert tif.rio.crs.to_proj4() == '+init=epsg:4326'
-    assert tif.rio.transform() == Affine(
-        0.01000213623046875,
+    wrf_grid_info = _get_wrf_grid_info(info)
+    crs_string = (
+        '+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=5.84999990463257 '
+        '+x_0=0 +y_0=0 +R=6370000 +units=m +no_defs'
+    )
+    assert wrf_grid_info['crs'] == crs_string
+    assert wrf_grid_info['transform'] == Affine(
+        1111.7747802734375,
         0.0,
-        -1.4050254821777344,
+        -838835.115342933,
         0.0,
-        0.010000228881835938,
-        41.480000495910645,
+        1111.7747802734375,
+        4577176.609447704,
     )
 
 
@@ -437,11 +435,11 @@ def test_get_lcz_arr(info_mock):
 @pytest.mark.parametrize(
     ('ucp_key', 'data_sum', 'data_mean'),
     (
-        ('MH_URB2D', 2, 1.1429937),
-        ('STDH_URB2D', 2, 0.29812142),
-        ('LB_URB2D', 1, 0.15104416),
-        ('LF_URB2D', 1, 0.07032267),
-        ('LP_URB2D', 1, 0.08072148),
+        ('MH_URB2D', 2, 1.14196181),
+        ('STDH_URB2D', 2, 0.29785209),
+        ('LB_URB2D', 1, 0.15090767),
+        ('LF_URB2D', 1, 0.070259198),
+        ('LP_URB2D', 1, 0.080648496),
     ),
 )
 def test_ucp_resampler_output_values_per_paramater(
@@ -451,7 +449,8 @@ def test_ucp_resampler_output_values_per_paramater(
         {
             'src_file': 'sample_data/lcz_zaragoza.tif',
             'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
-            'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
+            'dst_file': 'sample_data/geo_em.d04.nc',
+            'dst_nu_file': 'testing/geo_em.d04_NoUrban.nc',
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         }
     )
@@ -476,7 +475,8 @@ def test_ucp_resampler_output_values_per_paramater_frc_threshold(info_mock):
         {
             'src_file': 'sample_data/lcz_zaragoza.tif',
             'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
-            'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
+            'dst_file': 'sample_data/geo_em.d04.nc',
+            'dst_nu_file': 'testing/geo_em.d04_NoUrban.nc',
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         }
     )
@@ -492,7 +492,7 @@ def test_ucp_resampler_output_values_per_paramater_frc_threshold(info_mock):
     assert ucp_res.shape == (1, 102, 162)
     # Per parameter, check # max values and non-0 domain average
     assert np.sum(ucp_res.data == ucp_res.data.max()) == 1
-    assert approx(np.mean(ucp_res.data[ucp_res.data > 0])) == 0.428921
+    assert approx(np.mean(ucp_res.data[ucp_res.data > 0])) == 0.42892075
     # Make sure no nans are present.
     np.sum(np.isnan(ucp_res.data)) == 0
 
@@ -503,7 +503,8 @@ def test_hgt_resampler_output_values(info_mock):
         {
             'src_file': 'sample_data/lcz_zaragoza.tif',
             'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
-            'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
+            'dst_file': 'sample_data/geo_em.d04.nc',
+            'dst_nu_file': 'testing/geo_em.d04_NoUrban.nc',
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         }
     )
@@ -520,8 +521,8 @@ def test_hgt_resampler_output_values(info_mock):
     assert ucp_res.shape == (1, 102, 162)
 
     # Check # max values and non-0 domain average
-    assert np.sum(ucp_res.data == ucp_res.data.max()) == 9
-    assert approx(np.mean(ucp_res.data[ucp_res.data > 0])) == 6.7111716
+    assert np.sum(ucp_res.data == ucp_res.data.max()) == 10
+    assert approx(np.mean(ucp_res.data[ucp_res.data > 0])) == 6.7109852
 
     # Make sure no nans are present.
     assert np.sum(np.isnan(ucp_res.data)) == 0
@@ -651,7 +652,8 @@ def test_hi_resampler(info_mock):
     info = info_mock(
         {
             'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
-            'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
+            'dst_file': 'sample_data/geo_em.d04.nc',
+            'dst_nu_file': 'testing/geo_em.d04_NoUrban.nc',
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         }
     )
@@ -684,15 +686,13 @@ def test_hi_resampler(info_mock):
     (
         (
             False,
-            np.array(
-                [32.0, 33.0, 35.0, 36.0, 38.0, 39.0, 41.0, 42.0, 43.0, 44.0, 46.0]
-            ),
-            np.array([17, 3, 1, 77, 95, 2, 7, 5, 2, 150, 10]),
+            np.array([32.0, 35.0, 36.0, 38.0, 41.0, 42.0, 43.0, 44.0, 46.0]),
+            np.array([14, 1, 23, 35, 9, 6, 5, 140, 22]),
         ),
         (
             True,
-            np.array([32.0, 33.0, 35.0, 36.0, 38.0, 39.0, 41.0]),
-            np.array([18, 30, 1, 171, 136, 4, 9]),
+            np.array([32.0, 33.0, 35.0, 36.0, 38.0, 41.0, np.nan]),
+            np.array([14, 1, 1, 60, 44, 19, 116]),
         ),
     ),
 )
@@ -706,7 +706,8 @@ def test_lcz_resampler_lcz_nat_mask_on_off_with_lcz15(
     info = info_mock(
         {
             'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
-            'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
+            'dst_file': 'sample_data/geo_em.d04.nc',
+            'dst_nu_file': 'testing/geo_em.d04_NoUrban.nc',
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15],
         }
     )
@@ -722,7 +723,9 @@ def test_lcz_resampler_lcz_nat_mask_on_off_with_lcz15(
     # With natural masking off, majority filtering also includes
     # Natural classes
     lcz_values_def, lcz_counts_def = np.unique(lcz_resampled, return_counts=True)
-    assert (lcz_values_def == lcz_values).all()
+    assert (
+        lcz_values_def[~np.isnan(lcz_values_def)] == lcz_values[~np.isnan(lcz_values)]
+    ).all()
     assert (lcz_counts_def == lcz_counts).all()
 
 
@@ -733,7 +736,6 @@ def test_add_frc_lu_index_2_wrf(info_mock):
             'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
             'dst_file': 'sample_data/geo_em.d04.nc',
             'dst_nu_file': 'testing/geo_em.d04_NoUrban.nc',
-            'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         }
     )
@@ -817,7 +819,6 @@ def test_create_lcz_params_file_attrs_type(
     input_dir = tmpdir.mkdir('input')
     shutil.copy(os.path.join('sample_data', 'geo_em.d04.nc'), input_dir)
     shutil.copy(os.path.join('testing', 'lcz_zaragoza_clean.tif'), input_dir)
-    shutil.copy(os.path.join('testing', 'geo_em.d04_gridinfo.tif'), input_dir)
     shutil.copy(os.path.join('testing', 'geo_em.d04_NoUrban.nc'), input_dir)
 
     info = info_mock(
@@ -825,7 +826,6 @@ def test_create_lcz_params_file_attrs_type(
             'src_file_clean': os.path.join(input_dir, 'lcz_zaragoza_clean.tif'),
             'dst_file': os.path.join(input_dir, 'geo_em.d04.nc'),
             'dst_nu_file': os.path.join(input_dir, 'geo_em.d04_NoUrban.nc'),
-            'dst_gridinfo': os.path.join(input_dir, 'geo_em.d04_gridinfo.tif'),
             'dst_lcz_params_file': os.path.join(input_dir, 'geo_em.d04_LCZ_params.tif'),
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         }
@@ -864,7 +864,6 @@ def test_create_lcz_extent_file(tmpdir, info_mock):
             'dst_lcz_extent_file': os.path.join(tmpdir, 'geo_em.d04_LCZ_extent.nc'),
             'dst_file': 'sample_data/geo_em.d04.nc',
             'dst_nu_file': 'testing/geo_em.d04_NoUrban.nc',
-            'dst_gridinfo': 'testing/geo_em.d04_gridinfo.tif',
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         }
     )
@@ -897,7 +896,7 @@ def test_create_lcz_extent_file(tmpdir, info_mock):
     assert 'URB_PARAM' not in list(dst_extent.data_vars)
 
     # Number of urban pixels within LANDUSEF[12]
-    assert np.sum(dst_extent['LANDUSEF'].data[0, 12, :, :] == 1) == 369
+    assert np.sum(dst_extent['LANDUSEF'].data[0, 12, :, :] == 1) == 255
 
 
 @pytest.mark.parametrize(
@@ -1009,7 +1008,6 @@ def test_checks_and_cleaning_sample_data_all_ok(capsys, tmpdir, info_mock):
     input_dir = tmpdir.mkdir('input')
     shutil.copy(os.path.join('sample_data', 'geo_em.d04.nc'), input_dir)
     shutil.copy(os.path.join('testing', 'lcz_zaragoza_clean.tif'), input_dir)
-    shutil.copy(os.path.join('testing', 'geo_em.d04_gridinfo.tif'), input_dir)
     shutil.copy(os.path.join('testing', 'geo_em.d04_NoUrban.nc'), input_dir)
     shutil.copy(os.path.join('testing', 'geo_em.d04_LCZ_extent.nc'), input_dir)
     shutil.copy(os.path.join('testing', 'geo_em.d04_LCZ_params.nc'), input_dir)
@@ -1019,7 +1017,6 @@ def test_checks_and_cleaning_sample_data_all_ok(capsys, tmpdir, info_mock):
             'src_file_clean': os.path.join(input_dir, 'lcz_zaragoza_clean.tif'),
             'dst_file': os.path.join(input_dir, 'geo_em.d04.nc'),
             'dst_nu_file': os.path.join(input_dir, 'geo_em.d04_NoUrban.nc'),
-            'dst_gridinfo': os.path.join(input_dir, 'geo_em.d04_gridinfo.tif'),
             'dst_lcz_extent_file': os.path.join(input_dir, 'geo_em.d04_LCZ_extent.nc'),
             'dst_lcz_params_file': os.path.join(input_dir, 'geo_em.d04_LCZ_params.nc'),
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
@@ -1114,7 +1111,6 @@ def test_checks_and_cleaning_sample_data_check1to5_wrong(
     input_dir = tmpdir.mkdir('input')
     shutil.copy(os.path.join('sample_data', 'geo_em.d04.nc'), input_dir)
     shutil.copy(os.path.join('testing', 'lcz_zaragoza_clean.tif'), input_dir)
-    shutil.copy(os.path.join('testing', 'geo_em.d04_gridinfo.tif'), input_dir)
     shutil.copy(os.path.join('testing', 'geo_em.d04_NoUrban_dummy.nc'), input_dir)
     shutil.copy(os.path.join('testing', 'geo_em.d04_LCZ_extent_dummy.nc'), input_dir)
     shutil.copy(os.path.join('testing', 'geo_em.d04_LCZ_params_dummy.nc'), input_dir)
@@ -1124,7 +1120,6 @@ def test_checks_and_cleaning_sample_data_check1to5_wrong(
             'src_file_clean': os.path.join(input_dir, 'lcz_zaragoza_clean.tif'),
             'dst_file': os.path.join(input_dir, 'geo_em.d04.nc'),
             'dst_nu_file': os.path.join(input_dir, 'geo_em.d04_NoUrban_dummy.nc'),
-            'dst_gridinfo': os.path.join(input_dir, 'geo_em.d04_gridinfo.tif'),
             'dst_lcz_extent_file': os.path.join(
                 input_dir, 'geo_em.d04_LCZ_extent_dummy.nc'
             ),
@@ -1167,7 +1162,6 @@ def test_checks_and_cleaning_sample_data_check6to9_wrong(
     input_dir = tmpdir.mkdir('input')
     shutil.copy(os.path.join('sample_data', 'geo_em.d04.nc'), input_dir)
     shutil.copy(os.path.join('testing', 'lcz_zaragoza_clean.tif'), input_dir)
-    shutil.copy(os.path.join('testing', 'geo_em.d04_gridinfo.tif'), input_dir)
     shutil.copy(os.path.join('testing', 'geo_em.d04_NoUrban_dummy.nc'), input_dir)
     shutil.copy(os.path.join('testing', 'geo_em.d04_LCZ_extent_dummy.nc'), input_dir)
     shutil.copy(
@@ -1179,7 +1173,6 @@ def test_checks_and_cleaning_sample_data_check6to9_wrong(
             'src_file_clean': os.path.join(input_dir, 'lcz_zaragoza_clean.tif'),
             'dst_file': os.path.join(input_dir, 'geo_em.d04.nc'),
             'dst_nu_file': os.path.join(input_dir, 'geo_em.d04_NoUrban_dummy.nc'),
-            'dst_gridinfo': os.path.join(input_dir, 'geo_em.d04_gridinfo.tif'),
             'dst_lcz_extent_file': os.path.join(
                 input_dir, 'geo_em.d04_LCZ_extent_dummy.nc'
             ),
