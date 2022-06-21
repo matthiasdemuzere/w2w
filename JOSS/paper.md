@@ -52,7 +52,7 @@ In order to use the tool, two input files are required:
 
    * Extract your ROI from the global LCZ map [@Demuzere2022], or the continental-scale LCZ maps for Europe [@Demuzere2019] or the United States [@Demuzere2020] (see also [here](https://www.wudapt.org/lcz-maps/) for more info).
    * Check if your ROI is already covered by the many LCZ maps available in the [submission table](https://lcz-generator.rub.de/submissions) of the LCZ Generator.
-   * Use the [LCZ Generator](https://lcz-generator.rub.de/) to make your own LCZ map for your ROI. See also [here](https://www.wudapt.org/create-lcz-classification/) for more information. When using LCZ maps produced with the LCZ Generator, by default the Gaussian filtered LCZ map is used (corresponding to argument $--lcz-band = 1$).
+   * Use the [LCZ Generator](https://lcz-generator.rub.de/) to make your own LCZ map for your ROI. See also [here](https://www.wudapt.org/create-lcz-classification/) for more information. When using LCZ maps produced with the LCZ Generator, by default the Gaussian filtered LCZ map is used (corresponding to argument `--lcz-band = 1`).
 
 **Note**: When using LCZ information from any of the large-scale LCZ maps, please make sure to crop your domain of interest first, in order to avoid memory issues.
 
@@ -63,19 +63,19 @@ To get to that point, a number of sequential steps are required:
 
 ### Step 1: Remove the default urban land cover
 
-The default urban land cover from MODIS is replaced with the dominant surrounding vegetation category, as done in @Li2020. This procedure affects WRF's parameters LU_INDEX, LANDUSEF and GREENFRAC. LU_INDEX is selected as the dominant category from the corresponding argument `--npix-nlc` (default = 45) nearest grid points (excluding ocean, urban and lakes). GREENFRAC is calculated as the mean over all grid points with that dominant vegetation category among the $--npix-nlc$ nearest points. For each grid point, if LANDUSEF had any percentage of urban, it is set to zero and the percentage is added to the dominant vegetation category assigned to that grid point.
+The default urban land cover from MODIS is replaced with the dominant surrounding vegetation category, as done in @Li2020. This procedure affects WRF's parameters LU_INDEX, LANDUSEF and GREENFRAC. LU_INDEX is selected as the dominant category from the corresponding argument `--npix-nlc` (default = 45) nearest grid points (excluding ocean, urban and lakes). GREENFRAC is calculated as the mean over all grid points with that dominant vegetation category among the `--npix-nlc` nearest points. For each grid point, if LANDUSEF had any percentage of urban, it is set to zero and the percentage is added to the dominant vegetation category assigned to that grid point.
 
 Resulting output: **geo_em.d0X_NoUrban.nc**
 
 ### Step 2: Define the LCZ-based urban extent
 
-LCZ-based impervious fraction values (FRC_URB2D, available from `LCZ_UCP_default.csv`) are assigned to the original 100 m resolution LCZ map, and are aggregated to the WRF resolution. Areas with FRC_URB2D < 0.2 (corresponding to argument $--frc-threshold$) are currently considered non-urban. This choice has been made to avoid the use of the urban schemes in areas where the majority of the landuse is vegetated, since the impact of the impervious surfaces is low. The FRC_URB2D field is also used to mask all other urban parameter fields, so that their extent is consistent.
+LCZ-based impervious fraction values (FRC_URB2D, available from `LCZ_UCP_default.csv`) are assigned to the original 100 m resolution LCZ map, and are aggregated to the WRF resolution. Areas with FRC_URB2D < 0.2 (corresponding to argument `--frc-threshold`) are currently considered non-urban. This choice has been made to avoid the use of the urban schemes in areas where the majority of the landuse is vegetated, since the impact of the impervious surfaces is low. The FRC_URB2D field is also used to mask all other urban parameter fields, so that their extent is consistent.
 
 Resulting output: **geo_em.d0X_LCZ_extent.nc**
 
 ### Step 3: Introduce modal built LCZ classes
 
-For each WRF grid cell, the mode of the underlying built LCZ classes is added to LU_INDEX (numbered from 31-41). See [here](https://ral.ucar.edu/sites/default/files/public/product-tool/urban-canopy-model/WRF_urban_update_Readme_file_WRF4.3.pdf) for more info. Note that the `W2W` routine by default considers LCZ classes 1-10 as built classes (corresponding to argument $--built-lcz$). In some cases, also LCZ E (or 15 - Bare rock or paved) can be considered as a built LCZ class, as it might reflect large asphalt surfaces such as big parking lots or airstrips. In that case, the user must make sure the $--built-lcz$ argument is set appropriately.
+For each WRF grid cell, the mode of the underlying built LCZ classes is added to LU_INDEX (numbered from 31-41). See [here](https://ral.ucar.edu/sites/default/files/public/product-tool/urban-canopy-model/WRF_urban_update_Readme_file_WRF4.3.pdf) for more info. Note that the `W2W` routine by default considers LCZ classes 1-10 as built classes (corresponding to argument `--built-lcz`). In some cases, also LCZ E (or 15 - Bare rock or paved) can be considered as a built LCZ class, as it might reflect large asphalt surfaces such as big parking lots or airstrips. In that case, the user must make sure the `--built-lcz` argument is set appropriately.
 
 ### Step 4: Assign urban canopy parameters
 
