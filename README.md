@@ -128,6 +128,33 @@ Contributions to `w2w` are welcome! This is how:
 
 - **Enhancement:** New features and modules are welcome! You can check the issues: contributions are welcome for open issues with labels [`enhancement`](https://github.com/matthiasdemuzere/w2w/labels/enhancement) and [`help wanted`](https://github.com/matthiasdemuzere/w2w/labels/help%20wanted).
 
+### Running the tests
+
+The project uses [`tox`](https://tox.wiki/en/latest/) to check the package installs correctly and all tests pass on different versions of python. The tests can be run using:
+
+- all tests against all supported python versions can be run using:
+   ```console
+   tox
+   ```
+- a specific test can be run by specifying the `pytest` test id. In this case we only test against python 3.9 (`-e py39` argument)
+   ```console
+   tox -e py39 tests/w2w_test.py::<name_of_the_test>
+   ```
+
+[pytest](https://docs.pytest.org/) can also be used directly:
+
+1. install the package in the current virtual environment (`-e` editable install)
+   ```console
+   pip install -e .
+   ```
+1. install the development dependencies
+   ```console
+   pip install -r requirements-dev.txt
+   ```
+1. run pytest
+   ```console
+   pytest
+   ```
 
 Artists
 -------
