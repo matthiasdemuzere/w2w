@@ -32,16 +32,16 @@ bibliography: paper.bib
 ---
 
 # Summary
-An important objective of WUDAPT, the World Urban Database and Access Portals Tools community project, is 1) to acquire and make accessible coherent and consistent information on form and function of urban morphology relevant to climate weather, and environment studies, and 2) to provide tools that extract relevant urban parameters and properties for models and model applications at appropriate scales for various climate, weather, environment, and urban planning purposes [@Ching2018].
+The Python-based WUDAPT-to-WRF (`W2W`) package is developed to translate Local Climate Zone (LCZ) maps into urban canopy parameters readable by WRF, the community "Weather Research and Forecasting" model [@Skamarock2021]. It is the successor of the Fortran-based `W2W` package developed by @Brousse2016 and @Martilli2016, and provides an improved, simpler, and more efficient procedure to use LCZ information in WRF. Some important changes include a direct manipulation of the geogrid files (without the creation of temporary files), and the use of average LCZ-based urban morphological parameters instead of assigning them to the modal LCZ class.
 
-The Python-based WUDAPT-to-WRF (`W2W`) package is developed in this context, and translates Local Climate Zone (LCZ) maps into urban canopy parameters readable by WRF, the community "Weather Research and Forecasting" model [@Skamarock2021]. It is the successor of the Fortran-based `W2W` package developed by @Brousse2016 and @Martilli2016, and provides an improved, more simple, and more efficient procedure to use LCZ information in WRF. Some important changes include a direct manipulation of the geogrid files (without the creation of temporary files), and the use of average LCZ-based urban morphological parameters instead of assigning them to the modal LCZ class.
+This development of this package is in line with the objectives of WUDAPT, the World Urban Database and Access Portals Tools community project, that aims to 1) acquire and make accessible coherent and consistent information on form and function of urban morphology relevant to climate weather, and environment studies, and 2) provide tools that extract relevant urban parameters and properties for models and model applications at appropriate scales for various climate, weather, environment, and urban planning purposes [@Ching2018].
 
 # Statement of need
 Since the pioneering work of @Brousse2016 and @Martilli2016, the level-0 WUDAPT information, the Local Climate Zone maps, have been used increasingly in WRF.
 
 We expect this trend to continue, because of three recent developments: 1) the creation of city-wide LCZ maps is now easier than ever with the launch of the LCZ Generator web application [@Demuzere2021], 2) the availability of a global LCZ map [@Demuzere2022], and 3) WRF versions > 4.3 [@Skamarock2021] are able to ingest 10 or 11 built classes (corresponding to WUDAPT's LCZs) by default, whereas previous WRF versions required manual code changes (see @Martilli2016, @Zonato2021a and @Zonato2021b for more information).
 
-Because of these developments, an improved, Python-based, WUDAPT-to-WRF (`W2W`) routine is presented here, so as to make the translation of LCZ-based parameters better and more simple.
+Because of these developments, an improved, Python-based, WUDAPT-to-WRF (`W2W`) routine is presented here, so as to make the translation of LCZ-based parameters better and simpler.
 
 # Initial data requirements
 In order to use the tool, two input files are required:
@@ -94,12 +94,12 @@ In addition:
 * For computational efficiency, HI_URB2D values lower than 5% were set to 0 after resampling, the remaining HI_URB2D percentages are re-scaled to 100%.
 
 
-**Procedure 2**: In line with the former Fortran-based `W2W` procedure, **radiative and thermal parameters** are assigned to the modal LCZ class that is assigned to each WRF grid cell (see _Step 3_). These parameter values are not stored in the netcdf output, but are read from `URBPARM_LCZ.TBL` and assigned automatically to the modal LCZ class when running the model.
+**Procedure 2**: In line with the former Fortran-based `W2W` procedure, **radiative and thermal parameters** are assigned to the modal LCZ class that is assigned to each WRF grid cell (see _Step 3_). These parameter values are not stored in the NetCDF output, but are read from `URBPARM_LCZ.TBL` and assigned automatically to the modal LCZ class when running the model.
 
 
 ### Step 5: Adjust global attributes
 
-In a final step, some global attributes are adjusted in the resulting netcdf files:
+In a final step, some global attributes are adjusted in the resulting NetCDF files:
 
 * NBUI_MAX is added as a global attribute, reflecting the maximum amount of HI_URB2D classes that are not 0 across the model domain. This parameter can be used when compiling WRF, to optimize memory storage.
 * NUM_LAND_CAT is set to 41, to reflect the addition of 10 (or 11) built LCZ classes. This is not only done for the highest resolution domain file (e.g. d04), but also for **all of its lower-resolution parent domain files (e.g. d01, d02, d03)**. As such, make sure these files are also available in the input data directory. In case the parent domain files have  NUM_CAT_LAND $\neq$ 41, new parent domain files will be written to your drive with the extension `_41`.
