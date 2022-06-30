@@ -412,12 +412,7 @@ def wrf_remove_urban(
     orig_num_land_cat = dst_data.NUM_LAND_CAT
 
     # Convert urban to surrounding natural characteristics
-    print(len(dst_data.south_north))
     for i in dst_data.south_north:
-        from datetime import datetime
-
-        startTime = datetime.now()
-        print('i', i)
         for j in dst_data.west_east:
             if luse.isel(south_north=i, west_east=j) == 13:
 
@@ -494,7 +489,6 @@ def wrf_remove_urban(
                     south_north=i, west_east=j, land_cat=12
                 ).values
                 newluf[12, i, j] = 0.0
-        print(datetime.now() - startTime)
 
     dst_data.LU_INDEX.values[0, :] = newluse[:]
     dst_data.LANDUSEF.values[0, :] = newluf[:]
