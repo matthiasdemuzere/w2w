@@ -409,10 +409,10 @@ def wrf_remove_urban(
     newluf = dst_data.LANDUSEF.squeeze().values.copy()
     newgreenf = dst_data.GREENFRAC.squeeze().values.copy()
 
-    #Read number of categories
+    # Read number of categories
     orig_num_land_cat = dst_data.NUM_LAND_CAT
 
-    time1= time.time()
+    time1 = time.time()
     print(f'======> DONE Reading data in {(time1-start_time):.2f} seconds \n')
 
     # Convert urban to surrounding natural characteristics
@@ -421,8 +421,14 @@ def wrf_remove_urban(
             if dst_data.LU_INDEX.squeeze().isel(south_north=i, west_east=j) == 13:
 
                 dst_data_tile = dst_data.isel(
-                    south_north=slice(min(i,abs(i-NPIX_NLC)),min(len(dst_data.south_north),i+NPIX_NLC)),
-                    west_east=slice(min(j,abs(j-NPIX_NLC)),min(len(dst_data.west_east),j+NPIX_NLC))
+                    south_north=slice(
+                        min(i, abs(i - NPIX_NLC)),
+                        min(len(dst_data.south_north), i + NPIX_NLC),
+                    ),
+                    west_east=slice(
+                        min(j, abs(j - NPIX_NLC)),
+                        min(len(dst_data.west_east), j + NPIX_NLC),
+                    ),
                 )
 
                 luse = dst_data_tile.LU_INDEX.squeeze()
@@ -430,10 +436,9 @@ def wrf_remove_urban(
                 greenf = dst_data_tile.GREENFRAC.squeeze()
 
                 lat = dst_data_tile.XLAT_M.squeeze()
-                lon = dst_data_tile.XLONG_M.squeeze()    
-                ilon = dst_data.XLONG_M.isel(south_north=i, west_east=j).item()    
-                ilat = dst_data.XLAT_M.isel(south_north=i, west_east=j).item()    
-
+                lon = dst_data_tile.XLONG_M.squeeze()
+                ilon = dst_data.XLONG_M.isel(south_north=i, west_east=j).item()
+                ilat = dst_data.XLAT_M.isel(south_north=i, west_east=j).item()
 
                 dis = _calc_distance_coord(
                     lat.where((luse != 13) & (luse != 17) & (luse != 21)),
@@ -463,22 +468,32 @@ def wrf_remove_urban(
                 )
                 newgreenf[:, i, j] = auxg
 
-            if (dst_data.LANDUSEF.squeeze().isel(south_north=i, west_east=j, land_cat=12) > 0.0):
+            if (
+                dst_data.LANDUSEF.squeeze().isel(
+                    south_north=i, west_east=j, land_cat=12
+                )
+                > 0.0
+            ):
 
                 dst_data_tile = dst_data.isel(
-                    south_north=slice(min(i,abs(i-NPIX_NLC)),min(len(dst_data.south_north),i+NPIX_NLC)),
-                    west_east=slice(min(j,abs(j-NPIX_NLC)),min(len(dst_data.west_east),j+NPIX_NLC))
+                    south_north=slice(
+                        min(i, abs(i - NPIX_NLC)),
+                        min(len(dst_data.south_north), i + NPIX_NLC),
+                    ),
+                    west_east=slice(
+                        min(j, abs(j - NPIX_NLC)),
+                        min(len(dst_data.west_east), j + NPIX_NLC),
+                    ),
                 )
 
                 luse = dst_data_tile.LU_INDEX.squeeze()
                 luf = dst_data_tile.LANDUSEF.squeeze()
                 greenf = dst_data_tile.GREENFRAC.squeeze()
-                
-                lat = dst_data_tile.XLAT_M.squeeze()
-                lon = dst_data_tile.XLONG_M.squeeze()    
-                ilon = dst_data.XLONG_M.isel(south_north=i, west_east=j).item()    
-                ilat = dst_data.XLAT_M.isel(south_north=i, west_east=j).item()    
 
+                lat = dst_data_tile.XLAT_M.squeeze()
+                lon = dst_data_tile.XLONG_M.squeeze()
+                ilon = dst_data.XLONG_M.isel(south_north=i, west_east=j).item()
+                ilat = dst_data.XLAT_M.isel(south_north=i, west_east=j).item()
 
                 if orig_num_land_cat > 20:  # USING MODIS_LAKE
                     dis = _calc_distance_coord(
@@ -520,11 +535,13 @@ def wrf_remove_urban(
                 m = stats.mode(aux.values.flatten(), nan_policy='omit')[0]
                 newlu = int(m) - 1
                 # newlu = int(mode(aux.values.flatten())[0])-1
-                newluf[newlu, i, j] += dst_data.LANDUSEF.squeeze().isel(
-                    south_north=i, west_east=j, land_cat=12
-                ).values
+                newluf[newlu, i, j] += (
+                    dst_data.LANDUSEF.squeeze()
+                    .isel(south_north=i, west_east=j, land_cat=12)
+                    .values
+                )
                 newluf[12, i, j] = 0.0
-        time2= time.time()
+        time2 = time.time()
         print(f'======> DONE Loop in {(time2-time1):.2f} seconds \n')
 
     dst_data.LU_INDEX.values[0, :] = newluse[:]
@@ -535,8 +552,8 @@ def wrf_remove_urban(
     if os.path.exists(info.dst_nu_file):
         os.remove(info.dst_nu_file)
     dst_data.to_netcdf(info.dst_nu_file)
-    
-    time3= time.time()
+
+    time3 = time.time()
     print(f'======> DONE All in {(time3-start_time):.2f} seconds \n')
 
 
