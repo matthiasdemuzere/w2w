@@ -25,6 +25,8 @@ from scipy import stats
 import pyproj
 from pyproj import CRS, Transformer
 
+import time
+
 if sys.version_info >= (3, 9):  # pragma: >=3.9 cover
     import importlib.metadata as importlib_metadata
     import importlib.resources as importlib_resources
@@ -397,30 +399,47 @@ def wrf_remove_urban(
 
     '''Remove MODIS urban extent from geo_em*.nc file'''
 
+    start_time = time.time()
+
     # Make a copy of original dst file
     dst_data = xr.open_dataset(info.dst_file)
 
-    # Read the relevant parameters
-    luse = dst_data.LU_INDEX.squeeze()
-    luf = dst_data.LANDUSEF.squeeze()
-    greenf = dst_data.GREENFRAC.squeeze()
-    lat = dst_data.XLAT_M.squeeze()
-    lon = dst_data.XLONG_M.squeeze()
-    newluse = luse.values.copy()
-    newluf = luf.values.copy()
-    newgreenf = greenf.values.copy()
+    # Create new arrays holding new data
+    newluse = dst_data.LU_INDEX.squeeze().values.copy()
+    newluf = dst_data.LANDUSEF.squeeze().values.copy()
+    newgreenf = dst_data.GREENFRAC.squeeze().values.copy()
+
+    #Read number of categories
     orig_num_land_cat = dst_data.NUM_LAND_CAT
 
+    time1= time.time()
+    print(f'======> DONE Reading data in {(time1-start_time):.2f} seconds \n')
+
     # Convert urban to surrounding natural characteristics
-    for i in dst_data.south_north:
-        for j in dst_data.west_east:
-            if luse.isel(south_north=i, west_east=j) == 13:
+    for i in dst_data.south_north.values:
+        for j in dst_data.west_east.values:
+            if dst_data.LU_INDEX.squeeze().isel(south_north=i, west_east=j) == 13:
+
+                dst_data_tile = dst_data.isel(
+                    south_north=slice(min(i,abs(i-NPIX_NLC)),min(len(dst_data.south_north),i+NPIX_NLC)),
+                    west_east=slice(min(j,abs(j-NPIX_NLC)),min(len(dst_data.west_east),j+NPIX_NLC))
+                )
+
+                luse = dst_data_tile.LU_INDEX.squeeze()
+                luf = dst_data_tile.LANDUSEF.squeeze()
+                greenf = dst_data_tile.GREENFRAC.squeeze()
+
+                lat = dst_data_tile.XLAT_M.squeeze()
+                lon = dst_data_tile.XLONG_M.squeeze()    
+                ilon = dst_data.XLONG_M.isel(south_north=i, west_east=j).item()    
+                ilat = dst_data.XLAT_M.isel(south_north=i, west_east=j).item()    
+
 
                 dis = _calc_distance_coord(
                     lat.where((luse != 13) & (luse != 17) & (luse != 21)),
                     lon.where((luse != 13) & (luse != 17) & (luse != 21)),
-                    lat.isel(south_north=i, west_east=j),
-                    lon.isel(south_north=i, west_east=j),
+                    ilat,
+                    ilon,
                 )
 
                 disflat = (
@@ -444,7 +463,23 @@ def wrf_remove_urban(
                 )
                 newgreenf[:, i, j] = auxg
 
-            if luf.isel(south_north=i, west_east=j, land_cat=12) > 0.0:
+            if (dst_data.LANDUSEF.squeeze().isel(south_north=i, west_east=j, land_cat=12) > 0.0):
+
+                dst_data_tile = dst_data.isel(
+                    south_north=slice(min(i,abs(i-NPIX_NLC)),min(len(dst_data.south_north),i+NPIX_NLC)),
+                    west_east=slice(min(j,abs(j-NPIX_NLC)),min(len(dst_data.west_east),j+NPIX_NLC))
+                )
+
+                luse = dst_data_tile.LU_INDEX.squeeze()
+                luf = dst_data_tile.LANDUSEF.squeeze()
+                greenf = dst_data_tile.GREENFRAC.squeeze()
+                
+                lat = dst_data_tile.XLAT_M.squeeze()
+                lon = dst_data_tile.XLONG_M.squeeze()    
+                ilon = dst_data.XLONG_M.isel(south_north=i, west_east=j).item()    
+                ilat = dst_data.XLAT_M.isel(south_north=i, west_east=j).item()    
+
+
                 if orig_num_land_cat > 20:  # USING MODIS_LAKE
                     dis = _calc_distance_coord(
                         lat.where(
@@ -457,8 +492,8 @@ def wrf_remove_urban(
                             & (luf.isel(land_cat=16) == 0.0)
                             & (luf.isel(land_cat=20) == 0.0)
                         ),
-                        lat.isel(south_north=i, west_east=j),
-                        lon.isel(south_north=i, west_east=j),
+                        ilat,
+                        ilon,
                     )
                 else:  # USING MODIS (NO LAKES)
                     dis = _calc_distance_coord(
@@ -470,8 +505,8 @@ def wrf_remove_urban(
                             (luf.isel(land_cat=12) == 0.0)
                             & (luf.isel(land_cat=16) == 0.0)
                         ),
-                        lat.isel(south_north=i, west_east=j),
-                        lon.isel(south_north=i, west_east=j),
+                        ilat,
+                        ilon,
                     )
 
                 disflat = (
@@ -485,10 +520,12 @@ def wrf_remove_urban(
                 m = stats.mode(aux.values.flatten(), nan_policy='omit')[0]
                 newlu = int(m) - 1
                 # newlu = int(mode(aux.values.flatten())[0])-1
-                newluf[newlu, i, j] += luf.isel(
+                newluf[newlu, i, j] += dst_data.LANDUSEF.squeeze().isel(
                     south_north=i, west_east=j, land_cat=12
                 ).values
                 newluf[12, i, j] = 0.0
+        time2= time.time()
+        print(f'======> DONE Loop in {(time2-time1):.2f} seconds \n')
 
     dst_data.LU_INDEX.values[0, :] = newluse[:]
     dst_data.LANDUSEF.values[0, :] = newluf[:]
@@ -498,6 +535,9 @@ def wrf_remove_urban(
     if os.path.exists(info.dst_nu_file):
         os.remove(info.dst_nu_file)
     dst_data.to_netcdf(info.dst_nu_file)
+    
+    time3= time.time()
+    print(f'======> DONE All in {(time3-start_time):.2f} seconds \n')
 
 
 # Get WRF grid info for Resampler
