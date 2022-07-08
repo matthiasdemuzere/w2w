@@ -419,12 +419,11 @@ def wrf_remove_urban(
     for i in dst_data.south_north.values:
         for j in dst_data.west_east.values:
             if dst_data.LU_INDEX.squeeze().isel(south_north=i, west_east=j) == 13:
-
+                
                 dst_data_tile = dst_data.isel(
-                    south_north=slice(min(i,abs(i-NPIX_NLC)),min(len(dst_data.south_north),i+NPIX_NLC)),
-                    west_east=slice(min(j,abs(j-NPIX_NLC)),min(len(dst_data.west_east),j+NPIX_NLC))
+                    south_north=slice(min(0,abs(i-NPIX_NLC)),min(len(dst_data.south_north),i+NPIX_NLC)),
+                    west_east=slice(min(0,abs(j-NPIX_NLC)),min(len(dst_data.west_east),j+NPIX_NLC))
                 )
-
                 luse = dst_data_tile.LU_INDEX.squeeze()
                 luf = dst_data_tile.LANDUSEF.squeeze()
                 greenf = dst_data_tile.GREENFRAC.squeeze()
@@ -466,8 +465,8 @@ def wrf_remove_urban(
             if (dst_data.LANDUSEF.squeeze().isel(south_north=i, west_east=j, land_cat=12) > 0.0):
 
                 dst_data_tile = dst_data.isel(
-                    south_north=slice(min(i,abs(i-NPIX_NLC)),min(len(dst_data.south_north),i+NPIX_NLC)),
-                    west_east=slice(min(j,abs(j-NPIX_NLC)),min(len(dst_data.west_east),j+NPIX_NLC))
+                    south_north=slice(min(0,abs(i-NPIX_NLC)),min(len(dst_data.south_north),i+NPIX_NLC)),
+                    west_east=slice(min(0,abs(j-NPIX_NLC)),min(len(dst_data.west_east),j+NPIX_NLC))
                 )
 
                 luse = dst_data_tile.LU_INDEX.squeeze()
