@@ -865,8 +865,7 @@ def _check_hi_values(
     for hi_metric in hi_metrics:
 
         if hi_metric == 'MH_URB2D_MIN':
-            hi_sample_values = hi_sample.
-            min()
+            hi_sample_values = hi_sample.min()
         elif hi_metric == 'MH_URB2D_MAX':
             hi_sample_values = hi_sample.max()
         elif hi_metric == 'MH_URB2D':
@@ -1519,8 +1518,7 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
         FRC_URB2D = da.FRC_URB2D.values
         print(
             f'{base_text}{OKGREEN} OK: FRC_URB2D values '
-            f"range between {'{:0.2f}'.format(FRC_URB2D.
-            min())} and "
+            f"range between {'{:0.2f}'.format(FRC_URB2D.min())} and "
             f"{'{:0.2f}'.format(FRC_URB2D.max())} {ENDC}"
         )
         frc_urb2d_present = 'YES'
