@@ -410,7 +410,7 @@ def wrf_remove_urban(
     orig_num_land_cat = dst_data.NUM_LAND_CAT
 
     # Convert urban to surrounding natural characteristics
-    for i in tqdm(dst_data.south_north.values):
+    for i in tqdm(dst_data.south_north.values, desc='Looping through latitudes'):
         for j in dst_data.west_east.values:
             if dst_data.LU_INDEX.squeeze().isel(south_north=i, west_east=j) == 13:
 
