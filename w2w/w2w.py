@@ -24,8 +24,7 @@ from numpy.typing import NDArray
 from scipy import stats
 import pyproj
 from pyproj import CRS, Transformer
-
-import time
+from tqdm.auto import tqdm
 
 if sys.version_info >= (3, 9):  # pragma: >=3.9 cover
     import importlib.metadata as importlib_metadata
@@ -411,7 +410,7 @@ def wrf_remove_urban(
     orig_num_land_cat = dst_data.NUM_LAND_CAT
 
     # Convert urban to surrounding natural characteristics
-    for i in dst_data.south_north.values:
+    for i in tqdm(dst_data.south_north.values):
         for j in dst_data.west_east.values:
             if dst_data.LU_INDEX.squeeze().isel(south_north=i, west_east=j) == 13:
 
