@@ -401,8 +401,6 @@ def wrf_remove_urban(
 
     '''Remove MODIS urban extent from geo_em*.nc file'''
 
-    start_time = time.time()
-
     # Make a copy of original dst file
     dst_data = xr.open_dataset(info.dst_file)
 
@@ -414,8 +412,6 @@ def wrf_remove_urban(
     # Read number of categories
     orig_num_land_cat = dst_data.NUM_LAND_CAT
 
-    time1 = time.time()
-    print(f'======> DONE Reading data in {(time1-start_time):.2f} seconds \n')
 
     # Convert urban to surrounding natural characteristics
     for i in dst_data.south_north.values:
@@ -542,9 +538,7 @@ def wrf_remove_urban(
                     .values
                 )
                 newluf[12, i, j] = 0.0
-        time2 = time.time()
-        print(f'======> DONE Loop in {(time2-time1):.2f} seconds \n')
-
+ 
     dst_data.LU_INDEX.values[0, :] = newluse[:]
     dst_data.LANDUSEF.values[0, :] = newluf[:]
     dst_data.GREENFRAC.values[0, :] = newgreenf[:]
@@ -553,9 +547,6 @@ def wrf_remove_urban(
     if os.path.exists(info.dst_nu_file):
         os.remove(info.dst_nu_file)
     dst_data.to_netcdf(info.dst_nu_file)
-
-    time3 = time.time()
-    print(f'======> DONE All in {(time3-start_time):.2f} seconds \n')
 
 
 # Get WRF grid info for Resampler
