@@ -417,9 +417,9 @@ def wrf_remove_urban(
     for i in dst_data.south_north.values:
         for j in dst_data.west_east.values:
             if dst_data.LU_INDEX.squeeze().isel(south_north=i, west_east=j) == 13:
-                
+
                 dst_data_tile = dst_data.isel(
-                    south_north=slice( 
+                    south_north=slice(
                         min(0,abs(i-NPIX_NLC)),
                         min(len(dst_data.south_north),i+NPIX_NLC)
                     ),
@@ -538,7 +538,7 @@ def wrf_remove_urban(
                     .values
                 )
                 newluf[12, i, j] = 0.0
- 
+
     dst_data.LU_INDEX.values[0, :] = newluse[:]
     dst_data.LANDUSEF.values[0, :] = newluf[:]
     dst_data.GREENFRAC.values[0, :] = newgreenf[:]
