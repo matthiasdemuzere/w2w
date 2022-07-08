@@ -272,10 +272,8 @@ def _check_lcz_wrf_extent(lcz: xr.DataArray, wrf: xr.Dataset) -> None:
     # Get bounding box coordinates
     lcz_xmin, lcz_ymin, lcz_xmax, lcz_ymax = lcz.rio.bounds()
     wrf_xmin, wrf_ymin, wrf_xmax, wrf_ymax = (
-        float(wrf.XLONG_M.
-        min()),
-        float(wrf.XLAT_M.
-        min()),
+        float(wrf.XLONG_M.min()),
+        float(wrf.XLAT_M.min()),
         float(wrf.XLONG_M.max()),
         float(wrf.XLAT_M.max()),
     )
@@ -412,7 +410,6 @@ def wrf_remove_urban(
     # Read number of categories
     orig_num_land_cat = dst_data.NUM_LAND_CAT
 
-
     # Convert urban to surrounding natural characteristics
     for i in dst_data.south_north.values:
         for j in dst_data.west_east.values:
@@ -420,13 +417,13 @@ def wrf_remove_urban(
 
                 dst_data_tile = dst_data.isel(
                     south_north=slice(
-                        min(0,abs(i-NPIX_NLC)),
-                        min(len(dst_data.south_north),i+NPIX_NLC)
+                        min(0, abs(i - NPIX_NLC)),
+                        min(len(dst_data.south_north), i + NPIX_NLC),
                     ),
                     west_east=slice(
-                        min(0,abs(j-NPIX_NLC)),
-                        min(len(dst_data.west_east),j+NPIX_NLC)
-                    )
+                        min(0, abs(j - NPIX_NLC)),
+                        min(len(dst_data.west_east), j + NPIX_NLC),
+                    ),
                 )
                 luse = dst_data_tile.LU_INDEX.squeeze()
                 luf = dst_data_tile.LANDUSEF.squeeze()
@@ -474,13 +471,13 @@ def wrf_remove_urban(
 
                 dst_data_tile = dst_data.isel(
                     south_north=slice(
-                        min(0,abs(i-NPIX_NLC)),
-                        min(len(dst_data.south_north),i+NPIX_NLC)
-                        ),
+                        min(0, abs(i - NPIX_NLC)),
+                        min(len(dst_data.south_north), i + NPIX_NLC),
+                    ),
                     west_east=slice(
-                        min(0,abs(j-NPIX_NLC)),
-                        min(len(dst_data.west_east),j+NPIX_NLC)
-                        )
+                        min(0, abs(j - NPIX_NLC)),
+                        min(len(dst_data.west_east), j + NPIX_NLC),
+                    ),
                 )
 
                 luse = dst_data_tile.LU_INDEX.squeeze()
