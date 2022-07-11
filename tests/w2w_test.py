@@ -287,6 +287,7 @@ def test_check_lcz_integrity_clean_file_written(tmpdir, info_mock):
     check_lcz_integrity(info=info, LCZ_BAND=LCZ_BAND)
     assert os.listdir(tmpdir) == ['Shanghai_clean.tif']
 
+
 @pytest.mark.parametrize(
     ('dst_file', 'dst_nu_file'),
     (
@@ -299,7 +300,7 @@ def test_wrf_remove_urban(tmpdir, dst_file, dst_nu_file, info_mock):
         {'dst_file': dst_file, 'dst_nu_file': os.path.join(tmpdir, dst_nu_file)}
     )
     old_ds = xr.open_dataset(info.dst_file)
-    wrf_remove_urban(info=info, NPIX_NLC=9,NPIX_AREA=25)
+    wrf_remove_urban(info=info, NPIX_NLC=9, NPIX_AREA=25)
     ds = xr.open_dataset(info.dst_nu_file)
     # check lused 13 was reclassified to 12
     assert ds.LU_INDEX.values[0][2][2] == 12
@@ -334,7 +335,7 @@ def test_wrf_remove_urban_output_already_exists_is_overwritten(tmpdir, info_mock
     )
     assert os.listdir(tmpdir) == ['5by5_new.nc']
     m_time_old = os.path.getmtime(info.dst_nu_file)
-    wrf_remove_urban(info=info, NPIX_NLC=9,NPIX_AREA=25)
+    wrf_remove_urban(info=info, NPIX_NLC=9, NPIX_AREA=25)
     assert m_time_old != os.path.getmtime(info.dst_nu_file)
 
 

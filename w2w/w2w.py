@@ -140,7 +140,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         lookup_table = importlib_resources.files(
             'w2w.resources',
         ).joinpath('LCZ_UCP_lookup.csv')
- 
+
     # Aesthetics, main prints in bold
     FBOLD = '\033[1m'
     FEND = '\033[0m'
@@ -381,25 +381,27 @@ def check_lcz_integrity(info: Info, LCZ_BAND: int) -> None:
     lcz.rio.to_raster(info.src_file_clean, dtype=np.int32)
 
 
-def using_kdtree(data,kpoints):
-    "Based on https://stackoverflow.com/q/43020919/190597"
+def using_kdtree(data, kpoints):
+    'Based on https://stackoverflow.com/q/43020919/190597'
+
     def dist_to_arclength(chord_length):
         """
         https://en.wikipedia.org/wiki/Great-circle_distance
         Convert Euclidean chord length to great circle arc length
         """
-        central_angle = 2*np.arcsin(chord_length/(2.0*R)) 
-        arclength = R*central_angle
+        central_angle = 2 * np.arcsin(chord_length / (2.0 * R))
+        arclength = R * central_angle
         return arclength
+
     R = 6371
     phi = np.deg2rad(data['lat'])
     theta = np.deg2rad(data['lon'])
     data['x'] = R * np.cos(phi) * np.cos(theta)
     data['y'] = R * np.cos(phi) * np.sin(theta)
     data['z'] = R * np.sin(phi)
-    tree = spatial.KDTree(data[['x', 'y','z']])
-    distance, index = tree.query(data[['x', 'y','z']], k=kpoints)
-    #return dist_to_arclength(distance[:, 1])
+    tree = spatial.KDTree(data[['x', 'y', 'z']])
+    distance, index = tree.query(data[['x', 'y', 'z']], k=kpoints)
+    # return dist_to_arclength(distance[:, 1])
     return distance, index
 
 
@@ -425,70 +427,84 @@ def wrf_remove_urban(
     newgreenf = greenf.values.copy()
     orig_num_land_cat = dst_data.NUM_LAND_CAT
 
-    data_coord = pd.DataFrame({'lat':lat.values.ravel(), 'lon':lon.values.ravel(),'luse':luse.values.ravel()})
+    data_coord = pd.DataFrame(
+        {
+            'lat': lat.values.ravel(),
+            'lon': lon.values.ravel(),
+            'luse': luse.values.ravel(),
+        }
+    )
 
     ERROR = '\033[0;31m'
     ENDC = '\033[0m'
 
-  
-    luf_2D = luf.values.reshape(luf.shape[0],-1)
+    luf_2D = luf.values.reshape(luf.shape[0], -1)
     if orig_num_land_cat > 20:  # USING MODIS_LAKE
-        data_coord['luf_natland']=list((luf_2D[12,:]==0) & (luf_2D[16,:]==0) & (luf_2D[20,:]==0))
-        data_coord['luf_urb']=list((luf_2D[12,:]!=0))
+        data_coord['luf_natland'] = list(
+            (luf_2D[12, :] == 0) & (luf_2D[16, :] == 0) & (luf_2D[20, :] == 0)
+        )
+        data_coord['luf_urb'] = list((luf_2D[12, :] != 0))
     else:  # USING MODIS (NO LAKES)
-        data_coord['luf_natland']=list((luf_2D[12,:]==0) & (luf_2D[16,:]==0))
-        data_coord['luf_urb']=list((luf_2D[12,:]!=0))
-    if NPIX_AREA == None: NPIX_AREA=NPIX_NLC**2
-    if NPIX_AREA>luse.size:
-        raise ValueError(f'{ERROR}ERROR: The area you selected is larger than the domain size\n'
+        data_coord['luf_natland'] = list((luf_2D[12, :] == 0) & (luf_2D[16, :] == 0))
+        data_coord['luf_urb'] = list((luf_2D[12, :] != 0))
+    if NPIX_AREA == None:
+        NPIX_AREA = NPIX_NLC**2
+    if NPIX_AREA > luse.size:
+        raise ValueError(
+            f'{ERROR}ERROR: The area you selected is larger than the domain size\n'
             f'You chose an area of {NPIX_AREA} pixels and the domain is {luse.size} pixels\n'
             f'Reduce NPIX_AREA. \n\n'
-            f'Exiting...{ENDC}')
-    
-    dkd, ikd = using_kdtree(data_coord,min(luse.size,NPIX_AREA))   
+            f'Exiting...{ENDC}'
+        )
 
+    dkd, ikd = using_kdtree(data_coord, min(luse.size, NPIX_AREA))
 
-    data_coord['luse_urb'] = (data_coord.luse==13)
-    data_coord['luse_natland'] = ((data_coord.luse!=13) & (data_coord.luse!=17) & (data_coord.luse!=21))
-
+    data_coord['luse_urb'] = data_coord.luse == 13
+    data_coord['luse_natland'] = (
+        (data_coord.luse != 13) & (data_coord.luse != 17) & (data_coord.luse != 21)
+    )
 
     data_urb = data_coord.where(data_coord.luse_urb).dropna()
 
     for iurb in tqdm(data_urb.index, desc='Looping through urban grid pixels'):
 
-        i,j = np.unravel_index(iurb,luse.shape)
-        data_luse_natland = data_coord.loc[ikd[iurb,:]].where(data_coord.luse_natland).dropna()
-    
+        i, j = np.unravel_index(iurb, luse.shape)
+        data_luse_natland = (
+            data_coord.loc[ikd[iurb, :]].where(data_coord.luse_natland).dropna()
+        )
+
         try:
             aux_kd = data_luse_natland.iloc[:NPIX_NLC]
             mkd = data_luse_natland.iloc[:NPIX_NLC].luse.mode()[0]
         except (IndexError, KeyError):
             err = traceback.format_exc()
             print(
-            f'{ERROR}ERROR:  Not enough natural land points in selected area\n'
-            f'You chose to sample {NPIX_NLC} pixels over an area of {NPIX_AREA} '
-            f'Increase NPIX_AREA. \n\n'
-            f'{err}\n'
-            f'Exiting ...{ENDC}'
+                f'{ERROR}ERROR:  Not enough natural land points in selected area\n'
+                f'You chose to sample {NPIX_NLC} pixels over an area of {NPIX_AREA} '
+                f'Increase NPIX_AREA. \n\n'
+                f'{err}\n'
+                f'Exiting ...{ENDC}'
             )
             sys.exit(1)
- 
-        gkf = np.take(greenf.values.reshape(greenf.shape[0],-1),aux_kd[aux_kd.luse==mkd.item()].index,axis=1).mean(axis=1)
+
+        gkf = np.take(
+            greenf.values.reshape(greenf.shape[0], -1),
+            aux_kd[aux_kd.luse == mkd.item()].index,
+            axis=1,
+        ).mean(axis=1)
         newluse[i, j] = int(mkd)
         newgreenf[:, i, j] = gkf
 
-
     ## SET URBAN LANDUSEF to 0 and MOVE THAT FRACTION TO DOMINANT RURAL CATEGORY
-    data_coord['newluse']=newluse.ravel()
+    data_coord['newluse'] = newluse.ravel()
     data_luf = data_coord.where(data_coord.luf_urb).dropna()
 
     for iurb_luf in data_luf.index:
-        i,j = np.unravel_index(iurb_luf,luse.shape)
-        newluf[int(data_luf.loc[iurb_luf]['newluse'])-1,i,j]+= luf.isel(
-                                        south_north=i, west_east=j, land_cat=12
-                                        ).values
+        i, j = np.unravel_index(iurb_luf, luse.shape)
+        newluf[int(data_luf.loc[iurb_luf]['newluse']) - 1, i, j] += luf.isel(
+            south_north=i, west_east=j, land_cat=12
+        ).values
         newluf[12, i, j] = 0.0
-                                    
 
     dst_data.LU_INDEX.values[0, :] = newluse[:]
     dst_data.LANDUSEF.values[0, :] = newluf[:]
