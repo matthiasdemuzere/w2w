@@ -8,6 +8,7 @@ import xarray as xr
 from rasterio.warp import reproject, Resampling
 from rasterio.transform import Affine
 from scipy.stats import mode, truncnorm
+import scipy.spatial as spatial
 import os, sys
 import argparse
 from argparse import RawTextHelpFormatter
@@ -113,11 +114,23 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         'natural land cover (DEFAULT: 45)',
         default=45,
     )
+
+    parser.add_argument(
+        '-a',
+        '--npix-area',
+        metavar='',
+        type=int,
+        dest='NPIX_AREA',
+        help='Area in number of pixels to look for the nearest number of pixels'
+        'for sampling neighbouring natural land cover (DEFAULT: NPIX_NLC**2)',
+        default=None,
+    )
     parser.add_argument(
         '--lcz-ucp',
         type=str,
         help='File with custom LCZ-based urban canopy parameters',
     )
+
     args = parser.parse_args(argv)
 
     # check if a custom LCZ UCP file was set and read it
@@ -127,7 +140,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         lookup_table = importlib_resources.files(
             'w2w.resources',
         ).joinpath('LCZ_UCP_lookup.csv')
-
+ 
     # Aesthetics, main prints in bold
     FBOLD = '\033[1m'
     FEND = '\033[0m'
@@ -150,9 +163,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     print(
         f'{FBOLD}--> Replace WRF MODIS urban LC with ' f'surrounding natural LC{FEND}'
     )
+
     wrf_remove_urban(
         info=info,
         NPIX_NLC=args.NPIX_NLC,
+        NPIX_AREA=args.NPIX_AREA,
     )
 
     print(f'{FBOLD}--> Create LCZ-based geo_em file{FEND}')
@@ -366,34 +381,32 @@ def check_lcz_integrity(info: Info, LCZ_BAND: int) -> None:
     lcz.rio.to_raster(info.src_file_clean, dtype=np.int32)
 
 
-def _calc_distance_coord(
-    lat1: float, lon1: float, lat2: float, lon2: float
-) -> xr.DataArray:
-
-    '''Calculate distance using coordinates
-    This uses the spherical law of cosines
-    '''
-
-    earth_radius = 6371000  # Earth radius in m
-    lat1r = lat1 * np.pi / 180.0
-    lat2r = lat2 * np.pi / 180.0
-    lon1r = lon1 * np.pi / 180.0
-    lon2r = lon2 * np.pi / 180.0
-
-    d = (
-        np.arccos(
-            np.sin(lat1r) * np.sin(lat2r)
-            + np.cos(lat1r) * np.cos(lat2r) * np.cos(lon2r - lon1r)
-        )
-        * earth_radius
-    )
-
-    return d
+def using_kdtree(data,kpoints):
+    "Based on https://stackoverflow.com/q/43020919/190597"
+    def dist_to_arclength(chord_length):
+        """
+        https://en.wikipedia.org/wiki/Great-circle_distance
+        Convert Euclidean chord length to great circle arc length
+        """
+        central_angle = 2*np.arcsin(chord_length/(2.0*R)) 
+        arclength = R*central_angle
+        return arclength
+    R = 6371
+    phi = np.deg2rad(data['lat'])
+    theta = np.deg2rad(data['lon'])
+    data['x'] = R * np.cos(phi) * np.cos(theta)
+    data['y'] = R * np.cos(phi) * np.sin(theta)
+    data['z'] = R * np.sin(phi)
+    tree = spatial.KDTree(data[['x', 'y','z']])
+    distance, index = tree.query(data[['x', 'y','z']], k=kpoints)
+    #return dist_to_arclength(distance[:, 1])
+    return distance, index
 
 
 def wrf_remove_urban(
     info: Info,
     NPIX_NLC: int,
+    NPIX_AREA: int,
 ) -> None:
 
     '''Remove MODIS urban extent from geo_em*.nc file'''
@@ -401,139 +414,81 @@ def wrf_remove_urban(
     # Make a copy of original dst file
     dst_data = xr.open_dataset(info.dst_file)
 
-    # Create new arrays holding new data
-    newluse = dst_data.LU_INDEX.squeeze().values.copy()
-    newluf = dst_data.LANDUSEF.squeeze().values.copy()
-    newgreenf = dst_data.GREENFRAC.squeeze().values.copy()
-
-    # Read number of categories
+    # Read the relevant parameters
+    luse = dst_data.LU_INDEX.squeeze()
+    luf = dst_data.LANDUSEF.squeeze()
+    greenf = dst_data.GREENFRAC.squeeze()
+    lat = dst_data.XLAT_M.squeeze()
+    lon = dst_data.XLONG_M.squeeze()
+    newluse = luse.values.copy()
+    newluf = luf.values.copy()
+    newgreenf = greenf.values.copy()
     orig_num_land_cat = dst_data.NUM_LAND_CAT
 
-    # Convert urban to surrounding natural characteristics
-    for i in tqdm(dst_data.south_north.values, desc='Looping through latitudes'):
-        for j in dst_data.west_east.values:
-            if dst_data.LU_INDEX.squeeze().isel(south_north=i, west_east=j) == 13:
+    data_coord = pd.DataFrame({'lat':lat.values.ravel(), 'lon':lon.values.ravel(),'luse':luse.values.ravel()})
 
-                dst_data_tile = dst_data.isel(
-                    south_north=slice(
-                        min(0, abs(i - NPIX_NLC)),
-                        min(len(dst_data.south_north), i + NPIX_NLC),
-                    ),
-                    west_east=slice(
-                        min(0, abs(j - NPIX_NLC)),
-                        min(len(dst_data.west_east), j + NPIX_NLC),
-                    ),
-                )
-                luse = dst_data_tile.LU_INDEX.squeeze()
-                luf = dst_data_tile.LANDUSEF.squeeze()
-                greenf = dst_data_tile.GREENFRAC.squeeze()
+    ERROR = '\033[0;31m'
+    ENDC = '\033[0m'
 
-                lat = dst_data_tile.XLAT_M.squeeze()
-                lon = dst_data_tile.XLONG_M.squeeze()
-                ilon = dst_data.XLONG_M.isel(south_north=i, west_east=j).item()
-                ilat = dst_data.XLAT_M.isel(south_north=i, west_east=j).item()
+  
+    luf_2D = luf.values.reshape(luf.shape[0],-1)
+    if orig_num_land_cat > 20:  # USING MODIS_LAKE
+        data_coord['luf_natland']=list((luf_2D[12,:]==0) & (luf_2D[16,:]==0) & (luf_2D[20,:]==0))
+        data_coord['luf_urb']=list((luf_2D[12,:]!=0))
+    else:  # USING MODIS (NO LAKES)
+        data_coord['luf_natland']=list((luf_2D[12,:]==0) & (luf_2D[16,:]==0))
+        data_coord['luf_urb']=list((luf_2D[12,:]!=0))
+    if NPIX_AREA == None: NPIX_AREA=NPIX_NLC**2
+    if NPIX_AREA>luse.size:
+        raise ValueError(f'{ERROR}ERROR: The area you selected is larger than the domain size\n'
+            f'You chose an area of {NPIX_AREA} pixels and the domain is {luse.size} pixels\n'
+            f'Reduce NPIX_AREA. \n\n'
+            f'Exiting...{ENDC}')
+    
+    dkd, ikd = using_kdtree(data_coord,min(luse.size,NPIX_AREA))   
 
-                dis = _calc_distance_coord(
-                    lat.where((luse != 13) & (luse != 17) & (luse != 21)),
-                    lon.where((luse != 13) & (luse != 17) & (luse != 21)),
-                    ilat,
-                    ilon,
-                )
 
-                disflat = (
-                    dis.stack(gridpoints=('south_north', 'west_east'))
-                    .reset_index('gridpoints')
-                    .drop_vars(['south_north', 'west_east'])
-                )
-                aux = luse.where(
-                    dis <= disflat.sortby(disflat).isel(gridpoints=NPIX_NLC), drop=True
-                )
-                m = stats.mode(aux.values.flatten(), nan_policy='omit')[0]
-                newluse[i, j] = int(m)
+    data_coord['luse_urb'] = (data_coord.luse==13)
+    data_coord['luse_natland'] = ((data_coord.luse!=13) & (data_coord.luse!=17) & (data_coord.luse!=21))
 
-                auxg = (
-                    greenf.where(
-                        dis <= disflat.sortby(disflat).isel(gridpoints=NPIX_NLC),
-                        drop=True,
-                    )
-                    .where(aux == newluse[i, j])
-                    .mean(dim=['south_north', 'west_east'])
-                )
-                newgreenf[:, i, j] = auxg
 
-            if (
-                dst_data.LANDUSEF.squeeze().isel(
-                    south_north=i, west_east=j, land_cat=12
-                )
-                > 0.0
-            ):
+    data_urb = data_coord.where(data_coord.luse_urb).dropna()
 
-                dst_data_tile = dst_data.isel(
-                    south_north=slice(
-                        min(0, abs(i - NPIX_NLC)),
-                        min(len(dst_data.south_north), i + NPIX_NLC),
-                    ),
-                    west_east=slice(
-                        min(0, abs(j - NPIX_NLC)),
-                        min(len(dst_data.west_east), j + NPIX_NLC),
-                    ),
-                )
+    for iurb in tqdm(data_urb.index, desc='Looping through urban grid pixels'):
 
-                luse = dst_data_tile.LU_INDEX.squeeze()
-                luf = dst_data_tile.LANDUSEF.squeeze()
-                greenf = dst_data_tile.GREENFRAC.squeeze()
+        i,j = np.unravel_index(iurb,luse.shape)
+        data_luse_natland = data_coord.loc[ikd[iurb,:]].where(data_coord.luse_natland).dropna()
+    
+        try:
+            aux_kd = data_luse_natland.iloc[:NPIX_NLC]
+            mkd = data_luse_natland.iloc[:NPIX_NLC].luse.mode()[0]
+        except (IndexError, KeyError):
+            err = traceback.format_exc()
+            print(
+            f'{ERROR}ERROR:  Not enough natural land points in selected area\n'
+            f'You chose to sample {NPIX_NLC} pixels over an area of {NPIX_AREA} '
+            f'Increase NPIX_AREA. \n\n'
+            f'{err}\n'
+            f'Exiting ...{ENDC}'
+            )
+            sys.exit(1)
+ 
+        gkf = np.take(greenf.values.reshape(greenf.shape[0],-1),aux_kd[aux_kd.luse==mkd.item()].index,axis=1).mean(axis=1)
+        newluse[i, j] = int(mkd)
+        newgreenf[:, i, j] = gkf
 
-                lat = dst_data_tile.XLAT_M.squeeze()
-                lon = dst_data_tile.XLONG_M.squeeze()
-                ilon = dst_data.XLONG_M.isel(south_north=i, west_east=j).item()
-                ilat = dst_data.XLAT_M.isel(south_north=i, west_east=j).item()
 
-                if orig_num_land_cat > 20:  # USING MODIS_LAKE
-                    dis = _calc_distance_coord(
-                        lat.where(
-                            (luf.isel(land_cat=12) == 0.0)
-                            & (luf.isel(land_cat=16) == 0.0)
-                            & (luf.isel(land_cat=20) == 0.0)
-                        ),
-                        lon.where(
-                            (luf.isel(land_cat=12) == 0.0)
-                            & (luf.isel(land_cat=16) == 0.0)
-                            & (luf.isel(land_cat=20) == 0.0)
-                        ),
-                        ilat,
-                        ilon,
-                    )
-                else:  # USING MODIS (NO LAKES)
-                    dis = _calc_distance_coord(
-                        lat.where(
-                            (luf.isel(land_cat=12) == 0.0)
-                            & (luf.isel(land_cat=16) == 0.0)
-                        ),
-                        lon.where(
-                            (luf.isel(land_cat=12) == 0.0)
-                            & (luf.isel(land_cat=16) == 0.0)
-                        ),
-                        ilat,
-                        ilon,
-                    )
+    ## SET URBAN LANDUSEF to 0 and MOVE THAT FRACTION TO DOMINANT RURAL CATEGORY
+    data_coord['newluse']=newluse.ravel()
+    data_luf = data_coord.where(data_coord.luf_urb).dropna()
 
-                disflat = (
-                    dis.stack(gridpoints=('south_north', 'west_east'))
-                    .reset_index('gridpoints')
-                    .drop_vars(['south_north', 'west_east'])
-                )
-                aux = luse.where(
-                    dis <= disflat.sortby(disflat).isel(gridpoints=NPIX_NLC), drop=True
-                )
-                m = stats.mode(aux.values.flatten(), nan_policy='omit')[0]
-                newlu = int(m) - 1
-                # newlu = int(mode(aux.values.flatten())[0])-1
-                newluf[newlu, i, j] += (
-                    dst_data.LANDUSEF.squeeze()
-                    .isel(south_north=i, west_east=j, land_cat=12)
-                    .values
-                )
-                newluf[12, i, j] = 0.0
+    for iurb_luf in data_luf.index:
+        i,j = np.unravel_index(iurb_luf,luse.shape)
+        newluf[int(data_luf.loc[iurb_luf]['newluse'])-1,i,j]+= luf.isel(
+                                        south_north=i, west_east=j, land_cat=12
+                                        ).values
+        newluf[12, i, j] = 0.0
+                                    
 
     dst_data.LU_INDEX.values[0, :] = newluse[:]
     dst_data.LANDUSEF.values[0, :] = newluf[:]
