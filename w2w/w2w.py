@@ -380,7 +380,8 @@ def check_lcz_integrity(info: Info, LCZ_BAND: int) -> None:
     # Write clean LCZ to file, used in all subsequent routines.
     lcz.rio.to_raster(info.src_file_clean, dtype=np.int32)
 
-def using_kdtree(data,kpoints):
+
+def using_kdtree(data, kpoints):
 
     '''
     Extract nearest kpoints to each point given a list of them.
@@ -394,15 +395,14 @@ def using_kdtree(data,kpoints):
         index: indices of nearest k points for each point.
     '''
 
-
     R = 6371
     phi = np.deg2rad(data['lat'])
     theta = np.deg2rad(data['lon'])
     data['x'] = R * np.cos(phi) * np.cos(theta)
     data['y'] = R * np.cos(phi) * np.sin(theta)
     data['z'] = R * np.sin(phi)
-    tree = spatial.KDTree(data[['x', 'y','z']])
-    distance, index = tree.query(data[['x', 'y','z']], k=kpoints)
+    tree = spatial.KDTree(data[['x', 'y', 'z']])
+    distance, index = tree.query(data[['x', 'y', 'z']], k=kpoints)
 
     return distance, index
 
