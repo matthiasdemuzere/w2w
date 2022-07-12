@@ -405,10 +405,7 @@ def using_kdtree(
     data['y'] = R * np.cos(phi) * np.sin(theta)
     data['z'] = R * np.sin(phi)
     tree = spatial.KDTree(data[['x', 'y', 'z']])
-    distance, index = tree.query(
-        data[['x', 'y', 'z']],
-        k=kpoints
-        )
+    distance, index = tree.query(data[['x', 'y', 'z']], k=kpoints)
 
     return distance, index
 
@@ -432,11 +429,10 @@ def wrf_remove_urban(
     lon = dst_data.XLONG_M.squeeze()
     orig_num_land_cat = dst_data.NUM_LAND_CAT
 
-    #New arrays to hold data without urban areas
+    # New arrays to hold data without urban areas
     newluse = luse.values.copy()
     newluf = luf.values.copy()
     newgreenf = greenf.values.copy()
-    
 
     data_coord = pd.DataFrame(
         {
@@ -475,8 +471,7 @@ def wrf_remove_urban(
         (data_coord.luse != 13) & (data_coord.luse != 17) & (data_coord.luse != 21)
     )
 
-
-    #Replacing urban pixels with surrounding dominant natural land use category
+    # Replacing urban pixels with surrounding dominant natural land use category
     data_urb = data_coord.where(data_coord.luse_urb).dropna()
 
     for iurb in tqdm(data_urb.index, desc='Looping through urban grid pixels'):
