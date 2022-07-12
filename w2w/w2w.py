@@ -380,17 +380,21 @@ def check_lcz_integrity(info: Info, LCZ_BAND: int) -> None:
     # Write clean LCZ to file, used in all subsequent routines.
     lcz.rio.to_raster(info.src_file_clean, dtype=np.int32)
 
-
 def using_kdtree(data,kpoints):
-    "Based on https://stackoverflow.com/q/43020919/190597"
-    def dist_to_arclength(chord_length):
-        """
-        https://en.wikipedia.org/wiki/Great-circle_distance
-        Convert Euclidean chord length to great circle arc length
-        """
-        central_angle = 2*np.arcsin(chord_length/(2.0*R)) 
-        arclength = R*central_angle
-        return arclength
+
+    '''
+    Extract nearest kpoints to each point given a list of them.
+    The input data contains at least latitude ('lat') and longitude ('lon').
+    The distance is calculated with great circle arc length.
+    Based on https://stackoverflow.com/q/43020919/190597
+    https://en.wikipedia.org/wiki/Great-circle_distance
+
+    Output:
+        distance: distances between nearest k points and each point using circle arch length.
+        index: indices of nearest k points for each point.
+    '''
+
+
     R = 6371
     phi = np.deg2rad(data['lat'])
     theta = np.deg2rad(data['lon'])
@@ -399,7 +403,7 @@ def using_kdtree(data,kpoints):
     data['z'] = R * np.sin(phi)
     tree = spatial.KDTree(data[['x', 'y','z']])
     distance, index = tree.query(data[['x', 'y','z']], k=kpoints)
-    #return dist_to_arclength(distance[:, 1])
+
     return distance, index
 
 
