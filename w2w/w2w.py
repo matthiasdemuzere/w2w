@@ -381,7 +381,10 @@ def check_lcz_integrity(info: Info, LCZ_BAND: int) -> None:
     lcz.rio.to_raster(info.src_file_clean, dtype=np.int32)
 
 
-def using_kdtree(data, kpoints):
+def using_kdtree(
+    data: pd.DataFrame,
+    kpoints: int,
+) -> Tuple[NDArray[np.float_], NDArray[np.int_]]:
 
     '''
     Extract nearest kpoints to each point given a list of them.
