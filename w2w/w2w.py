@@ -405,7 +405,10 @@ def using_kdtree(
     data['y'] = R * np.cos(phi) * np.sin(theta)
     data['z'] = R * np.sin(phi)
     tree = spatial.KDTree(data[['x', 'y', 'z']])
-    distance, index = tree.query(data[['x', 'y', 'z']], k=kpoints)
+    distance, index = tree.query(
+        data[['x', 'y', 'z']],
+        k=kpoints
+        )
 
     return distance, index
 
@@ -427,10 +430,13 @@ def wrf_remove_urban(
     greenf = dst_data.GREENFRAC.squeeze()
     lat = dst_data.XLAT_M.squeeze()
     lon = dst_data.XLONG_M.squeeze()
+    orig_num_land_cat = dst_data.NUM_LAND_CAT
+
+    #New arrays to hold data without urban areas
     newluse = luse.values.copy()
     newluf = luf.values.copy()
     newgreenf = greenf.values.copy()
-    orig_num_land_cat = dst_data.NUM_LAND_CAT
+    
 
     data_coord = pd.DataFrame(
         {
@@ -462,13 +468,15 @@ def wrf_remove_urban(
             f'Exiting...{ENDC}'
         )
 
-    dkd, ikd = using_kdtree(data_coord, min(luse.size, NPIX_AREA))
+    _, ikd = using_kdtree(data_coord, min(luse.size, NPIX_AREA))
 
     data_coord['luse_urb'] = data_coord.luse == 13
     data_coord['luse_natland'] = (
         (data_coord.luse != 13) & (data_coord.luse != 17) & (data_coord.luse != 21)
     )
 
+
+    #Replacing urban pixels with surrounding dominant natural land use category
     data_urb = data_coord.where(data_coord.luse_urb).dropna()
 
     for iurb in tqdm(data_urb.index, desc='Looping through urban grid pixels'):
@@ -500,7 +508,7 @@ def wrf_remove_urban(
         newluse[i, j] = int(mkd)
         newgreenf[:, i, j] = gkf
 
-    ## SET URBAN LANDUSEF to 0 and MOVE THAT FRACTION TO DOMINANT RURAL CATEGORY
+    # Set urban LANDUSEF to 0 and move that fraction to dominant natural category
     data_coord['newluse'] = newluse.ravel()
     data_luf = data_coord.where(data_coord.luf_urb).dropna()
 
