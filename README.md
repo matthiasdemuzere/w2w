@@ -66,7 +66,7 @@ Arguments
 ```
 -b --built-lcz = LCZ classes considered as urban (DEFAULT: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 -l --lcz-band = Band to use from LCZ file (DEFAULT: 0). For maps produced with LCZ Generator, use 1
--f --frc-threshold = FRC_URB2D treshold value to assign pixel as urban (DEFAULT: 0.2)
+-f --frc-threshold = FRC_URB2D threshold value to assign pixel as urban (DEFAULT: 0.2)
 -n --npix-nlc = Number of pixels to use for sampling neighbouring natural land cover (DEFAULT: 45)
 -a --npix_area = Area in number of pixels to look for the NPIX_NLC nearest number of pixels for sampling neighbouring natural land cover (DEFAULT: NPIX_NLC**2)
 --lcz-ucp = Specify a custom lookup table for the LCZ-based Urban Canopy Parameters

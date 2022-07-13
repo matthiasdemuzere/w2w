@@ -101,7 +101,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         metavar='',
         type=float,
         dest='FRC_THRESHOLD',
-        help='FRC_URB2D treshold value to assign pixel as urban ' '(DEFAULT: 0.2)',
+        help='FRC_URB2D trheshold value to assign pixel as urban ' '(DEFAULT: 0.2)',
         default=0.2,
     )
     parser.add_argument(
@@ -381,10 +381,7 @@ def check_lcz_integrity(info: Info, LCZ_BAND: int) -> None:
     lcz.rio.to_raster(info.src_file_clean, dtype=np.int32)
 
 
-def using_kdtree(
-    data: pd.DataFrame,
-    kpoints: int,
-) -> Tuple[NDArray[np.float_], NDArray[np.int_]]:
+def using_kdtree(data: pd.DataFrame, kpoints: int) -> NDArray[np.int_]:
 
     '''
     Extract nearest kpoints to each point given a list of them.
@@ -405,9 +402,8 @@ def using_kdtree(
     data['y'] = R * np.cos(phi) * np.sin(theta)
     data['z'] = R * np.sin(phi)
     tree = spatial.KDTree(data[['x', 'y', 'z']])
-    distance, index = tree.query(data[['x', 'y', 'z']], k=kpoints)
-
-    return distance, index
+    _, index = tree.query(data[['x', 'y', 'z']], k=kpoints)
+    return index
 
 
 def wrf_remove_urban(
@@ -464,7 +460,7 @@ def wrf_remove_urban(
             f'Exiting...{ENDC}'
         )
 
-    _, ikd = using_kdtree(data_coord, min(luse.size, NPIX_AREA))
+    ikd = using_kdtree(data_coord, min(luse.size, NPIX_AREA))
 
     data_coord['luse_urb'] = data_coord.luse == 13
     data_coord['luse_natland'] = (
