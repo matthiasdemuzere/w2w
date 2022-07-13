@@ -101,7 +101,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         metavar='',
         type=float,
         dest='FRC_THRESHOLD',
-        help='FRC_URB2D trheshold value to assign pixel as urban ' '(DEFAULT: 0.2)',
+        help='FRC_URB2D threshold value to assign pixel as urban ' '(DEFAULT: 0.2)',
         default=0.2,
     )
     parser.add_argument(
