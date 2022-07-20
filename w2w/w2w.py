@@ -244,11 +244,15 @@ class Info(NamedTuple):
 
 def _get_lcz_band(info: Info, args: argparse.Namespace) -> int:
 
+    ERROR = '\033[0;31m'
+    ENDC = '\033[0m'
     # Read the file
     try:
         lcz = rxr.open_rasterio(info.src_file)
     except RasterioIOError as exc:
-        print(f'ERROR: cannot find LCZ map file: {os.path.abspath(info.src_file)}')
+        print(
+            f'{ERROR}ERROR: cannot find LCZ map file: {os.path.abspath(info.src_file)}{ENDC}'
+        )
         raise SystemExit(exc)
 
     # Check if 'lczFilter' is part of attributes. If so, band = 1

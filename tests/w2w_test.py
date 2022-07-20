@@ -106,10 +106,10 @@ def test_get_lcz_band_not_found(info_mock, capsys):
         _get_lcz_band(info=info, args=args)
 
     out, _ = capsys.readouterr()
-    assert out == (
+    assert (
         f'ERROR: cannot find LCZ map file: '
-        f'{os.path.join(os.getcwd(), "testing/not_existing.tif")}\n'
-    )
+        f'{os.path.join(os.getcwd(), "testing/not_existing.tif")}'
+    ) in out
     assert exc_info.value.args[0].args[0] == (
         'testing/not_existing.tif: No such file or directory'
     )
