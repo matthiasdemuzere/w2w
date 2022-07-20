@@ -22,6 +22,7 @@ import xarray as xr
 from numpy.typing import NDArray
 from pyproj import CRS
 from pyproj import Transformer
+from rasterio.errors import RasterioIOError
 from rasterio.transform import Affine
 from rasterio.warp import reproject
 from rasterio.warp import Resampling
@@ -243,8 +244,16 @@ class Info(NamedTuple):
 
 def _get_lcz_band(info: Info, args: argparse.Namespace) -> int:
 
+    ERROR = '\033[0;31m'
+    ENDC = '\033[0m'
     # Read the file
-    lcz = rxr.open_rasterio(info.src_file)
+    try:
+        lcz = rxr.open_rasterio(info.src_file)
+    except RasterioIOError as exc:
+        print(
+            f'{ERROR}ERROR: cannot find LCZ map file: {os.path.abspath(info.src_file)}{ENDC}'
+        )
+        raise SystemExit(exc)
 
     # Check if 'lczFilter' is part of attributes. If so, band = 1
     if 'long_name' in lcz.attrs and 'lczFilter' in lcz.attrs['long_name']:
@@ -350,7 +359,13 @@ def check_lcz_integrity(info: Info, LCZ_BAND: int) -> None:
         )
         sys.exit(1)
 
-    wrf = xr.open_dataset(info.dst_file)
+    try:
+        wrf = xr.open_dataset(info.dst_file)
+    except FileNotFoundError as exc:
+        print(
+            f'{ERROR}ERROR: cannot find geo_em* file: {os.path.abspath(info.dst_file)}{ENDC}'
+        )
+        raise SystemExit(exc)
 
     # If any of [101, 102, 103, 104, 105, 106, 107] is in the lcz tif file.
     lcz_100 = np.array(

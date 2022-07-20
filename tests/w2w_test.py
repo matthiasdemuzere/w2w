@@ -10,8 +10,6 @@ import rioxarray as rxr
 import xarray as xr
 from affine import Affine
 from pytest import approx
-from rasterio.warp import reproject
-from rasterio.warp import Resampling
 
 import w2w.w2w
 from w2w.w2w import _add_frc_lu_index_2_wrf
@@ -101,6 +99,22 @@ def test_get_lcz_band_lcz_generator(info_mock, capsys):
     assert LCZ_BAND == 1
 
 
+def test_get_lcz_band_not_found(info_mock, capsys):
+    info = info_mock({'src_file': 'testing/not_existing.tif'})
+    args = argparse.Namespace(LCZ_BAND=0)
+    with pytest.raises(SystemExit) as exc_info:
+        _get_lcz_band(info=info, args=args)
+
+    out, _ = capsys.readouterr()
+    assert (
+        f'ERROR: cannot find LCZ map file: '
+        f'{os.path.join(os.getcwd(), "testing/not_existing.tif")}'
+    ) in out
+    assert exc_info.value.args[0].args[0] == (
+        'testing/not_existing.tif: No such file or directory'
+    )
+
+
 @pytest.mark.parametrize(
     ('arg', 'exp'),
     (
@@ -184,6 +198,24 @@ def test_check_lcz_integrity_exit_lcz_band(capsys, info_mock, tmpdir):
 
     out, _ = capsys.readouterr()
     assert 'ERROR: Can not read the requested LCZ_BAND' in out
+
+
+def test_check_lcz_integrity_dst_not_found(capsys, info_mock, tmpdir):
+    info = info_mock(
+        {
+            'src_file': 'sample_data/lcz_zaragoza.tif',
+            'dst_file': 'sample_data/not_existing_geo_em.d04.nc',
+        }
+    )
+    with pytest.raises(SystemExit) as exc_info:
+        check_lcz_integrity(info=info, LCZ_BAND=0)
+
+    out, _ = capsys.readouterr()
+    assert (
+        f'ERROR: cannot find geo_em* file: '
+        f'{os.path.join(os.getcwd(), "sample_data/not_existing_geo_em.d04.nc")}'
+    ) in out
+    assert 'No such file or directory' in exc_info.value.args[0].args
 
 
 def test_check_lcz_integrity_lcz_numbers_as_expected(capsys, tmpdir, info_mock):
