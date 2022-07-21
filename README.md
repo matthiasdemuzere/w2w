@@ -41,11 +41,8 @@ Output
 
    Differences between the original file and the newly created files by `w2w` are shown below for the sample data provided.
 
-   <p>
-<img src = "./sample_data/W2W-BeforeAfter.png">
-</p>
-<p>
-Fig.1: W2W results on sample data. Land use categories from the original file (a), the params file (b), the extent file (d) and the NoUrban (f). Pixels replaced with respect to the original file in params (c), extent (e) and NoUrb (g).
+![before and after](./sample_data/W2W-BeforeAfter.png)
+Fig.1: w2w results on sample data. Land use categories from the original file (a), the params file (b), the extent file (d) and the NoUrban (f). Pixels replaced with respect to the original file in params (c), extent (e) and NoUrb (g).
 </p>
 
    A [sample Jupyter notebook](./sample_data/Plotting_W2W-BeforeAfter.ipynb) is provided to recreate this Figure but is not part of the package, thus additional modules are required to run it.
