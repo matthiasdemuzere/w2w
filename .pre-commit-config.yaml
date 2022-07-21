@@ -14,7 +14,7 @@ repos:
     -   id: double-quote-string-fixer
     -   id: check-merge-conflict
 -   repo: https://github.com/asottile/reorder_python_imports
-    rev: v3.8.1
+    rev: v3.8.2
     hooks:
     -   id: reorder-python-imports
         args: [--py3-plus]
@@ -25,10 +25,31 @@ repos:
 -   repo: https://github.com/psf/black
     rev: 22.6.0
     hooks:
-      - id: black
+      - id: black-jupyter
         args: [--skip-string-normalization]
 -   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.961
+    rev: v0.971
     hooks:
     -   id: mypy
-        additional_dependencies: [numpy==1.22.2]
+        additional_dependencies: [numpy>=1.22.2]
+# jupyter hooks
+-   repo: https://github.com/nbQA-dev/nbQA
+    rev: 1.4.0
+    hooks:
+    -   id: nbqa
+        name: mypy-juypter
+        args: [mypy, --ignore-missing-imports, --scripts-are-modules]
+        additional_dependencies: [reorder-python-imports, mypy, numpy>=1.22.2]
+    -   id: nbqa
+        name: Reorder python import-jupyter
+        args: [reorder_python_imports]
+        additional_dependencies: [reorder-python-imports]
+        # the hook below are called via an unsupported interface, this may break at some point
+    -   id: nbqa
+        name: double-quote-string-fixer-jupyter
+        args: [pre_commit_hooks.string_fixer]
+        additional_dependencies: [pre-commit-hooks]
+    -   id: nbqa
+        name: debug-statements-jupyter
+        args: [pre_commit_hooks.debug_statement_hook]
+        additional_dependencies: [pre-commit-hooks]
