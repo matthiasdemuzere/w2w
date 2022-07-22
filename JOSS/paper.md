@@ -46,9 +46,9 @@ Because of these developments, an improved, Python-based, WUDAPT-to-WRF (`W2W`) 
 # Initial data requirements
 In order to use the tool, two input files are required:
 
-1. A **geo_em.d0X** (.nc) file for the inner WRF model domain in which one would like to use the LCZ-based information. This file can be produced by WRF's geogrid.exe tool as part of the WRF Preprocessing System (WPS), without additional modifications of the standard procedure.
+1. A **geo_em.dXX** (.nc) file for the inner WRF model domain in which one would like to use the LCZ-based information. This file can be produced by WRF's geogrid.exe tool as part of the WRF Preprocessing System (WPS), without additional modifications of the standard procedure.
 
-2.  A **Local Climate Zone map** (.tif) file that is slightly bigger than the domain extent of the geo_em.d0X.nc file. There are a number of ways to obtain an LCZ map for your region of interest (ROI):
+2.  A **Local Climate Zone map** (.tif) file that is slightly bigger than the domain extent of the geo_em.dXX.nc file. There are a number of ways to obtain an LCZ map for your region of interest (ROI):
 
    * Extract your ROI from the global LCZ map [@Demuzere2022], or the continental-scale LCZ maps for Europe [@Demuzere2019] or the United States [@Demuzere2020] (see also [here](https://www.wudapt.org/lcz-maps/) for more info).
    * Check if your ROI is already covered by the many LCZ maps available in the [submission table](https://lcz-generator.rub.de/submissions) of the LCZ Generator.
@@ -57,7 +57,7 @@ In order to use the tool, two input files are required:
 **Note**: When using LCZ information from any of the large-scale LCZ maps, please make sure to crop your domain of interest first, in order to avoid memory issues.
 
 # Workflow
-The goal of the Python-based `W2W` tool is to obtain an inner WRF domain file (*geo_em.d0X.nc*) that contains the built LCZ classes and their corresponding urban canopy parameters relevant for all urban parameterizations embedded in WRF: the single layer urban canopy model (Noah/SLUCM, @Kusaka2001), the Building Environment Parameterization (BEP, @Martilli2002), and BEP+BEM (Building Energy Model, @Salamanca2010).
+The goal of the Python-based `W2W` tool is to obtain an inner WRF domain file (*geo_em.dXX.nc*) that contains the built LCZ classes and their corresponding urban canopy parameters relevant for all urban parameterizations embedded in WRF: the single layer urban canopy model (Noah/SLUCM, @Kusaka2001), the Building Environment Parameterization (BEP, @Martilli2002), and BEP+BEM (Building Energy Model, @Salamanca2010).
 
 To get to that point, a number of sequential steps are required:
 
@@ -65,13 +65,13 @@ To get to that point, a number of sequential steps are required:
 
 The default urban land cover from MODIS is replaced with the dominant surrounding vegetation category, as done in @Li2020. This procedure affects WRF's parameters LU_INDEX, LANDUSEF and GREENFRAC. First, an initial number of neighbouring pixels (corresponding argument `--npix-area`, default = `--npix-nlc` ** 2) are selected using the k-d tree algorithm, to find the nearest pixels based on the great circle arc length, specifically [the chord length formula](https://en.wikipedia.org/wiki/Great-circle_distance). Afterwards, the LU_INDEX is set by sampling the dominant category from the corresponding argument `--npix-nlc` (default = 45) nearest initial grid points (excluding ocean, urban and lakes). GREENFRAC is calculated as the mean over all grid points with that dominant vegetation category among the `--npix-nlc` nearest points. For each grid point, if LANDUSEF had any percentage of urban, it is set to zero and the percentage is added to the dominant vegetation category assigned to that grid point.
 
-Resulting output: **geo_em.d0X_NoUrban.nc**
+Resulting output: **geo_em.dXX_NoUrban.nc**
 
 ### Step 2: Define the LCZ-based urban extent
 
 LCZ-based impervious fraction values (FRC_URB2D, available from `LCZ_UCP_default.csv`) are assigned to the original 100 m resolution LCZ map, and are aggregated to the WRF resolution. Areas with FRC_URB2D < 0.2 (corresponding to argument `--frc-threshold`) are currently considered non-urban. This choice has been made to avoid the use of the urban schemes in areas where the majority of the landuse is vegetated, since the impact of the impervious surfaces is low. The FRC_URB2D field is also used to mask all other urban parameter fields, so that their extent is consistent.
 
-Resulting output: **geo_em.d0X_LCZ_extent.nc**
+Resulting output: **geo_em.dXX_LCZ_extent.nc**
 
 ### Step 3: Introduce modal built LCZ classes
 
@@ -104,11 +104,11 @@ In a final step, some global attributes are adjusted in the resulting NetCDF fil
 * NBUI_MAX is added as a global attribute, reflecting the maximum amount of HI_URB2D classes that are not 0 across the model domain. This parameter can be used when compiling WRF, to optimize memory storage.
 * NUM_LAND_CAT is set to 41, to reflect the addition of 10 (or 11) built LCZ classes. This is not only done for the highest resolution domain file (e.g. d04), but also for **all of its lower-resolution parent domain files (e.g. d01, d02, d03)**. As such, make sure these files are also available in the input data directory. In case the parent domain files have  NUM_CAT_LAND $\neq$ 41, new parent domain files will be written to your drive with the extension `_41`.
 
-Resulting output: **geo_em.d0X_LCZ_params.nc** (and **geo_em.d0X_41.nc**)
+Resulting output: **geo_em.dXX_LCZ_params.nc** (and **geo_em.dXX_41.nc**)
 
 
 # Integration in WRF's preprocessing
- The current tool is designed to work with the geo_em.d0X files produced by geogrid.exe, which is available in the WRF Preprocessing System (WPS). WPS needs to be at a version >3.8, in order to incorporate the urban geometrical parameters in the `URB_PARAM` matrix [@Glotfelty2013]. The user should run geogrid.exe using its default settings, which will provide the various geo_em.d0X.nc files containing the static data fields. No additional variables are required, neither in the namelist.wps nor within the GEOGRID.TBL table. The `W2W` tool (\autoref{fig:w2w_workflow}) reads the standard geo_em.d0X.nc files (for all the domains) and produces the aforementioned **geo_em.d0X_LCZ_params.nc** files. The user should then simply rename these files to the standard name for each of the domains (e.g. rename geo_em.d01_41.nc to geo_em.d01.nc, geo_em.d04_LCZ_params.nc to geo_em.d04.nc, ...), which will serve as input to the metgrid.exe module (\autoref{fig:w2w_workflow}).
+ The current tool is designed to work with the geo_em.dXX files produced by geogrid.exe, which is available in the WRF Preprocessing System (WPS). WPS needs to be at a version >3.8, in order to incorporate the urban geometrical parameters in the `URB_PARAM` matrix [@Glotfelty2013]. The user should run geogrid.exe using its default settings, which will provide the various geo_em.dXX.nc files containing the static data fields. No additional variables are required, neither in the namelist.wps nor within the GEOGRID.TBL table. The `W2W` tool (\autoref{fig:w2w_workflow}) reads the standard geo_em.dXX.nc files (for all the domains) and produces the aforementioned **geo_em.dXX_LCZ_params.nc** files. The user should then simply rename these files to the standard name for each of the domains (e.g. rename geo_em.d01_41.nc to geo_em.d01.nc, geo_em.d04_LCZ_params.nc to geo_em.d04.nc, ...), which will serve as input to the metgrid.exe module (\autoref{fig:w2w_workflow}).
 
 ![Modified workflow to set-up and run a WRF simulations including urban parameters derived from LCZs using W2W.\label{fig:w2w_workflow}](w2w_workflow.jpg)
 
@@ -117,9 +117,9 @@ Resulting output: **geo_em.d0X_LCZ_params.nc** (and **geo_em.d0X_41.nc**)
 # Potential use cases
 The files provided as output by `W2W` allow a wide range of applications, including - but not limited to - addressing the impact of:
 
-* urbanization, by running WRF with the default geo_em.d0X.nc and the geo_em.d0X_NoUrban.nc files (see for example @Li2020 and @Hirsch2021).
-* an improved urban land cover extent description, by running WRF with the default geo_em.d0X.nc and the geo_em.d0X_LCZ_extent.nc files (similar to for example @Bhati2018 and @Mallard2018).
-* a more detailed (LCZ-based) urban description, by running WRF with the default geo_em.d0X.nc and the geo_em.d0X_LCZ_params.nc files (see for example @Brousse2016, @Hammerberg2018, @Molnar2019, @Wong2019, @Patel2020, @Zonato2020, @Ribeiro2021, @Hirsch2021 and @Patel2022).
+* urbanization, by running WRF with the default geo_em.dXX.nc and the geo_em.dXX_NoUrban.nc files (see for example @Li2020 and @Hirsch2021).
+* an improved urban land cover extent description, by running WRF with the default geo_em.dXX.nc and the geo_em.dXX_LCZ_extent.nc files (similar to for example @Bhati2018 and @Mallard2018).
+* a more detailed (LCZ-based) urban description, by running WRF with the default geo_em.dXX.nc and the geo_em.dXX_LCZ_params.nc files (see for example @Brousse2016, @Hammerberg2018, @Molnar2019, @Wong2019, @Patel2020, @Zonato2020, @Ribeiro2021, @Hirsch2021 and @Patel2022).
 
 
 # Important notes

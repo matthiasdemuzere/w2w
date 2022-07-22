@@ -45,12 +45,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     '''Add WUDAPT info to WRF's'''
 
     parser = argparse.ArgumentParser(
-        description='PURPOSE: Add LCZ-based info to WRF geo_em.d0X.nc\n \n'
+        description='PURPOSE: Add LCZ-based info to WRF geo_em.dXX.nc\n \n'
         'OUTPUT:\n'
         '- *_NoUrban.nc: MODIS Urban replaced by surrounding natural LC\n'
         '- *_LCZ_extent.nc: LCZ urban extent implemented, no LCZ UCPs yet\n'
         '- *_LCZ_params.nc: LCZ urban extent + UPC parameter values\n'
-        '- *_d0X_41.nc: Parent domain files reflecting 41 Land categories',
+        '- *_dXX_41.nc: Parent domain files reflecting 41 Land categories',
         formatter_class=RawTextHelpFormatter,
     )
 
@@ -58,7 +58,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument(
         type=str,
         dest='io_dir',
-        help='Directory that contains geo_em.d0X.nc and LCZ.tif file',
+        help='Directory that contains geo_em.dXX.nc and LCZ.tif file',
     )
     parser.add_argument(
         type=str,
