@@ -536,7 +536,7 @@ def wrf_remove_urban(
     # Save to final _lcz_params file
     if os.path.exists(info.dst_nu_file):
         os.remove(info.dst_nu_file)
-    dst_data.to_netcdf(info.dst_nu_file)
+    dst_data.to_netcdf(info.dst_nu_file, format='NETCDF3_64BIT')
 
 
 # Get WRF grid info for Resampler
@@ -1320,7 +1320,7 @@ def create_lcz_params_file(
     # Save back to file
     if os.path.exists(info.dst_lcz_params_file):
         os.remove(info.dst_lcz_params_file)
-    dst_final.to_netcdf(info.dst_lcz_params_file)
+    dst_final.to_netcdf(info.dst_lcz_params_file, format='NETCDF3_64BIT')
 
     return nbui_max
 
@@ -1371,7 +1371,7 @@ def create_lcz_extent_file(info: Info) -> None:
     dst_extent.attrs['NUM_LAND_CAT'] = np.intc(orig_num_land_cat)
 
     # Save file.
-    dst_extent.to_netcdf(info.dst_lcz_extent_file)
+    dst_extent.to_netcdf(info.dst_lcz_extent_file, format='NETCDF3_64BIT')
 
 
 def expand_land_cat_parents(info: Info) -> None:
@@ -1424,7 +1424,7 @@ def expand_land_cat_parents(info: Info) -> None:
                         da['LANDUSEF'].attrs[key] = luf_attrs[key]
 
                     ofile = ifile.replace('.nc', '_41.nc')
-                    da.to_netcdf(ofile)
+                    da.to_netcdf(ofile, format='NETCDF3_64BIT')
 
                 else:
                     print(f'> Parent domain d{i:02d}.nc already contains 41 LC classes')
