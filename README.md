@@ -1,5 +1,6 @@
 [![ci](https://github.com/matthiasdemuzere/w2w/actions/workflows/ci.yml/badge.svg)](https://github.com/matthiasdemuzere/w2w/actions/workflows/ci.yml)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/matthiasdemuzere/w2w/main.svg)](https://results.pre-commit.ci/latest/github/matthiasdemuzere/w2w/main)
+[![DOI](https://joss.theoj.org/papers/10.21105/joss.04432/status.svg)](https://doi.org/10.21105/joss.04432)
 
 w2w.py
 ======
@@ -115,11 +116,6 @@ Arguments
 ```
 
 
-Documentation & citation
--------
-A citable documentation is in preparation for [The Journal of Open Source Software](https://joss.theoj.org/). The draft version can be accessed [here](https://github.com/matthiasdemuzere/w2w/blob/main/JOSS/paper.pdf).
-
-
 Background context
 -------
 An important objective of WUDAPT, the World Urban Database and Access Portals Tools community project, is to generate urban canopy information and provide the (open-source) tools to facilitate urban-focused modelling studies ([Ching et al., 2018](http://journals.ametsoc.org/doi/10.1175/BAMS-D-16-0236.1)).
@@ -129,6 +125,11 @@ Since the work of [Brousse et al. (2016)](https://doi.org/10.1016/j.uclim.2016.0
 As of spring 2021, [WRF v4.3.x](https://github.com/wrf-model/WRF/releases/tag/v4.3) is able to ingest LCZ information by default (previous versions required manual WRF code changes by the user). See more details on "*Updates of WRF-urban in WRF 4.3: Local Climate Zones, Mitigation Strategies, building materials permeability and new buildings drag coefficient*" [here](https://ral.ucar.edu/sites/default/files/public/product-tool/urban-canopy-model/WRF_urban_update_Readme_file_WRF4.3.pdf). Because of this, we decided to simultaneously built an improved WUDAPT-to-WRF routine, to make the translation of LCZ-based parameters better and simpler. As before, the LCZ-based urban canopy parameters generally follow the values provided by [Stewart and Oke (2012)](http://doi.org/10.1175/BAMS-D-11-00019.1) and [Stewart et al. (2014)](http://doi.org/10.1002/joc.3746).
 
 The procedure in this new `w2w` tool is different from the former tool. Morphological parameters are assigned directly to the high-resolution LCZ map, and only afterwards aggregated to the WRF grid. In this way, the method produces a unique value of the different urban morphology parameters for each model cell. This was found to be more efficient in reproducing urban boundary layer features, especially in the outskirts of the city [(Zonato et al., 2020)](https://doi.org/10.1016/j.uclim.2020.100584), and is in line with the [WUDAPT-to-COSMO](https://github.com/matthiasdemuzere/WUDAPT-to-COSMO) routine [(Varentsov et al., 2020)](https://www.mdpi.com/2073-4433/11/12/1349). Other radiative and thermal parameters are for now still assigned to the modal LCZ class. More details on the procedure and its assumptions will soon be available [here](https://github.com/matthiasdemuzere/w2w#documentation--citation).
+
+
+How to cite?
+-------
+Demuzere, M., Argüeso, D., Zonato, A. and Kittner, J. (2022). W2W: A Python package that injects WUDAPT's Local Climate Zone information in WRF. Journal of Open Source Software, 7(76), 4432, DOI: [10.21105/joss.04432](https://doi.org/10.21105/joss.04432).
 
 
 License
