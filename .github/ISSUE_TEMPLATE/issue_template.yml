@@ -1,0 +1,46 @@
+name: Bug Report
+description: Something does not work/went wrong
+body:
+  - type: markdown
+    attributes:
+      value: This is for issues for `w2w`. For issues with WRF, please use their [issue tracker](https://github.com/wrf-model/WRF).
+  - type: textarea
+    id: freeform
+    attributes:
+      label: Describe your issue
+      description: Exact step by step reproduction of the issue you encounter
+      placeholder: "I wanted to do...\nI ran these commands...\nI expected this result...\nI got this result..."
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: w2w --version
+      placeholder: w2w x.x.x
+    validations:
+      required: true
+  - type: textarea
+    id: nc-config
+    attributes:
+      label: nc-config --all
+      placeholder: "This netCDF x.y.z has been built with the following features:\n..."
+      render: console
+    validations:
+      required: true
+  - type: textarea
+    id: pip-freeze
+    attributes:
+      label: 'Installed Packages'
+      description: output of pip freeze
+      placeholder: "numpy==1.23.1\n..."
+      render: console
+    validations:
+      required: true
+  - type: textarea
+    id: traceback
+    attributes:
+      label: 'Traceback'
+      placeholder: "Traceback (most recent call last):\n..."
+      render: console
+    validations:
+      required: false
