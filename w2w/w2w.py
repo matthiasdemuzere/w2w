@@ -154,6 +154,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     print(f'{FBOLD}--> Set data, arguments and files {FEND}')
     info = Info.from_argparse(args)
     ucp_table = pd.read_csv(lookup_table, index_col=0)
+
+    # Strip white spaces in column names in case they occur
+    ucp_table = ucp_table.rename(columns=lambda x: x.strip())
+
+    # Get the required LCZ band to use
     LCZ_BAND = _get_lcz_band(info=info, args=args)
 
     print(
