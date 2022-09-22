@@ -349,11 +349,9 @@ def check_custom_ucp_table_integraty(ucp_table):
     ENDC = '\033[0m'
 
     # MH_URB2D_MIN < MH_URB2D < MH_URB2D_MAX
-    check_min = sum(ucp_table['MH_URB2D_MIN'][:10]
-        < ucp_table['MH_URB2D'][:10]) == 10
+    check_min = sum(ucp_table['MH_URB2D_MIN'][:10] < ucp_table['MH_URB2D'][:10]) == 10
     print(check_min)
-    check_max = sum(ucp_table['MH_URB2D_MAX'][:10]
-        > ucp_table['MH_URB2D'][:10]) == 10
+    check_max = sum(ucp_table['MH_URB2D_MAX'][:10] > ucp_table['MH_URB2D'][:10]) == 10
     print(check_max)
     if not check_min or not check_max:
         print(
@@ -364,6 +362,7 @@ def check_custom_ucp_table_integraty(ucp_table):
         )
 
         sys.exit(1)
+
 
 def check_lcz_integrity(info: Info, LCZ_BAND: int) -> None:
 
