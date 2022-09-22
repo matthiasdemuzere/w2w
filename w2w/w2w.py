@@ -158,6 +158,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     # Strip white spaces in column names in case they occur
     ucp_table = ucp_table.rename(columns=lambda x: x.strip())
 
+    if args.lcz_ucp is not None:
+        check_custom_ucp_table_integraty(ucp_table)
+
     # Get the required LCZ band to use
     LCZ_BAND = _get_lcz_band(info=info, args=args)
 
@@ -331,6 +334,36 @@ def _check_lcz_wrf_extent(lcz: xr.DataArray, wrf: xr.Dataset) -> None:
     else:
         print('> LCZ domain is covering WRF domain')
 
+
+def check_custom_ucp_table_integraty(ucp_table):
+
+    '''
+    In order to calculte the building height distribution with
+    scipy.stats.truncnorm, custom MH_URB2D_MIN (MH_URB2D_MAX)
+    values need to be smaller (larger) than MH_URB2D.
+
+    If this is not the case, the routine will exit.
+    '''
+
+    ERROR = '\033[0;31m'
+    ENDC = '\033[0m'
+
+    # MH_URB2D_MIN < MH_URB2D < MH_URB2D_MAX
+    check_min = sum(ucp_table['MH_URB2D_MIN'][:10]
+        < ucp_table['MH_URB2D'][:10]) == 10
+    print(check_min)
+    check_max = sum(ucp_table['MH_URB2D_MAX'][:10]
+        > ucp_table['MH_URB2D'][:10]) == 10
+    print(check_max)
+    if not check_min or not check_max:
+        print(
+            f'{ERROR}ERROR: MH_URB2D_MIN (MH_URB2D_MAX) '
+            f'should be smaller (larger) than MH_URB2D.\n'
+            f'Please revise the custom ucp table accordingly. \n\n'
+            f'Exiting ...{ENDC}'
+        )
+
+        sys.exit(1)
 
 def check_lcz_integrity(info: Info, LCZ_BAND: int) -> None:
 
