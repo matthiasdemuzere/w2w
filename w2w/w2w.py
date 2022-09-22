@@ -350,9 +350,8 @@ def check_custom_ucp_table_integraty(ucp_table: pd.DataFrame) -> None:
 
     # MH_URB2D_MIN < MH_URB2D < MH_URB2D_MAX
     check_min = sum(ucp_table['MH_URB2D_MIN'][:10] < ucp_table['MH_URB2D'][:10]) == 10
-    print(check_min)
     check_max = sum(ucp_table['MH_URB2D_MAX'][:10] > ucp_table['MH_URB2D'][:10]) == 10
-    print(check_max)
+
     if not check_min or not check_max:
         print(
             f'{ERROR}ERROR: MH_URB2D_MIN (MH_URB2D_MAX) '
