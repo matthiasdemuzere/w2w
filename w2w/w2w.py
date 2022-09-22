@@ -335,7 +335,7 @@ def _check_lcz_wrf_extent(lcz: xr.DataArray, wrf: xr.Dataset) -> None:
         print('> LCZ domain is covering WRF domain')
 
 
-def check_custom_ucp_table_integraty(ucp_table):
+def check_custom_ucp_table_integraty(ucp_table: pd.DataFrame) -> None:
 
     '''
     In order to calculte the building height distribution with
