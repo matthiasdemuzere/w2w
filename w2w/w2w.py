@@ -159,7 +159,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ucp_table = ucp_table.rename(columns=lambda x: x.strip())
 
     if args.lcz_ucp is not None:
-        check_custom_ucp_table_integraty(ucp_table)
+        check_custom_ucp_table_integrity(ucp_table)
 
     # Get the required LCZ band to use
     LCZ_BAND = _get_lcz_band(info=info, args=args)
@@ -335,7 +335,7 @@ def _check_lcz_wrf_extent(lcz: xr.DataArray, wrf: xr.Dataset) -> None:
         print('> LCZ domain is covering WRF domain')
 
 
-def check_custom_ucp_table_integraty(ucp_table: pd.DataFrame) -> None:
+def check_custom_ucp_table_integrity(ucp_table: pd.DataFrame) -> None:
 
     '''
     In order to calculte the building height distribution with
