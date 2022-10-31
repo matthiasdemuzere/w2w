@@ -165,9 +165,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         LCZ_BAND=LCZ_BAND,
     )
 
-    print(
-        f'{FBOLD}--> Replace WRF urban LC with ' f'surrounding natural LC{FEND}'
-    )
+    print(f'{FBOLD}--> Replace WRF urban LC with ' f'surrounding natural LC{FEND}')
 
     wrf_remove_urban(
         info=info,
@@ -472,7 +470,10 @@ def wrf_remove_urban(
         data_coord['luf_urb'] = list((luf_2D[12, :] != 0))
     elif orig_num_land_cat == 28:  # USING USGS
         data_coord['luf_natland'] = list(
-            (luf_2D[0, :] == 0) & (luf_2D[15, :] == 0) & (luf_2D[18, :] == 0) & (luf_2D[27, :] == 0)
+            (luf_2D[0, :] == 0)
+            & (luf_2D[15, :] == 0)
+            & (luf_2D[18, :] == 0)
+            & (luf_2D[27, :] == 0)
         )
         data_coord['luf_urb'] = list((luf_2D[0, :] != 0))
     elif orig_num_land_cat == 24:  # USING USGS (NO LAKES)
@@ -482,9 +483,9 @@ def wrf_remove_urban(
         data_coord['luf_urb'] = list((luf_2D[0, :] != 0))
     else:
         raise NotImplementedError(
-                f'{ERROR}ERROR: Your data has a number of landuse classes ({orig_num_land_cat}),\n'
-                f'which has not been implemented{ENDC}'
-            )
+            f'{ERROR}ERROR: Your data has a number of landuse classes ({orig_num_land_cat}),\n'
+            f'which has not been implemented{ENDC}'
+        )
 
     if NPIX_AREA == None:
         NPIX_AREA = NPIX_NLC**2
@@ -498,15 +499,20 @@ def wrf_remove_urban(
 
     ikd = using_kdtree(data_coord, min(luse.size, NPIX_AREA))
 
-    if orig_num_land_cat == 20 or orig_num_land_cat == 21: # MODIS
+    if orig_num_land_cat == 20 or orig_num_land_cat == 21:  # MODIS
         data_coord['luse_urb'] = data_coord.luse == urb_cat
         data_coord['luse_natland'] = (
-            (data_coord.luse != urb_cat) & (data_coord.luse != 17) & (data_coord.luse != 21)
+            (data_coord.luse != urb_cat)
+            & (data_coord.luse != 17)
+            & (data_coord.luse != 21)
         )
-    elif orig_num_land_cat == 28 or orig_num_land_cat == 24: # USGS
+    elif orig_num_land_cat == 28 or orig_num_land_cat == 24:  # USGS
         data_coord['luse_urb'] = data_coord.luse == urb_cat
         data_coord['luse_natland'] = (
-            (data_coord.luse != urb_cat) & (data_coord.luse != 16) & (data_coord.luse != 19) & (data_coord.luse != 28)
+            (data_coord.luse != urb_cat)
+            & (data_coord.luse != 16)
+            & (data_coord.luse != 19)
+            & (data_coord.luse != 28)
         )
 
     # Replacing urban pixels with surrounding dominant natural land use category
@@ -548,9 +554,9 @@ def wrf_remove_urban(
     for iurb_luf in data_luf.index:
         i, j = np.unravel_index(iurb_luf, luse.shape)
         newluf[int(data_luf.loc[iurb_luf]['newluse']) - 1, i, j] += luf.isel(
-            south_north=i, west_east=j, land_cat=urb_cat-1
+            south_north=i, west_east=j, land_cat=urb_cat - 1
         ).values
-        newluf[urb_cat-1, i, j] = 0.0
+        newluf[urb_cat - 1, i, j] = 0.0
 
     dst_data.LU_INDEX.values[0, :] = newluse[:]
     dst_data.LANDUSEF.values[0, :] = newluf[:]
@@ -1151,13 +1157,9 @@ def _adjust_greenfrac_landusef(
     dst_data['LANDUSEF'] = dst_data.LANDUSEF.astype('float32')
 
     if orig_num_land_cat < 24:
-        luf_attrs['description'] = (
-            'Noah-modified 41-category ' 'IGBP-MODIS landuse'
-        )
+        luf_attrs['description'] = 'Noah-modified 41-category ' 'IGBP-MODIS landuse'
     else:
-        luf_attrs['description'] = (
-            'modified 41-category USGS landuse'
-        )
+        luf_attrs['description'] = 'modified 41-category USGS landuse'
     for key in luf_attrs.keys():
         dst_data['LANDUSEF'].attrs[key] = luf_attrs[key]
 
@@ -1391,7 +1393,7 @@ def create_lcz_extent_file(info: Info) -> None:
         ('Time', 'land_cat', 'south_north', 'west_east'),
         luf_values[:, :orig_num_land_cat, :, :],
     )
-    dst_extent['LANDUSEF'].values[0, urb_cat-1, frc_mask] = 1
+    dst_extent['LANDUSEF'].values[0, urb_cat - 1, frc_mask] = 1
     dst_extent['LANDUSEF'] = dst_extent.LANDUSEF.astype('float32')
 
     luf_attrs['description'] = orig_luf_description
@@ -1454,9 +1456,7 @@ def expand_land_cat_parents(info: Info) -> None:
                             'Noah-modified 41-category ' 'IGBP-MODIS landuse'
                         )
                     else:
-                        luf_attrs['description'] = (
-                            'modified 41-category USGS landuse'
-                        )
+                        luf_attrs['description'] = 'modified 41-category USGS landuse'
                     for key in luf_attrs.keys():
                         da['LANDUSEF'].attrs[key] = luf_attrs[key]
 
