@@ -441,7 +441,7 @@ def wrf_remove_urban(
     lat = dst_data.XLAT_M.squeeze()
     lon = dst_data.XLONG_M.squeeze()
     orig_num_land_cat = dst_data.NUM_LAND_CAT
-    urb_cat = 13 if orig_num_land_cat < 24 else 1
+    urb_cat = 13 if orig_num_land_cat < 22 or orig_num_land_cat == 41 else 1
 
     # New arrays to hold data without urban areas
     newluse = luse.values.copy()
@@ -460,7 +460,7 @@ def wrf_remove_urban(
     ENDC = '\033[0m'
 
     luf_2D = luf.values.reshape(luf.shape[0], -1)
-    if orig_num_land_cat == 21:  # USING MODIS_LAKE
+    if orig_num_land_cat == 21 or orig_num_land_cat == 41:  # USING MODIS_LAKE
         data_coord['luf_natland'] = list(
             (luf_2D[12, :] == 0) & (luf_2D[16, :] == 0) & (luf_2D[20, :] == 0)
         )
@@ -499,7 +499,9 @@ def wrf_remove_urban(
 
     ikd = using_kdtree(data_coord, min(luse.size, NPIX_AREA))
 
-    if orig_num_land_cat == 20 or orig_num_land_cat == 21:  # MODIS
+    if (
+        orig_num_land_cat == 20 or orig_num_land_cat == 21 or orig_num_land_cat == 41
+    ):  # MODIS
         data_coord['luse_urb'] = data_coord.luse == urb_cat
         data_coord['luse_natland'] = (
             (data_coord.luse != urb_cat)
@@ -1101,7 +1103,7 @@ def _adjust_greenfrac_landusef(
 
     dst_data_orig = xr.open_dataset(info.dst_file)
     orig_num_land_cat = dst_data_orig.NUM_LAND_CAT
-    urb_cat = 13 if orig_num_land_cat < 24 else 1
+    urb_cat = 13 if orig_num_land_cat < 22 or orig_num_land_cat == 41 else 1
 
     # Adjust GREENFRAC and LANDUSEF
     # GREENFRAC is set as average / month from GREENFRAC
@@ -1372,7 +1374,7 @@ def create_lcz_extent_file(info: Info) -> None:
 
     dst_data_orig = xr.open_dataset(info.dst_file)
     orig_num_land_cat = dst_data_orig.NUM_LAND_CAT
-    urb_cat = 13 if orig_num_land_cat < 24 else 1
+    urb_cat = 13 if orig_num_land_cat < 22 or orig_num_land_cat == 41 else 1
     orig_luf_description = dst_data_orig.LANDUSEF.description
 
     lu_index = dst_extent.LU_INDEX.values
@@ -1494,7 +1496,7 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
     ifile = info.dst_nu_file
     da = xr.open_dataset(ifile)
     orig_num_land_cat = xr.open_dataset(info.dst_file).NUM_LAND_CAT
-    urb_cat = 13 if orig_num_land_cat < 24 else 1
+    urb_cat = 13 if orig_num_land_cat < 22 or orig_num_land_cat == 41 else 1
     if urb_cat in da.LU_INDEX.values:
         print(
             f'{base_text}\n{WARNING} WARNING: Urban land use ' f'still present {ENDC}'
