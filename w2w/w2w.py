@@ -445,7 +445,7 @@ def wrf_remove_urban(
     is_water = dst_data.ISWATER
     is_lake = (
         dst_data.ISLAKE
-        if hasattr(dst_data, 'ISLAKE') and dst_data.ISLAKE < orig_num_land_cat
+        if hasattr(dst_data, 'ISLAKE') and 0 < dst_data.ISLAKE < orig_num_land_cat
         else None
     )
 
