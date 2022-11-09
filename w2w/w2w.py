@@ -157,7 +157,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     # Strip white spaces in column names in case they occur
     ucp_table = ucp_table.rename(columns=lambda x: x.strip())
-    ucp_table.index.name = None # Set explicitly for consistency
+    ucp_table.index.name = None  # Set explicitly for consistency
 
     if args.lcz_ucp is not None:
         check_custom_ucp_table_integrity(ucp_table)
