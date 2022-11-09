@@ -1276,7 +1276,14 @@ def test_main_default_lcz_ucp(tmpdir):
     pd.testing.assert_frame_equal(exp_df, m.call_args[1]['ucp_table'])
 
 
-def test_main_custom_lcz_ucp(tmpdir):
+@pytest.mark.parametrize(
+    'ucp',
+    (
+        'testing/custom_lcz_ucp.csv',
+        'testing/custom_lcz_ucp_w_spaces.csv',
+    ),
+)
+def test_main_custom_lcz_ucp(ucp, tmpdir):
     input_dir = tmpdir.mkdir('input')
     input_files = (
         'geo_em.d01.nc',
@@ -1287,7 +1294,7 @@ def test_main_custom_lcz_ucp(tmpdir):
     )
     for f in input_files:
         shutil.copy(os.path.join('sample_data', f), input_dir)
-    shutil.copy('testing/custom_lcz_ucp.csv', tmpdir)
+    shutil.copy(ucp, tmpdir)
 
     with tmpdir.as_cwd():
         with mock.patch.object(w2w.w2w, 'checks_and_cleaning') as m:
@@ -1297,9 +1304,16 @@ def test_main_custom_lcz_ucp(tmpdir):
                     'lcz_zaragoza.tif',
                     'geo_em.d04.nc',
                     '--lcz-ucp',
-                    'custom_lcz_ucp.csv',
+                    os.path.basename(ucp),
                 ],
             )
-
     exp_df = pd.read_csv('testing/custom_lcz_ucp.csv', index_col=0)
+    assert m.call_args[1]['ucp_table'].columns.to_list() == [
+        'FRC_URB2D',
+        'MH_URB2D_MIN',
+        'MH_URB2D',
+        'MH_URB2D_MAX',
+        'BLDFR_URB2D',
+        'H2W',
+    ]
     pd.testing.assert_frame_equal(exp_df, m.call_args[1]['ucp_table'])
