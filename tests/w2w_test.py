@@ -363,9 +363,17 @@ def test_wrf_remove_urban(
     assert compare.sum() == len(urb_locs['south_north'][1])
     # check the values were changed at those coords
     assert compare.sel(urb_locs).all()
-    urb_locs.update(land_cat=('urban', [ds.ISURBAN - 1] * 3))
+    urb_landusef = old_ds.LANDUSEF.sel(land_cat=ds.ISURBAN - 1).stack(
+        urban=['south_north', 'west_east']
+    )
+    urb_nonzero = urb_landusef.where(urb_landusef > 0, drop=True)
     # check the values were changed at those coords
-    assert (old_ds.LANDUSEF.sel(urb_locs) != ds.LANDUSEF.sel(urb_locs)).all()
+    nonzero_loc = {
+        'south_north': ('urban_nz', urb_nonzero.south_north.values),
+        'west_east': ('urban_nz', urb_nonzero.west_east.values),
+        'land_cat': ds.ISURBAN - 1,
+    }
+    assert (old_ds.LANDUSEF.sel(nonzero_loc) != ds.LANDUSEF.sel(nonzero_loc)).all()
 
 
 def test_wrf_remove_urban_output_already_exists_is_overwritten(tmpdir, info_mock):
