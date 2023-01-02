@@ -321,40 +321,59 @@ def test_check_lcz_integrity_clean_file_written(tmpdir, info_mock):
 
 
 @pytest.mark.parametrize(
-    ('dst_file', 'dst_nu_file'),
+    ('dst_file', 'dst_nu_file', 'urb_locs', 'replacement'),
     (
-        pytest.param('testing/5by5.nc', '5by5_new.nc', id='all cat'),
-        pytest.param('testing/5by5_20cat.nc', '5by5_20cat_new.nc', id='20 cat'),
+        pytest.param(
+            'testing/5by5.nc',
+            '5by5_new.nc',
+            {'south_north': ('urban', [2, 2, 4]), 'west_east': ('urban', [2, 3, 1])},
+            [12] * 3,
+            id='all cat',
+        ),
+        pytest.param(
+            'testing/5by5_20cat.nc',
+            '5by5_20cat_new.nc',
+            {'south_north': ('urban', [2, 2, 4]), 'west_east': ('urban', [2, 3, 1])},
+            [12] * 3,
+            id='20 cat',
+        ),
+        pytest.param(
+            'testing/5by5_usgs.nc',
+            '5by5_usgs_new.nc',
+            {'south_north': ('urban', [1, 0, 0]), 'west_east': ('urban', [0, 2, 3])},
+            [11, 6, 6],
+            id='usgs cat',
+        ),
     ),
 )
-def test_wrf_remove_urban(tmpdir, dst_file, dst_nu_file, info_mock):
+def test_wrf_remove_urban(
+    tmpdir, dst_file, dst_nu_file, urb_locs, replacement, info_mock
+):
     info = info_mock(
         {'dst_file': dst_file, 'dst_nu_file': os.path.join(tmpdir, dst_nu_file)}
     )
     old_ds = xr.open_dataset(info.dst_file)
     wrf_remove_urban(info=info, NPIX_NLC=9, NPIX_AREA=25)
     ds = xr.open_dataset(info.dst_nu_file)
-    # check lused 13 was reclassified to 12
-    assert ds.LU_INDEX.values[0][2][2] == 12
-    assert ds.LU_INDEX.values[0][2][3] == 12
-    assert ds.LU_INDEX.values[0][4][1] == 12
-    assert 13 not in ds.LU_INDEX.values.flatten()
-    # sum up the booleans to check that the luse 13 (which are 3) values have
-    # changed
-    compare = old_ds.GREENFRAC.values[0][0] != ds.GREENFRAC.values[0][0]
-    assert sum(compare.flatten()) == 3
+    # check luse was reclassified to replacement values
+    assert (ds.LU_INDEX.sel(urb_locs) == replacement).all()
+    assert not (ds.LU_INDEX == ds.ISURBAN).any()
+    # sum up the booleans to check that the luse values have changed
+    compare = old_ds.GREENFRAC.isel(month=0) != ds.GREENFRAC.isel(month=0)
+    assert compare.sum() == len(urb_locs['south_north'][1])
     # check the values were changed at those coords
-    assert compare[2][2].item() is True
-    assert compare[2][3].item() is True
-    assert compare[4][1].item() is True
-    compare_luf = old_ds.LANDUSEF.values[0][11] != ds.LANDUSEF.values[0][11]
+    assert compare.sel(urb_locs).all()
+    urb_landusef = old_ds.LANDUSEF.sel(land_cat=ds.ISURBAN - 1).stack(
+        urban=['south_north', 'west_east']
+    )
+    urb_nonzero = urb_landusef.where(urb_landusef > 0, drop=True)
     # check the values were changed at those coords
-    assert compare_luf[2][2].item() is True
-    assert compare_luf[2][3].item() is True
-    assert compare_luf[4][1].item() is True
-    # TODO: there is one more value changed than we expect
-    # the value at [4][0] is changed -- why?
-    # assert sum(compare_luf.flatten()) == 3
+    nonzero_loc = {
+        'south_north': ('urban_nz', urb_nonzero.south_north.values),
+        'west_east': ('urban_nz', urb_nonzero.west_east.values),
+        'land_cat': ds.ISURBAN - 1,
+    }
+    assert (old_ds.LANDUSEF.sel(nonzero_loc) != ds.LANDUSEF.sel(nonzero_loc)).all()
 
 
 def test_wrf_remove_urban_output_already_exists_is_overwritten(tmpdir, info_mock):

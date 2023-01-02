@@ -47,7 +47,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         description='PURPOSE: Add LCZ-based info to WRF geo_em.dXX.nc\n \n'
         'OUTPUT:\n'
-        '- *_NoUrban.nc: MODIS Urban replaced by surrounding natural LC\n'
+        '- *_NoUrban.nc: Urban replaced by surrounding natural LC\n'
         '- *_LCZ_extent.nc: LCZ urban extent implemented, no LCZ UCPs yet\n'
         '- *_LCZ_params.nc: LCZ urban extent + UPC parameter values\n'
         '- *_dXX_41.nc: Parent domain files reflecting 41 Land categories',
@@ -174,9 +174,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         LCZ_BAND=LCZ_BAND,
     )
 
-    print(
-        f'{FBOLD}--> Replace WRF MODIS urban LC with ' f'surrounding natural LC{FEND}'
-    )
+    print(f'{FBOLD}--> Replace WRF urban LC with ' f'surrounding natural LC{FEND}')
 
     wrf_remove_urban(
         info=info,
@@ -468,7 +466,7 @@ def wrf_remove_urban(
     NPIX_AREA: int,
 ) -> None:
 
-    '''Remove MODIS urban extent from geo_em*.nc file'''
+    '''Remove urban extent from geo_em*.nc file'''
 
     # Make a copy of original dst file
     dst_data = xr.open_dataset(info.dst_file)
@@ -480,6 +478,13 @@ def wrf_remove_urban(
     lat = dst_data.XLAT_M.squeeze()
     lon = dst_data.XLONG_M.squeeze()
     orig_num_land_cat = dst_data.NUM_LAND_CAT
+    urban_cat = dst_data.ISURBAN
+    water_cat = dst_data.ISWATER
+    lake_cat = (
+        dst_data.ISLAKE
+        if hasattr(dst_data, 'ISLAKE') and 0 < dst_data.ISLAKE < orig_num_land_cat
+        else None
+    )
 
     # New arrays to hold data without urban areas
     newluse = luse.values.copy()
@@ -498,14 +503,15 @@ def wrf_remove_urban(
     ENDC = '\033[0m'
 
     luf_2D = luf.values.reshape(luf.shape[0], -1)
-    if orig_num_land_cat > 20:  # USING MODIS_LAKE
-        data_coord['luf_natland'] = list(
-            (luf_2D[12, :] == 0) & (luf_2D[16, :] == 0) & (luf_2D[20, :] == 0)
+    data_coord['luf_natland'] = list(
+        (luf_2D[urban_cat - 1, :] == 0) & (luf_2D[water_cat - 1, :] == 0)
+    )
+    if lake_cat is not None:
+        data_coord['luf_natland'] = data_coord['luf_natland'] & (
+            luf_2D[lake_cat - 1, :] == 0
         )
-        data_coord['luf_urb'] = list((luf_2D[12, :] != 0))
-    else:  # USING MODIS (NO LAKES)
-        data_coord['luf_natland'] = list((luf_2D[12, :] == 0) & (luf_2D[16, :] == 0))
-        data_coord['luf_urb'] = list((luf_2D[12, :] != 0))
+    data_coord['luf_urb'] = list((luf_2D[urban_cat - 1, :] != 0))
+
     if NPIX_AREA == None:
         NPIX_AREA = NPIX_NLC**2
     if NPIX_AREA > luse.size:
@@ -518,11 +524,14 @@ def wrf_remove_urban(
 
     ikd = using_kdtree(data_coord, min(luse.size, NPIX_AREA))
 
-    data_coord['luse_urb'] = data_coord.luse == 13
-    data_coord['luse_natland'] = (
-        (data_coord.luse != 13) & (data_coord.luse != 17) & (data_coord.luse != 21)
+    data_coord['luse_urb'] = data_coord.luse == urban_cat
+    data_coord['luse_natland'] = (data_coord.luse != urban_cat) & (
+        data_coord.luse != water_cat
     )
-
+    if lake_cat is not None:
+        data_coord['luse_natland'] = data_coord['luse_natland'] & (
+            data_coord.luse != lake_cat
+        )
     # Replacing urban pixels with surrounding dominant natural land use category
     data_urb = data_coord.where(data_coord.luse_urb).dropna()
 
@@ -562,9 +571,9 @@ def wrf_remove_urban(
     for iurb_luf in data_luf.index:
         i, j = np.unravel_index(iurb_luf, luse.shape)
         newluf[int(data_luf.loc[iurb_luf]['newluse']) - 1, i, j] += luf.isel(
-            south_north=i, west_east=j, land_cat=12
+            south_north=i, west_east=j, land_cat=urban_cat - 1
         ).values
-        newluf[12, i, j] = 0.0
+        newluf[urban_cat - 1, i, j] = 0.0
 
     dst_data.LU_INDEX.values[0, :] = newluse[:]
     dst_data.LANDUSEF.values[0, :] = newluf[:]
@@ -1109,12 +1118,13 @@ def _adjust_greenfrac_landusef(
 
     dst_data_orig = xr.open_dataset(info.dst_file)
     orig_num_land_cat = dst_data_orig.NUM_LAND_CAT
+    urban_cat = dst_data_orig.ISURBAN
 
     # Adjust GREENFRAC and LANDUSEF
     # GREENFRAC is set as average / month from GREENFRAC
-    # of original MODIS urban pixels
+    # of original urban pixels
     wrf_urb = xr.DataArray(
-        np.in1d(dst_data_orig['LU_INDEX'][0, :, :].values, [13]).reshape(
+        np.in1d(dst_data_orig['LU_INDEX'][0, :, :].values, [urban_cat]).reshape(
             dst_data_orig['LU_INDEX'][0, :, :].shape
         ),
         dims=dst_data_orig['LU_INDEX'][0, :, :].dims,
@@ -1163,7 +1173,10 @@ def _adjust_greenfrac_landusef(
     )
     dst_data['LANDUSEF'] = dst_data.LANDUSEF.astype('float32')
 
-    luf_attrs['description'] = 'Noah-modified 41-category IGBP-MODIS landuse'
+    if orig_num_land_cat < 24:
+        luf_attrs['description'] = 'Noah-modified 41-category ' 'IGBP-MODIS landuse'
+    else:
+        luf_attrs['description'] = 'modified 41-category USGS landuse'
     for key in luf_attrs.keys():
         dst_data['LANDUSEF'].attrs[key] = luf_attrs[key]
 
@@ -1194,7 +1207,7 @@ def _add_frc_lu_index_2_wrf(
         FRC_THRESHOLD=FRC_THRESHOLD,
     )
 
-    # Add to geo_em* that that has no MODIS urban
+    # Add to geo_em* that that has no urban
     dst_data = xr.open_dataset(info.dst_nu_file)
 
     # Make a FRC_URB field and store aggregated data.
@@ -1376,10 +1389,11 @@ def create_lcz_extent_file(info: Info) -> None:
 
     dst_data_orig = xr.open_dataset(info.dst_file)
     orig_num_land_cat = dst_data_orig.NUM_LAND_CAT
+    urban_cat = dst_data_orig.ISURBAN
     orig_luf_description = dst_data_orig.LANDUSEF.description
 
     lu_index = dst_extent.LU_INDEX.values
-    lu_index[lu_index >= 31] = 13
+    lu_index[lu_index >= 31] = urban_cat
 
     dst_extent.LU_INDEX.values = lu_index
 
@@ -1396,7 +1410,7 @@ def create_lcz_extent_file(info: Info) -> None:
         ('Time', 'land_cat', 'south_north', 'west_east'),
         luf_values[:, :orig_num_land_cat, :, :],
     )
-    dst_extent['LANDUSEF'].values[0, 12, frc_mask] = 1
+    dst_extent['LANDUSEF'].values[0, urban_cat - 1, frc_mask] = 1
     dst_extent['LANDUSEF'] = dst_extent.LANDUSEF.astype('float32')
 
     luf_attrs['description'] = orig_luf_description
@@ -1454,9 +1468,12 @@ def expand_land_cat_parents(info: Info) -> None:
                     )
                     da['LANDUSEF'] = da.LANDUSEF.astype('float32')
 
-                    luf_attrs['description'] = (
-                        'Noah-modified 41-category ' 'IGBP-MODIS landuse'
-                    )
+                    if orig_num_land_cat < 24:
+                        luf_attrs['description'] = (
+                            'Noah-modified 41-category ' 'IGBP-MODIS landuse'
+                        )
+                    else:
+                        luf_attrs['description'] = 'modified 41-category USGS landuse'
                     for key in luf_attrs.keys():
                         da['LANDUSEF'].attrs[key] = luf_attrs[key]
 
@@ -1493,7 +1510,10 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
     )
     ifile = info.dst_nu_file
     da = xr.open_dataset(ifile)
-    if 13 in da.LU_INDEX.values:
+    dst_data_orig = xr.open_dataset(info.dst_file)
+    orig_num_land_cat = dst_data_orig.NUM_LAND_CAT
+    urban_cat = dst_data_orig.ISURBAN
+    if urban_cat in da.LU_INDEX.values:
         print(
             f'{base_text}\n{WARNING} WARNING: Urban land use ' f'still present {ENDC}'
         )
@@ -1506,7 +1526,7 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
     )
     ifile = info.dst_lcz_extent_file
     da = xr.open_dataset(ifile)
-    if not 13 in da.LU_INDEX.values:
+    if not urban_cat in da.LU_INDEX.values:
         print(
             f'{base_text}\n{WARNING} WARNING: LCZ-based urban ' f'extent missing {ENDC}'
         )
@@ -1519,10 +1539,10 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
     )
     ifile = info.dst_lcz_params_file
     da = xr.open_dataset(ifile)
-    if 13 in da.LU_INDEX.values:
+    if urban_cat in da.LU_INDEX.values:
         print(
             f'{base_text}\n{WARNING} WARNING: Urban extent still '
-            f'defined via LU_INDEX = 13? {ENDC}'
+            f'defined via LU_INDEX = {urban_cat}? {ENDC}'
         )
     else:
         LU_values = np.unique(da.LU_INDEX.values.flatten())
@@ -1662,7 +1682,7 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
     )
     da_e = xr.open_dataset(info.dst_lcz_extent_file)
     da_p = xr.open_dataset(info.dst_lcz_params_file)
-    da_e_res = xr.where(da_e.LU_INDEX == 13, 1, 0)
+    da_e_res = xr.where(da_e.LU_INDEX == urban_cat, 1, 0)
     da_p_res = xr.where(da_p.LU_INDEX >= 31, 1, 0)
 
     if int((da_p_res - da_e_res).sum()) != 0:
