@@ -40,7 +40,11 @@ body:
     id: traceback
     attributes:
       label: 'Traceback'
+      description: Provide the full traceback from start to end and please indicate if you have changed anything (e.g. for privacy reasons)
       placeholder: "Traceback (most recent call last):\n..."
       render: console
     validations:
       required: false
+  - type: markdown
+    attributes:
+      value: If files are needed to reproduce the error (e.g. `geo_em.*.nc` files), please upload them.

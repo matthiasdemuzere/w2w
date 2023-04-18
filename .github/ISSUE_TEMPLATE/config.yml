@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+- wrf: WRF issue tracker
+  url: https://github.com/wrf-model/WRF
+  about: For issues with WRF, please use their [issue tracker](https://github.com/wrf-model/WRF)
