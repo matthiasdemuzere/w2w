@@ -219,7 +219,6 @@ def test_check_lcz_integrity_dst_not_found(capsys, info_mock, tmpdir):
 
 
 def test_check_lcz_integrity_lcz_numbers_as_expected(capsys, tmpdir, info_mock):
-
     info = info_mock(
         {
             'src_file': 'sample_data/lcz_zaragoza.tif',
@@ -235,7 +234,6 @@ def test_check_lcz_integrity_lcz_numbers_as_expected(capsys, tmpdir, info_mock):
 
 
 def test_check_lcz_integrity_crs_changed(capsys, tmpdir, info_mock):
-
     info = info_mock(
         {
             'src_file': 'testing/Shanghai.tif',
@@ -307,7 +305,6 @@ def test_check_lcz_wrf_extent_ok(capsys, info_mock):
 
 
 def test_check_lcz_integrity_clean_file_written(tmpdir, info_mock):
-
     info = info_mock(
         {
             'src_file': 'testing/Shanghai.tif',
@@ -413,7 +410,6 @@ def test_get_wrf_grid_info(info_mock):
 
 
 def test_get_SW_BW():
-
     ucp_table = pd.read_csv('w2w/resources/LCZ_UCP_lookup.csv', index_col=0)
 
     SW, BW = _get_SW_BW(ucp_table)
@@ -445,7 +441,6 @@ def test_get_SW_BW():
 
 
 def test_get_lcz_arr(info_mock):
-
     info = info_mock(
         {
             'src_file': 'sample_data/lcz_zaragoza.tif',
@@ -534,7 +529,6 @@ def test_ucp_resampler_output_values_per_paramater_frc_threshold(info_mock):
 
 
 def test_hgt_resampler_output_values(info_mock):
-
     info = info_mock(
         {
             'src_file': 'sample_data/lcz_zaragoza.tif',
@@ -565,7 +559,6 @@ def test_hgt_resampler_output_values(info_mock):
 
 
 def test_check_hi_values_fails_skewed_distribution_ucp_table(capsys):
-
     lcz_i = 1
     SAMPLE_SIZE = 100000
     ERROR_MARGIN = 0.05
@@ -589,7 +582,6 @@ def test_check_hi_values_fails_skewed_distribution_ucp_table(capsys):
 
 
 def test_check_hi_values_fails_sample_size_too_small(capsys):
-
     lcz_i = 6
     SAMPLE_SIZE = 10
     ERROR_MARGIN = 0.05
@@ -608,7 +600,6 @@ def test_check_hi_values_fails_sample_size_too_small(capsys):
 
 
 def test_check_hi_values_fails_error_margin_too_small(capsys):
-
     lcz_i = 4
     SAMPLE_SIZE = 100000
     ERROR_MARGIN = 0.000001
@@ -627,7 +618,6 @@ def test_check_hi_values_fails_error_margin_too_small(capsys):
 
 
 def test_compute_hi_distribution_values(info_mock):
-
     info = info_mock({'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
 
     ucp_table = pd.read_csv('w2w/resources/LCZ_UCP_lookup.csv', index_col=0)
@@ -651,7 +641,6 @@ def test_compute_hi_distribution_values(info_mock):
 
 
 def test_compute_hi_distribution_values_lcz15(info_mock):
-
     info = info_mock({'BUILT_LCZ': [15]})
 
     ucp_table = pd.read_csv('w2w/resources/LCZ_UCP_lookup.csv', index_col=0)
@@ -671,7 +660,6 @@ def test_compute_hi_distribution_values_lcz15(info_mock):
 
 
 def test_scale_hi():
-
     # Create random array to work with,
     # with 10 levels of HI frequency values
     a = np.random.randint(1, 100, size=(10, 5, 5))
@@ -684,7 +672,6 @@ def test_scale_hi():
 
 
 def test_hi_resampler(info_mock):
-
     info = info_mock(
         {
             'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
@@ -738,7 +725,6 @@ def test_lcz_resampler_lcz_nat_mask_on_off_with_lcz15(
     lcz_counts,
     info_mock,
 ):
-
     info = info_mock(
         {
             'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
@@ -766,7 +752,6 @@ def test_lcz_resampler_lcz_nat_mask_on_off_with_lcz15(
 
 
 def test_add_frc_lu_index_2_wrf(info_mock):
-
     info = info_mock(
         {
             'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
@@ -991,7 +976,6 @@ def test_expand_land_cat_parents_no_num_land_cat(tmpdir, capsys, info_mock):
 
 
 def test_expand_land_cat_parents_num_land_cat_41(capsys, tmpdir, info_mock):
-
     input_dir = tmpdir.mkdir('input')
     shutil.copy(
         os.path.join('testing', 'geo_em.d02_Shanghai.nc'),
@@ -1015,7 +999,6 @@ def test_expand_land_cat_parents_num_land_cat_41(capsys, tmpdir, info_mock):
 
 
 def test_expand_land_cat_parents_num_land_cat_not41(capsys, tmpdir, info_mock):
-
     input_dir = tmpdir.mkdir('input')
     shutil.copy(
         os.path.join('testing', 'geo_em.d02_Shanghai.nc'),
@@ -1040,7 +1023,6 @@ def test_expand_land_cat_parents_num_land_cat_not41(capsys, tmpdir, info_mock):
 
 
 def test_checks_and_cleaning_sample_data_all_ok(capsys, tmpdir, info_mock):
-
     input_dir = tmpdir.mkdir('input')
     shutil.copy(os.path.join('sample_data', 'geo_em.d04.nc'), input_dir)
     shutil.copy(os.path.join('testing', 'lcz_zaragoza_clean.tif'), input_dir)
@@ -1141,7 +1123,6 @@ def test_checks_and_cleaning_sample_data_check1to5_wrong(
     tmpdir,
     info_mock,
 ):
-
     # Test WARNINGS by using dummy lcz_extent and lcz_params files
 
     input_dir = tmpdir.mkdir('input')
@@ -1192,7 +1173,6 @@ def test_checks_and_cleaning_sample_data_check6to9_wrong(
     tmpdir,
     info_mock,
 ):
-
     # Test WARNINGS by using dummy lcz_extent and lcz_params files
 
     input_dir = tmpdir.mkdir('input')

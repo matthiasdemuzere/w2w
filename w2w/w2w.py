@@ -41,7 +41,6 @@ else:  # pragma: <3.9 cover
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
-
     '''Add WUDAPT info to WRF's'''
 
     parser = argparse.ArgumentParser(
@@ -250,7 +249,6 @@ class Info(NamedTuple):
 
 
 def _get_lcz_band(info: Info, args: argparse.Namespace) -> int:
-
     ERROR = '\033[0;31m'
     ENDC = '\033[0m'
     # Read the file
@@ -299,7 +297,6 @@ def _replace_lcz_number(
 
 
 def _check_lcz_wrf_extent(lcz: xr.DataArray, wrf: xr.Dataset) -> None:
-
     ERROR = '\033[0;31m'
     ENDC = '\033[0m'
 
@@ -319,7 +316,6 @@ def _check_lcz_wrf_extent(lcz: xr.DataArray, wrf: xr.Dataset) -> None:
         & (wrf_ymin > lcz_ymin)
         & (wrf_ymax < lcz_ymax)
     ):
-
         message = (
             f'{ERROR}ERROR: LCZ domain should be larger than '
             'WRF domain in all directions.\n'
@@ -335,7 +331,6 @@ def _check_lcz_wrf_extent(lcz: xr.DataArray, wrf: xr.Dataset) -> None:
 
 
 def check_custom_ucp_table_integrity(ucp_table: pd.DataFrame) -> None:
-
     '''
     In order to calculte the building height distribution with
     scipy.stats.truncnorm, custom MH_URB2D_MIN (MH_URB2D_MAX)
@@ -363,7 +358,6 @@ def check_custom_ucp_table_integrity(ucp_table: pd.DataFrame) -> None:
 
 
 def check_lcz_integrity(info: Info, LCZ_BAND: int) -> None:
-
     '''
     Check integrity of LCZ GeoTIFF file, which should have:
     - LCZ class labels between 1 and 17
@@ -436,7 +430,6 @@ def check_lcz_integrity(info: Info, LCZ_BAND: int) -> None:
 
 
 def using_kdtree(data: pd.DataFrame, kpoints: int) -> NDArray[np.int_]:
-
     '''
     Extract nearest kpoints to each point given a list of them.
     The input data contains at least latitude ('lat') and longitude ('lon').
@@ -465,7 +458,6 @@ def wrf_remove_urban(
     NPIX_NLC: int,
     NPIX_AREA: int,
 ) -> None:
-
     '''Remove urban extent from geo_em*.nc file'''
 
     # Make a copy of original dst file
@@ -536,7 +528,6 @@ def wrf_remove_urban(
     data_urb = data_coord.where(data_coord.luse_urb).dropna()
 
     for iurb in tqdm(data_urb.index, desc='Looping through urban grid pixels'):
-
         i, j = np.unravel_index(iurb, luse.shape)
         data_luse_natland = (
             data_coord.loc[ikd[iurb, :]].where(data_coord.luse_natland).dropna()
@@ -588,7 +579,6 @@ def wrf_remove_urban(
 # Get WRF grid info for Resampler
 # Inspired by: https://fabienmaussion.info/2018/01/06/wrf-projection/
 def _get_wrf_grid_info(info: Info) -> Dict[str, Any]:
-
     # Initialize WGS84 projection
     wgs_proj = pyproj.Proj(proj='latlong', datum='WGS84')
 
@@ -669,7 +659,6 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Any]:
 
 
 def _get_SW_BW(ucp_table: pd.DataFrame) -> Tuple[pd.Series, pd.Series]:
-
     '''Get Street and Building Width'''
 
     # Street width extracted from S02012 Building heighht and H2W.
@@ -683,7 +672,6 @@ def _get_SW_BW(ucp_table: pd.DataFrame) -> Tuple[pd.Series, pd.Series]:
 
 
 def _get_lcz_arr(src_data: xr.DataArray, info: Info) -> NDArray[np.int_]:
-
     '''Get LCZ data as array, setting non-built pixels to 0'''
 
     # Get mask of selected built LCZs
@@ -709,7 +697,6 @@ def _ucp_resampler(
     ucp_table: pd.DataFrame,
     **kwargs: float,
 ) -> xr.DataArray:
-
     '''Helper function to resample lcz ucp data ('FRC_URB2D', 'MH_URB2D',
     'STDH_URB2D', 'LB_URB2D', 'LF_URB2D', 'LP_URB2D') to WRF grid'''
 
@@ -725,7 +712,6 @@ def _ucp_resampler(
 
     # Get Look-up for FRC_values
     if ucp_key in ['LB_URB2D', 'LF_URB2D', 'LP_URB2D']:
-
         # Following Zonato et al (2020)
         LAMBDA_P = BW / (BW + SW)
         LAMBDA_F = 2 * ucp_table['MH_URB2D'] / (BW + SW)
@@ -786,7 +772,6 @@ def _hgt_resampler(
     RESAMPLE_TYPE: str,
     ucp_table: pd.DataFrame,
 ) -> xr.DataArray:
-
     '''Helper function to resample HGT_URB2D (=Area Weighted
     Mean Building Height ) data to WRF grid'''
 
@@ -862,7 +847,6 @@ def _hgt_resampler(
 def _get_truncated_normal_sample(
     lcz_i: int, ucp_table: pd.DataFrame, SAMPLE_SIZE: int = 100000
 ) -> NDArray[np.float_]:
-
     '''Helper function to return bounded normal distribution sample'''
 
     # Create instance of a truncated normal distribution
@@ -887,7 +871,6 @@ def _check_hi_values(
     ucp_table: pd.DataFrame,
     ERROR_MARGIN: float,
 ) -> None:
-
     WARNING = '\033[0;35m'
     ENDC = '\033[0m'
 
@@ -899,7 +882,6 @@ def _check_hi_values(
     # Produce warning if approximated HI_URB2D distribution metrics
     # are not as expected: using a ERROR_MARGIN % marging here.
     for hi_metric in hi_metrics:
-
         if hi_metric == 'MH_URB2D_MIN':
             hi_sample_values = hi_sample.min()
         elif hi_metric == 'MH_URB2D_MAX':
@@ -928,7 +910,6 @@ def _compute_hi_distribution(
     SAMPLE_SIZE: int = 100000,
     ERROR_MARGIN: float = 0.05,
 ) -> pd.DataFrame:
-
     '''Helper function to compute building height distribution'''
 
     # Initialize dataframe that stores building height distributions
@@ -954,10 +935,8 @@ def _compute_hi_distribution(
     )
 
     for i in info.BUILT_LCZ:
-
         # LCZ 15 = paved, and considered to have no buildings (values = 0%)
         if not i == 15:
-
             # Make the sample
             hi_sample = _get_truncated_normal_sample(
                 lcz_i=i,
@@ -987,7 +966,6 @@ def _compute_hi_distribution(
 
 
 def _scale_hi(array: NDArray[np.int_]) -> List[float]:
-
     '''Helper function to scale HI_URB2D to 100%'''
 
     scaled_array = [(float(i) / sum(array) * 100.0) for i in array]
@@ -1000,7 +978,6 @@ def _hi_resampler(
     ucp_table: pd.DataFrame,
     HI_THRES_MIN: int = 5,
 ) -> Tuple[NDArray[np.float_], float]:
-
     '''Helper function to resample ucp HI_URB2D_URB2D data to WRF grid'''
 
     # Read gridded LCZ data
@@ -1021,7 +998,6 @@ def _hi_resampler(
 
     # Loop over the 15 height density classes.
     for hi_i in range(df_hi.shape[1]):
-
         # print(f"Working on height interval {df_hi.columns[hi_i]} ...")
         lookup = df_hi.iloc[:, hi_i].loc[info.BUILT_LCZ]
 
@@ -1073,7 +1049,6 @@ def _lcz_resampler(
     frc_urb2d: xr.DataArray,
     LCZ_NAT_MASK: bool,
 ) -> Tuple[NDArray[np.bool_], NDArray[np.float_]]:
-
     '''Helper function to resample lcz classes to WRF grid using majority'''
 
     # Read gridded LCZ data
@@ -1115,7 +1090,6 @@ def _adjust_greenfrac_landusef(
     dst_data: xr.Dataset,
     frc_mask: NDArray[np.bool_],
 ) -> xr.Dataset:
-
     dst_data_orig = xr.open_dataset(info.dst_file)
     orig_num_land_cat = dst_data_orig.NUM_LAND_CAT
     urban_cat = dst_data_orig.ISURBAN
@@ -1189,7 +1163,6 @@ def _add_frc_lu_index_2_wrf(
     LCZ_NAT_MASK: bool,
     ucp_table: pd.DataFrame,
 ) -> xr.Dataset:
-
     '''
     Add FRC_URB2D and adjusted LCZ-based LU_INDEX to WRF file
     Also alters LANDUSEF and GREENFRAC in line with LU_INDEX
@@ -1240,7 +1213,6 @@ def _add_frc_lu_index_2_wrf(
 
 
 def _initialize_urb_param(dst_data: xr.Dataset) -> xr.Dataset:
-
     '''Helper function to initialize URB_PARAM in WRF geo_em file'''
 
     URB_PARAM = np.zeros([1, 132, len(dst_data.south_north), len(dst_data.west_east)])
@@ -1267,7 +1239,6 @@ def create_lcz_params_file(
     LCZ_NAT_MASK: bool,
     ucp_table: pd.DataFrame,
 ) -> float:
-
     '''
     Create a domain file with all LCZ-based information:
     Map, aggregate and add lcz-based UCP values to the inner geo_em file.
@@ -1301,7 +1272,6 @@ def create_lcz_params_file(
     }
 
     for ucp_key in ucp_dict.keys():
-
         print(f'> Processing {ucp_key} ...')
 
         # Obtain aggregated LCZ-based UCP values
@@ -1376,7 +1346,6 @@ def create_lcz_params_file(
 
 
 def create_lcz_extent_file(info: Info) -> None:
-
     '''
     Create a domain file with an LCZ-based urban extent
     (excluding other LCZ-based info)
@@ -1426,7 +1395,6 @@ def create_lcz_extent_file(info: Info) -> None:
 
 
 def expand_land_cat_parents(info: Info) -> None:
-
     WARNING = '\033[0;35m'
     ENDC = '\033[0m'
 
@@ -1437,16 +1405,13 @@ def expand_land_cat_parents(info: Info) -> None:
     domain_lst = list(np.arange(1, domain_nr, 1))
 
     for i in domain_lst:
-
         ifile = f'{info.dst_file[:-5]}{i:02d}.nc'
 
         if os.path.exists(ifile):
-
             da = xr.open_dataset(ifile)
 
             try:
                 if int(da.attrs['NUM_LAND_CAT']) != 41:
-
                     orig_num_land_cat = da.attrs['NUM_LAND_CAT']
                     # Set number of land categories to 41
                     da.attrs['NUM_LAND_CAT'] = np.intc(41)
@@ -1498,7 +1463,6 @@ def expand_land_cat_parents(info: Info) -> None:
 
 
 def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) -> None:
-
     'Sanity checks and cleaning'
 
     OKGREEN = '\033[0;32m'
@@ -1626,7 +1590,6 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
 
         print(base_text)
         for ucp_key in ucp_dict.keys():
-
             darr = da.URB_PARAM[
                 0, ucp_dict[ucp_key]['index'] - 1, :, :
             ].values.flatten()
@@ -1715,7 +1678,6 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
 ###############################################################################
 
 if __name__ == '__main__':
-
     raise SystemExit(main())
 
 ###############################################################################
