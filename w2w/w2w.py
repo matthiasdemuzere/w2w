@@ -49,7 +49,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         '- *_NoUrban.nc: Urban replaced by surrounding natural LC\n'
         '- *_LCZ_extent.nc: LCZ urban extent implemented, no LCZ UCPs yet\n'
         '- *_LCZ_params.nc: LCZ urban extent + UPC parameter values\n'
-        '- *_dXX_41.nc: Parent domain files reflecting 41 Land categories',
+        '- *_dXX_41.nc or *_dXX_61.nc: Parent domain files reflecting 41 or 61 Land categories',
         formatter_class=RawTextHelpFormatter,
     )
 
@@ -70,6 +70,22 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         help='WRF geo_em* file name',
     )
 
+    parser.add_argument(
+        type=str,
+        dest='wrf_version',
+        help='Expected WRF version numbers:\n'
+             '- v4.3\n'
+             '- v4.3.1\n'
+             '- v4.3.2\n'
+             '- v4.3.3\n'
+             '- v4.4\n'
+             '- v4.4.1\n'
+             '- v4.4.2\n'
+             '- v4.5\n'
+             '- v4.5.1\n'
+             '- v4.5.2\n'
+             'Note: in case you use a version older than v4.3, please use v4.3',
+    )
     # Additional arguments
     parser.add_argument(
         '-V',
@@ -136,6 +152,22 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     )
 
     args = parser.parse_args(argv)
+
+    # WRF version dict
+    wrf_versions_dict = {
+        'v4.3': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
+        'v4.3.1': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
+        'v4.3.2': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
+        'v4.3.3': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
+        'v4.4': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
+        'v4.4.1': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
+        'v4.4.2': {'ADD_LCZ_INT': 50, 'NUM_LAND_CAT': 61},
+        'v4.5': {'ADD_LCZ_INT': 50, 'NUM_LAND_CAT': 61},
+        'v4.5.1': {'ADD_LCZ_INT': 50, 'NUM_LAND_CAT': 61},
+        'v4.5.2': {'ADD_LCZ_INT': 50, 'NUM_LAND_CAT': 61}
+    }
+    # Get specific WRF version settings
+    wrf_version_settings = wrf_versions_dict[wrf_version]
 
     # check if a custom LCZ UCP file was set and read it
     if args.lcz_ucp is not None:
@@ -1083,7 +1115,7 @@ def _lcz_resampler(
     frc_mask = frc_urb2d.values[0, :, :] != 0
 
     # Final LU_INDEX = 31 to 41 (included), as LCZ classes.
-    lcz_resampled = lcz_2_wrf[0, frc_mask] + 30
+    lcz_resampled = lcz_2_wrf[0, frc_mask] + wrf_version_settings['ADD_LCZ_INT']
 
     return frc_mask, lcz_resampled
 
@@ -1116,9 +1148,12 @@ def _adjust_greenfrac_landusef(
         dst_data['GREENFRAC'].values[0, mm, frc_mask] = greenfrac_per_month[mm]
 
     # TODO: For lower resolution domains, this might not be valid?
-    # Create new LANDUSEF with 41 levels instead of 21
+    # Create new LANDUSEF with 41/61 levels instead of 21
     landusef_new = np.zeros(
-        (41, dst_data.LANDUSEF.shape[2], dst_data.LANDUSEF.shape[3])
+        (
+            wrf_version_settings['NUM_LAND_CAT'],
+            dst_data.LANDUSEF.shape[2], dst_data.LANDUSEF.shape[3]
+        )
     )
 
     # Copy values from original file
@@ -1151,9 +1186,10 @@ def _adjust_greenfrac_landusef(
     dst_data['LANDUSEF'] = dst_data.LANDUSEF.astype('float32')
 
     if orig_num_land_cat < 24:
-        luf_attrs['description'] = 'Noah-modified 41-category ' 'IGBP-MODIS landuse'
+        luf_attrs['description'] = (f'Noah-modified {wrf_version_settings['NUM_LAND_CAT']}-category '
+                                    f'IGBP-MODIS landuse')
     else:
-        luf_attrs['description'] = 'modified 41-category USGS landuse'
+        luf_attrs['description'] = f'modified {wrf_version_settings['NUM_LAND_CAT']}-category USGS landuse'
     for key in luf_attrs.keys():
         dst_data['LANDUSEF'].attrs[key] = luf_attrs[key]
 
@@ -1206,7 +1242,7 @@ def _add_frc_lu_index_2_wrf(
         LCZ_NAT_MASK=LCZ_NAT_MASK,
     )
 
-    # 2) as LU_INDEX = 30 to 41, as LCZ classes.
+    # 2) as LU_INDEX = 30 to 41 or 50 to 61, as LCZ classes.
     dst_data['LU_INDEX'].values[0, frc_mask] = lcz_resampled
 
     # Also adjust GREENFRAC and LANDUSEF
@@ -1322,7 +1358,7 @@ def create_lcz_params_file(
     # Add/Change some additional global attributes,
     # including NBUI_MAX = max. nr. of HI intervals over the grid
     glob_attrs: Dict[str, Union[int, SupportsInt]] = {
-        'NUM_LAND_CAT': 41,
+        'NUM_LAND_CAT': wrf_version_settings['NUM_LAND_CAT'],
         'FLAG_URB_PARAM': 1,
         'NBUI_MAX': np.intc(nbui_max),
     }
@@ -1414,14 +1450,14 @@ def expand_land_cat_parents(info: Info) -> None:
             da = xr.open_dataset(ifile)
 
             try:
-                if int(da.attrs['NUM_LAND_CAT']) != 41:
+                if int(da.attrs['NUM_LAND_CAT']) != wrf_version_settings['NUM_LAND_CAT']:
                     orig_num_land_cat = da.attrs['NUM_LAND_CAT']
-                    # Set number of land categories to 41
-                    da.attrs['NUM_LAND_CAT'] = np.intc(41)
+                    # Set number of land categories to 41 or 61
+                    da.attrs['NUM_LAND_CAT'] = np.intc(wrf_version_settings['NUM_LAND_CAT'])
 
                     # Create new landusef array with expanded dimensions
                     landusef_new = np.zeros(
-                        (1, 41, da.LANDUSEF.shape[2], da.LANDUSEF.shape[3])
+                        (1, wrf_version_settings['NUM_LAND_CAT'], da.LANDUSEF.shape[2], da.LANDUSEF.shape[3])
                     )
                     landusef_new[:, :orig_num_land_cat, :, :] = da['LANDUSEF'].values
 
@@ -1438,14 +1474,14 @@ def expand_land_cat_parents(info: Info) -> None:
 
                     if orig_num_land_cat < 24:
                         luf_attrs['description'] = (
-                            'Noah-modified 41-category ' 'IGBP-MODIS landuse'
+                            f'Noah-modified {wrf_version_settings['NUM_LAND_CAT']}-category IGBP-MODIS landuse'
                         )
                     else:
-                        luf_attrs['description'] = 'modified 41-category USGS landuse'
+                        luf_attrs['description'] = f'modified {wrf_version_settings['NUM_LAND_CAT']}-category USGS landuse'
                     for key in luf_attrs.keys():
                         da['LANDUSEF'].attrs[key] = luf_attrs[key]
 
-                    ofile = ifile.replace('.nc', '_41.nc')
+                    ofile = ifile.replace('.nc', f'_{wrf_version_settings['NUM_LAND_CAT']}.nc')
                     da.to_netcdf(ofile)
 
                 else:
