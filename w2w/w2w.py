@@ -31,7 +31,6 @@ from tqdm.auto import tqdm
 
 np.seterr(divide='ignore', invalid='ignore')
 
-
 if sys.version_info >= (3, 9):  # pragma: >=3.9 cover
     import importlib.metadata as importlib_metadata
     import importlib.resources as importlib_resources
@@ -45,11 +44,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     parser = argparse.ArgumentParser(
         description='PURPOSE: Add LCZ-based info to WRF geo_em.dXX.nc\n \n'
-        'OUTPUT:\n'
-        '- *_NoUrban.nc: Urban replaced by surrounding natural LC\n'
-        '- *_LCZ_extent.nc: LCZ urban extent implemented, no LCZ UCPs yet\n'
-        '- *_LCZ_params.nc: LCZ urban extent + UPC parameter values\n'
-        '- *_dXX_41.nc or *_dXX_61.nc: Parent domain files reflecting 41 or 61 Land categories',
+                    'OUTPUT:\n'
+                    '- *_NoUrban.nc: Urban replaced by surrounding natural LC\n'
+                    '- *_LCZ_extent.nc: LCZ urban extent implemented, no LCZ UCPs yet\n'
+                    '- *_LCZ_params.nc: LCZ urban extent + UPC parameter values\n'
+                    '- *_dXX_41.nc or *_dXX_61.nc: Parent domain files reflecting 41 or 61 Land categories',
         formatter_class=RawTextHelpFormatter,
     )
 
@@ -110,9 +109,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         type=int,
         dest='LCZ_BAND',
         help='Band to use from LCZ GeoTIFF file:\n'
-        '* 0: first band (DEFAULT)\n'
-        '* 1: second band, for maps produced with the LCZ Generator\n'
-        '* X: any other band can be selected by providing an integer (0-indexed)',
+             '* 0: first band (DEFAULT)\n'
+             '* 1: second band, for maps produced with the LCZ Generator\n'
+             '* X: any other band can be selected by providing an integer (0-indexed)',
         default=0,
     )
     parser.add_argument(
@@ -131,7 +130,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         type=int,
         dest='NPIX_NLC',
         help='Number of pixels to use for sampling neighbouring '
-        'natural land cover (DEFAULT: 45)',
+             'natural land cover (DEFAULT: 45)',
         default=45,
     )
 
@@ -142,7 +141,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         type=int,
         dest='NPIX_AREA',
         help='Area in number of pixels to look for the nearest number of pixels'
-        'for sampling neighbouring natural land cover (DEFAULT: NPIX_NLC**2)',
+             'for sampling neighbouring natural land cover (DEFAULT: NPIX_NLC**2)',
         default=None,
     )
     parser.add_argument(
@@ -166,8 +165,27 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         'v4.5.1': {'ADD_LCZ_INT': 50, 'NUM_LAND_CAT': 61},
         'v4.5.2': {'ADD_LCZ_INT': 50, 'NUM_LAND_CAT': 61}
     }
-    # Get specific WRF version settings
-    wrf_version_settings = wrf_versions_dict[wrf_version]
+
+    # Check if WRF version is known
+    if not args.wrf_version in wrf_versions_dict.keys():
+        ENDC = '\033[0m'
+        print(
+            f'ERROR: I do not know what to do with WRF version {args.wrf_version} \n.'
+            f'Please use one of the following:\n'
+            '- v4.3\n'
+            '- v4.3.1\n'
+            '- v4.3.2\n'
+            '- v4.3.3\n'
+            '- v4.4\n'
+            '- v4.4.1\n'
+            '- v4.4.2\n'
+            '- v4.5\n'
+            '- v4.5.1\n'
+            '- v4.5.2\n'
+            'Note: in case you use a version older than v4.3, please use v4.3\n\n'
+            f'Exiting ...{ENDC}'
+        )
+        sys.exit(1)
 
     # check if a custom LCZ UCP file was set and read it
     if args.lcz_ucp is not None:
@@ -183,7 +201,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     # Execute the functions
     print(f'{FBOLD}--> Set data, arguments and files {FEND}')
-    info = Info.from_argparse(args)
+    wrf_v_info = wrf_versions_dict[args.wrf_version]
+    info = Info.from_argparse(args, wrf_v_info)
+    print(info)
     ucp_table = pd.read_csv(lookup_table, index_col=0)
 
     # Strip white spaces in column names in case they occur
@@ -229,7 +249,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         info=info,
     )
 
-    print(f'{FBOLD}--> Expanding land categories of parent ' f'domain(s) to 41{FEND}')
+    print(f"{FBOLD}--> Expanding land categories of parent "
+          f"domain(s) to {info.WRF_V_INFO['NUM_LAND_CAT']}{FEND}")
     expand_land_cat_parents(
         info=info,
     )
@@ -256,9 +277,10 @@ class Info(NamedTuple):
     dst_lcz_extent_file: str
     dst_lcz_params_file: str
     BUILT_LCZ: List[int]
+    WRF_V_INFO: Dict[str, Any]
 
     @classmethod
-    def from_argparse(cls, args: argparse.Namespace) -> 'Info':
+    def from_argparse(cls, args: argparse.Namespace, wrf_v_info: Dict[str, Any]) -> 'Info':
         # Define output and tmp file(s), the latter is removed when done.
         return cls(
             io_dir=args.io_dir,
@@ -277,6 +299,7 @@ class Info(NamedTuple):
                 args.io_dir, args.wrf_file.replace('.nc', '_LCZ_params.nc')
             ),
             BUILT_LCZ=args.built_lcz,
+            WRF_V_INFO=wrf_v_info,
         )
 
 
@@ -313,7 +336,7 @@ def _get_lcz_band(info: Info, args: argparse.Namespace) -> int:
 
 
 def _replace_lcz_number(
-    lcz: xr.DataArray, lcz_to_change: NDArray[np.int_]
+        lcz: xr.DataArray, lcz_to_change: NDArray[np.int_]
 ) -> xr.DataArray:
     lcz_expected = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17])
 
@@ -343,10 +366,10 @@ def _check_lcz_wrf_extent(lcz: xr.DataArray, wrf: xr.Dataset) -> None:
 
     # Evaluate and throw error if WRF not within LCZ domain
     if (
-        not (wrf_xmin > lcz_xmin)
-        & (wrf_xmax < lcz_xmax)
-        & (wrf_ymin > lcz_ymin)
-        & (wrf_ymax < lcz_ymax)
+            not (wrf_xmin > lcz_xmin)
+                & (wrf_xmax < lcz_xmax)
+                & (wrf_ymin > lcz_ymin)
+                & (wrf_ymax < lcz_ymax)
     ):
         message = (
             f'{ERROR}ERROR: LCZ domain should be larger than '
@@ -486,9 +509,9 @@ def using_kdtree(data: pd.DataFrame, kpoints: int) -> NDArray[np.int_]:
 
 
 def wrf_remove_urban(
-    info: Info,
-    NPIX_NLC: int,
-    NPIX_AREA: int,
+        info: Info,
+        NPIX_NLC: int,
+        NPIX_AREA: int,
 ) -> None:
     '''Remove urban extent from geo_em*.nc file'''
 
@@ -532,12 +555,12 @@ def wrf_remove_urban(
     )
     if lake_cat is not None:
         data_coord['luf_natland'] = data_coord['luf_natland'] & (
-            luf_2D[lake_cat - 1, :] == 0
+                luf_2D[lake_cat - 1, :] == 0
         )
     data_coord['luf_urb'] = list((luf_2D[urban_cat - 1, :] != 0))
 
     if NPIX_AREA == None:
-        NPIX_AREA = NPIX_NLC**2
+        NPIX_AREA = NPIX_NLC ** 2
     if NPIX_AREA > luse.size:
         raise ValueError(
             f'{ERROR}ERROR: The area you selected is larger than the domain size\n'
@@ -550,11 +573,11 @@ def wrf_remove_urban(
 
     data_coord['luse_urb'] = data_coord.luse == urban_cat
     data_coord['luse_natland'] = (data_coord.luse != urban_cat) & (
-        data_coord.luse != water_cat
+            data_coord.luse != water_cat
     )
     if lake_cat is not None:
         data_coord['luse_natland'] = data_coord['luse_natland'] & (
-            data_coord.luse != lake_cat
+                data_coord.luse != lake_cat
         )
     # Replacing urban pixels with surrounding dominant natural land use category
     data_urb = data_coord.where(data_coord.luse_urb).dropna()
@@ -699,8 +722,8 @@ def _get_SW_BW(ucp_table: pd.DataFrame) -> Tuple[pd.Series, pd.Series]:
     SW = ucp_table['MH_URB2D'] / ucp_table['H2W']
     # Building Width according to bldfr_urb2d/(frc_urb2d-bldfr_urb2d)*sw
     BW = (
-        ucp_table['BLDFR_URB2D'] / (ucp_table['FRC_URB2D'] - ucp_table['BLDFR_URB2D'])
-    ) * SW
+                 ucp_table['BLDFR_URB2D'] / (ucp_table['FRC_URB2D'] - ucp_table['BLDFR_URB2D'])
+         ) * SW
 
     return SW, BW
 
@@ -725,11 +748,11 @@ def _get_lcz_arr(src_data: xr.DataArray, info: Info) -> NDArray[np.int_]:
 
 
 def _ucp_resampler(
-    info: Info,
-    ucp_key: str,
-    RESAMPLE_TYPE: str,
-    ucp_table: pd.DataFrame,
-    **kwargs: float,
+        info: Info,
+        ucp_key: str,
+        RESAMPLE_TYPE: str,
+        ucp_table: pd.DataFrame,
+        **kwargs: float,
 ) -> xr.DataArray:
     '''Helper function to resample lcz ucp data ('FRC_URB2D', 'MH_URB2D',
     'STDH_URB2D', 'LB_URB2D', 'LF_URB2D', 'LP_URB2D') to WRF grid'''
@@ -802,9 +825,9 @@ def _ucp_resampler(
 
 
 def _hgt_resampler(
-    info: Info,
-    RESAMPLE_TYPE: str,
-    ucp_table: pd.DataFrame,
+        info: Info,
+        RESAMPLE_TYPE: str,
+        ucp_table: pd.DataFrame,
 ) -> xr.DataArray:
     '''Helper function to resample HGT_URB2D (=Area Weighted
     Mean Building Height ) data to WRF grid'''
@@ -888,8 +911,8 @@ def _get_truncated_normal_sample(
     mean = ucp_table['MH_URB2D'].loc[lcz_i]
     upp = ucp_table['MH_URB2D_MAX'].loc[lcz_i]
     sd = (
-        ucp_table['MH_URB2D_MAX'].loc[lcz_i] - ucp_table['MH_URB2D_MIN'].loc[lcz_i]
-    ) / 4
+                 ucp_table['MH_URB2D_MAX'].loc[lcz_i] - ucp_table['MH_URB2D_MIN'].loc[lcz_i]
+         ) / 4
 
     hi_inst = truncnorm((low - mean) / sd, (upp - mean) / sd, loc=mean, scale=sd)
 
@@ -924,25 +947,25 @@ def _check_hi_values(
             hi_sample_values = hi_sample.mean()
 
         if (
-            not ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN)
-            < hi_sample_values
-            < ucp_table[hi_metric].loc[lcz_i] * (1 + ERROR_MARGIN)
+                not ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN)
+                    < hi_sample_values
+                    < ucp_table[hi_metric].loc[lcz_i] * (1 + ERROR_MARGIN)
         ):
             print(
                 f'{WARNING}WARNING: {hi_metric} distribution not in '
-                f'expected range ({ERROR_MARGIN*100}% marging) for LCZ class {lcz_i}: '
+                f'expected range ({ERROR_MARGIN * 100}% marging) for LCZ class {lcz_i}: '
                 f'modelled: {np.round(hi_sample_values, 2)} | '
                 f'expected: ['
-                f'{np.round(ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN),2)} - '
-                f'{np.round(ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN),2)}]{ENDC}'
+                f'{np.round(ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN), 2)} - '
+                f'{np.round(ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN), 2)}]{ENDC}'
             )
 
 
 def _compute_hi_distribution(
-    info: Info,
-    ucp_table: pd.DataFrame,
-    SAMPLE_SIZE: int = 100000,
-    ERROR_MARGIN: float = 0.05,
+        info: Info,
+        ucp_table: pd.DataFrame,
+        SAMPLE_SIZE: int = 100000,
+        ERROR_MARGIN: float = 0.05,
 ) -> pd.DataFrame:
     '''Helper function to compute building height distribution'''
 
@@ -1115,15 +1138,15 @@ def _lcz_resampler(
     frc_mask = frc_urb2d.values[0, :, :] != 0
 
     # Final LU_INDEX = 31 to 41 (included), as LCZ classes.
-    lcz_resampled = lcz_2_wrf[0, frc_mask] + wrf_version_settings['ADD_LCZ_INT']
+    lcz_resampled = lcz_2_wrf[0, frc_mask] + info.WRF_V_INFO['ADD_LCZ_INT']
 
     return frc_mask, lcz_resampled
 
 
 def _adjust_greenfrac_landusef(
-    info: Info,
-    dst_data: xr.Dataset,
-    frc_mask: NDArray[np.bool_],
+        info: Info,
+        dst_data: xr.Dataset,
+        frc_mask: NDArray[np.bool_],
 ) -> xr.Dataset:
     dst_data_orig = xr.open_dataset(info.dst_file)
     orig_num_land_cat = dst_data_orig.NUM_LAND_CAT
@@ -1151,15 +1174,15 @@ def _adjust_greenfrac_landusef(
     # Create new LANDUSEF with 41/61 levels instead of 21
     landusef_new = np.zeros(
         (
-            wrf_version_settings['NUM_LAND_CAT'],
+            info.WRF_V_INFO['NUM_LAND_CAT'],
             dst_data.LANDUSEF.shape[2], dst_data.LANDUSEF.shape[3]
         )
     )
 
     # Copy values from original file
     landusef_new[:orig_num_land_cat, :, :] = dst_data['LANDUSEF'][
-        0, :orig_num_land_cat, :, :
-    ]
+                                             0, :orig_num_land_cat, :, :
+                                             ]
 
     # First set all values to zero for urban mask
     landusef_new[:, frc_mask] = 0  # First all to 0, so sum remains 1 in the end
@@ -1186,10 +1209,10 @@ def _adjust_greenfrac_landusef(
     dst_data['LANDUSEF'] = dst_data.LANDUSEF.astype('float32')
 
     if orig_num_land_cat < 24:
-        luf_attrs['description'] = (f"Noah-modified {wrf_version_settings['NUM_LAND_CAT']}-category "
+        luf_attrs['description'] = (f"Noah-modified {info.WRF_V_INFO['NUM_LAND_CAT']}-category "
                                     f"IGBP-MODIS landuse")
     else:
-        luf_attrs['description'] = f"modified {wrf_version_settings['NUM_LAND_CAT']}-category USGS landuse"
+        luf_attrs['description'] = f"modified {info.WRF_V_INFO['NUM_LAND_CAT']}-category USGS landuse"
     for key in luf_attrs.keys():
         dst_data['LANDUSEF'].attrs[key] = luf_attrs[key]
 
@@ -1197,10 +1220,10 @@ def _adjust_greenfrac_landusef(
 
 
 def _add_frc_lu_index_2_wrf(
-    info: Info,
-    FRC_THRESHOLD: float,
-    LCZ_NAT_MASK: bool,
-    ucp_table: pd.DataFrame,
+        info: Info,
+        FRC_THRESHOLD: float,
+        LCZ_NAT_MASK: bool,
+        ucp_table: pd.DataFrame,
 ) -> xr.Dataset:
     '''
     Add FRC_URB2D and adjusted LCZ-based LU_INDEX to WRF file
@@ -1273,10 +1296,10 @@ def _initialize_urb_param(dst_data: xr.Dataset) -> xr.Dataset:
 
 
 def create_lcz_params_file(
-    info: Info,
-    FRC_THRESHOLD: float,
-    LCZ_NAT_MASK: bool,
-    ucp_table: pd.DataFrame,
+        info: Info,
+        FRC_THRESHOLD: float,
+        LCZ_NAT_MASK: bool,
+        ucp_table: pd.DataFrame,
 ) -> float:
     '''
     Create a domain file with all LCZ-based information:
@@ -1343,7 +1366,7 @@ def create_lcz_params_file(
                 dst_final['URB_PARAM'][:, (ucp_dict[ucp_key] - 1 + i), :, :] = ucp_res
         if ucp_key == 'HI_URB2D':
             ucp_res[:, frc_mask == 0] = 0
-            dst_final['URB_PARAM'][0, (ucp_dict[ucp_key] - 1) :, :, :] = ucp_res
+            dst_final['URB_PARAM'][0, (ucp_dict[ucp_key] - 1):, :, :] = ucp_res
         else:
             ucp_res.values[:, frc_mask == 0] = 0
             dst_final['URB_PARAM'].values[0, (ucp_dict[ucp_key] - 1), :, :] = ucp_res
@@ -1358,7 +1381,7 @@ def create_lcz_params_file(
     # Add/Change some additional global attributes,
     # including NBUI_MAX = max. nr. of HI intervals over the grid
     glob_attrs: Dict[str, Union[int, SupportsInt]] = {
-        'NUM_LAND_CAT': wrf_version_settings['NUM_LAND_CAT'],
+        'NUM_LAND_CAT': info.WRF_V_INFO['NUM_LAND_CAT'],
         'FLAG_URB_PARAM': 1,
         'NBUI_MAX': np.intc(nbui_max),
     }
@@ -1450,18 +1473,18 @@ def expand_land_cat_parents(info: Info) -> None:
             da = xr.open_dataset(ifile)
 
             try:
-                if int(da.attrs['NUM_LAND_CAT']) != wrf_version_settings['NUM_LAND_CAT']:
+                if int(da.attrs['NUM_LAND_CAT']) != info.WRF_V_INFO['NUM_LAND_CAT']:
                     orig_num_land_cat = da.attrs['NUM_LAND_CAT']
                     # Set number of land categories to 41 or 61
-                    da.attrs['NUM_LAND_CAT'] = np.intc(wrf_version_settings['NUM_LAND_CAT'])
+                    da.attrs['NUM_LAND_CAT'] = np.intc(info.WRF_V_INFO['NUM_LAND_CAT'])
 
                     # Create new landusef array with expanded dimensions
                     landusef_new = np.zeros(
-                        (1, wrf_version_settings['NUM_LAND_CAT'], da.LANDUSEF.shape[2], da.LANDUSEF.shape[3])
+                        (1, info.WRF_V_INFO['NUM_LAND_CAT'], da.LANDUSEF.shape[2], da.LANDUSEF.shape[3])
                     )
                     landusef_new[:, :orig_num_land_cat, :, :] = da['LANDUSEF'].values
 
-                    # First store orginal attributes, then drop variable
+                    # First store original attributes, then drop variable
                     luf_attrs = da.LANDUSEF.attrs
                     da = da.drop_vars('LANDUSEF')
 
@@ -1473,19 +1496,20 @@ def expand_land_cat_parents(info: Info) -> None:
                     da['LANDUSEF'] = da.LANDUSEF.astype('float32')
 
                     if orig_num_land_cat < 24:
-                        luf_attrs['description'] = (
-                            f"Noah-modified {wrf_version_settings['NUM_LAND_CAT']}-category IGBP-MODIS landuse"
-                        )
+                        luf_attrs['description'] = \
+                            f"Noah-modified {info.WRF_V_INFO['NUM_LAND_CAT']}-category IGBP-MODIS landuse"
                     else:
-                        luf_attrs['description'] = f"modified {wrf_version_settings['NUM_LAND_CAT']}-category USGS landuse"
+                        luf_attrs['description'] = \
+                            f"modified {info.WRF_V_INFO['NUM_LAND_CAT']}-category USGS landuse"
+
                     for key in luf_attrs.keys():
                         da['LANDUSEF'].attrs[key] = luf_attrs[key]
 
-                    ofile = ifile.replace('.nc', f"_{wrf_version_settings['NUM_LAND_CAT']}.nc")
+                    ofile = ifile.replace('.nc', f"_{info.WRF_V_INFO['NUM_LAND_CAT']}.nc")
                     da.to_netcdf(ofile)
 
                 else:
-                    print(f'> Parent domain d{i:02d}.nc already contains 41 LC classes')
+                    print(f"> Parent domain d{i:02d}.nc already contains {info.WRF_V_INFO['NUM_LAND_CAT']} LC classes")
             except Exception:
                 err = traceback.format_exc()
                 print(f'Cannot read NUM_LAND_CAT and LANDUSEF dimensions\n{err}')
@@ -1632,8 +1656,8 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
         print(base_text)
         for ucp_key in ucp_dict.keys():
             darr = da.URB_PARAM[
-                0, ucp_dict[ucp_key]['index'] - 1, :, :
-            ].values.flatten()
+                   0, ucp_dict[ucp_key]['index'] - 1, :, :
+                   ].values.flatten()
             exp_range = ucp_dict[ucp_key]['range']
 
             result = _check_range(darr, exp_range)
