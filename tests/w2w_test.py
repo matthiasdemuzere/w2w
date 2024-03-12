@@ -50,6 +50,7 @@ def info_mock():
             'dst_lcz_extent_file': '',
             'dst_lcz_params_file': '',
             'BUILT_LCZ': [],
+            'WRF_V_INFO': {},
         }
         args_dict_override = {**args_dict, **info_override}
         return Info(**args_dict_override)  # type: ignore[arg-type]
