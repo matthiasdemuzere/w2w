@@ -69,9 +69,10 @@ def test_create_info_dict():
         wrf_file='wrf_file.nc',
         io_dir='input/directory',
         built_lcz=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-        WRF_V_INFO={'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41}
+        WRF_V_INFO={'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
     )
     info = Info.from_argparse(args)
+
     # info is Dict, with 8 keys
     assert len(info) == 9
 
