@@ -89,7 +89,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         dest='wrf_version',
         help=(
             f'Expected WRF version numbers:\n- '
-            f"{bullet_list.join(WRF_VERSIONS_DICT.keys())}"
+            f'{bullet_list.join(WRF_VERSIONS_DICT.keys())}'
             f'\nNote: in case you use a version older than v4.3, please specify v4.3\n'
         ),
         choices=(WRF_VERSIONS_DICT.keys()),
