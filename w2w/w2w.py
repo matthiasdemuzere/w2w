@@ -731,7 +731,7 @@ def _get_lcz_arr(src_data: xr.DataArray, info: Info) -> NDArray[np.int_]:
     # Get mask of selected built LCZs
     lcz_urb_mask = xr.DataArray(
         np.in1d(src_data, info.BUILT_LCZ).reshape(src_data.shape),
-        dims=src_data.dims,
+        dims=src_data.sizes,
         coords=src_data.coords,
     )
 
@@ -1155,7 +1155,7 @@ def _adjust_greenfrac_landusef(
         np.in1d(dst_data_orig['LU_INDEX'][0, :, :].values, [urban_cat]).reshape(
             dst_data_orig['LU_INDEX'][0, :, :].shape
         ),
-        dims=dst_data_orig['LU_INDEX'][0, :, :].dims,
+        dims=dst_data_orig['LU_INDEX'][0, :, :].sizes,
         coords=dst_data_orig['LU_INDEX'][0, :, :].coords,
     )
     greenfrac_per_month = [
