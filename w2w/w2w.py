@@ -696,7 +696,7 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Any]:
     # https://github.com/fmaussion/salem/blob/
     # d3f2e5e340c2af36c84c82a9de6099c90fba12e8/salem/wrftools.py#L734
     dx, dy = dst_data.DX, dst_data.DY
-    nx, ny = dst_data.dims['west_east'], dst_data.dims['south_north']
+    nx, ny = dst_data.sizes['west_east'], dst_data.sizes['south_north']
 
     # Down left corner of the domain
     x0 = -(nx - 1) / 2.0 * dx + e
