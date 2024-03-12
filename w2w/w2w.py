@@ -203,7 +203,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     print(f'{FBOLD}--> Set data, arguments and files {FEND}')
     wrf_v_info = wrf_versions_dict[args.wrf_version]
     info = Info.from_argparse(args, wrf_v_info)
-    print(info)
     ucp_table = pd.read_csv(lookup_table, index_col=0)
 
     # Strip white spaces in column names in case they occur
