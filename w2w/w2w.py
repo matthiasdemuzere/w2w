@@ -1186,10 +1186,10 @@ def _adjust_greenfrac_landusef(
     dst_data['LANDUSEF'] = dst_data.LANDUSEF.astype('float32')
 
     if orig_num_land_cat < 24:
-        luf_attrs['description'] = (f'Noah-modified {wrf_version_settings['NUM_LAND_CAT']}-category '
-                                    f'IGBP-MODIS landuse')
+        luf_attrs['description'] = (f"Noah-modified {wrf_version_settings['NUM_LAND_CAT']}-category "
+                                    f"IGBP-MODIS landuse")
     else:
-        luf_attrs['description'] = f'modified {wrf_version_settings['NUM_LAND_CAT']}-category USGS landuse'
+        luf_attrs['description'] = f"modified {wrf_version_settings['NUM_LAND_CAT']}-category USGS landuse"
     for key in luf_attrs.keys():
         dst_data['LANDUSEF'].attrs[key] = luf_attrs[key]
 
@@ -1474,14 +1474,14 @@ def expand_land_cat_parents(info: Info) -> None:
 
                     if orig_num_land_cat < 24:
                         luf_attrs['description'] = (
-                            f'Noah-modified {wrf_version_settings['NUM_LAND_CAT']}-category IGBP-MODIS landuse'
+                            f"Noah-modified {wrf_version_settings['NUM_LAND_CAT']}-category IGBP-MODIS landuse"
                         )
                     else:
-                        luf_attrs['description'] = f'modified {wrf_version_settings['NUM_LAND_CAT']}-category USGS landuse'
+                        luf_attrs['description'] = f"modified {wrf_version_settings['NUM_LAND_CAT']}-category USGS landuse"
                     for key in luf_attrs.keys():
                         da['LANDUSEF'].attrs[key] = luf_attrs[key]
 
-                    ofile = ifile.replace('.nc', f'_{wrf_version_settings['NUM_LAND_CAT']}.nc')
+                    ofile = ifile.replace('.nc', f"_{wrf_version_settings['NUM_LAND_CAT']}.nc")
                     da.to_netcdf(ofile)
 
                 else:
