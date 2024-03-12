@@ -1158,7 +1158,7 @@ def _adjust_greenfrac_landusef(
         np.isin(dst_data_orig['LU_INDEX'][0, :, :].values, [urban_cat]).reshape(
             dst_data_orig['LU_INDEX'][0, :, :].shape
         ),
-        dims=dst_data_orig['LU_INDEX'][0, :, :].dims,
+        dims=dst_data_orig['LU_INDEX'][0, :, :].sizes,
         coords=dst_data_orig['LU_INDEX'][0, :, :].coords,
     )
     greenfrac_per_month = [
