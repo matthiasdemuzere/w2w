@@ -69,10 +69,11 @@ def test_create_info_dict():
         wrf_file='wrf_file.nc',
         io_dir='input/directory',
         built_lcz=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        WRF_V_INFO={'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41}
     )
     info = Info.from_argparse(args)
     # info is Dict, with 8 keys
-    assert len(info) == 8
+    assert len(info) == 9
 
     # Two files are tifs
     assert info.src_file == 'input/directory/lcz_file.tif'
@@ -83,8 +84,11 @@ def test_create_info_dict():
     assert info.dst_lcz_extent_file == 'input/directory/wrf_file_LCZ_extent.nc'
     assert info.dst_lcz_params_file == 'input/directory/wrf_file_LCZ_params.nc'
 
-    # Last entry is list of built LCZs
+    # Before last entry is list of built LCZs
     assert info.BUILT_LCZ == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+    # Last entry is WRF version settings
+    assert info.WRF_V_INFO == {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41}
 
 
 def test_get_lcz_band_lcz_generator(info_mock, capsys):
