@@ -64,14 +64,15 @@ def test_argparse_shows_help():
 
 
 def test_create_info_dict():
+    wrf_v_info = {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41}
     args = argparse.Namespace(
         lcz_file='lcz_file.tif',
         wrf_file='wrf_file.nc',
         io_dir='input/directory',
         built_lcz=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-        WRF_V_INFO={'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
+        WRF_V_INFO=wrf_v_info,
     )
-    info = Info.from_argparse(args)
+    info = Info.from_argparse(args, wrf_v_info)
 
     # info is Dict, with 8 keys
     assert len(info) == 9
