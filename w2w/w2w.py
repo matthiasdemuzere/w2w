@@ -39,6 +39,21 @@ else:  # pragma: <3.9 cover
     import importlib_resources
 
 
+# WRF version dict
+WRF_VERSIONS_DICT = {
+    'v4.3': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
+    'v4.3.1': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
+    'v4.3.2': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
+    'v4.3.3': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
+    'v4.4': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
+    'v4.4.1': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
+    'v4.4.2': {'ADD_LCZ_INT': 50, 'NUM_LAND_CAT': 61},
+    'v4.5': {'ADD_LCZ_INT': 50, 'NUM_LAND_CAT': 61},
+    'v4.5.1': {'ADD_LCZ_INT': 50, 'NUM_LAND_CAT': 61},
+    'v4.5.2': {'ADD_LCZ_INT': 50, 'NUM_LAND_CAT': 61},
+}
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     '''Add WUDAPT info to WRF's'''
 
@@ -68,22 +83,17 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         dest='wrf_file',
         help='WRF geo_em* file name',
     )
-
+    bullet_list = '\n- '
     parser.add_argument(
         type=str,
         dest='wrf_version',
-        help='Expected WRF version numbers:\n'
-        '- v4.3\n'
-        '- v4.3.1\n'
-        '- v4.3.2\n'
-        '- v4.3.3\n'
-        '- v4.4\n'
-        '- v4.4.1\n'
-        '- v4.4.2\n'
-        '- v4.5\n'
-        '- v4.5.1\n'
-        '- v4.5.2\n'
-        'Note: in case you use a version older than v4.3, please use v4.3',
+        help=(
+            f'Expected WRF version numbers:\n- '
+            f"{bullet_list.join(WRF_VERSIONS_DICT.keys())}"
+            f'\nNote: in case you use a version older than v4.3, please specify v4.3\n'
+        ),
+        choices=(WRF_VERSIONS_DICT.keys()),
+        metavar='wrf_version',
     )
     # Additional arguments
     parser.add_argument(
@@ -152,41 +162,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     args = parser.parse_args(argv)
 
-    # WRF version dict
-    wrf_versions_dict = {
-        'v4.3': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
-        'v4.3.1': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
-        'v4.3.2': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
-        'v4.3.3': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
-        'v4.4': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
-        'v4.4.1': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
-        'v4.4.2': {'ADD_LCZ_INT': 50, 'NUM_LAND_CAT': 61},
-        'v4.5': {'ADD_LCZ_INT': 50, 'NUM_LAND_CAT': 61},
-        'v4.5.1': {'ADD_LCZ_INT': 50, 'NUM_LAND_CAT': 61},
-        'v4.5.2': {'ADD_LCZ_INT': 50, 'NUM_LAND_CAT': 61},
-    }
-
-    # Check if WRF version is known
-    if not args.wrf_version in wrf_versions_dict.keys():
-        ENDC = '\033[0m'
-        print(
-            f'ERROR: I do not know what to do with WRF version {args.wrf_version} \n.'
-            f'Please use one of the following:\n'
-            '- v4.3\n'
-            '- v4.3.1\n'
-            '- v4.3.2\n'
-            '- v4.3.3\n'
-            '- v4.4\n'
-            '- v4.4.1\n'
-            '- v4.4.2\n'
-            '- v4.5\n'
-            '- v4.5.1\n'
-            '- v4.5.2\n'
-            'Note: in case you use a version older than v4.3, please use v4.3\n\n'
-            f'Exiting ...{ENDC}'
-        )
-        sys.exit(1)
-
     # check if a custom LCZ UCP file was set and read it
     if args.lcz_ucp is not None:
         lookup_table = args.lcz_ucp
@@ -201,8 +176,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     # Execute the functions
     print(f'{FBOLD}--> Set data, arguments and files {FEND}')
-    wrf_v_info = wrf_versions_dict[args.wrf_version]
-    info = Info.from_argparse(args, wrf_v_info)
+    info = Info.from_argparse(args)
     ucp_table = pd.read_csv(lookup_table, index_col=0)
 
     # Strip white spaces in column names in case they occur
@@ -278,12 +252,10 @@ class Info(NamedTuple):
     dst_lcz_extent_file: str
     dst_lcz_params_file: str
     BUILT_LCZ: List[int]
-    WRF_V_INFO: Dict[str, Any]
+    WRF_V_INFO: Dict[str, int]
 
     @classmethod
-    def from_argparse(
-        cls, args: argparse.Namespace, wrf_v_info: Dict[str, Any]
-    ) -> 'Info':
+    def from_argparse(cls, args: argparse.Namespace) -> 'Info':
         # Define output and tmp file(s), the latter is removed when done.
         return cls(
             io_dir=args.io_dir,
@@ -302,7 +274,7 @@ class Info(NamedTuple):
                 args.io_dir, args.wrf_file.replace('.nc', '_LCZ_params.nc')
             ),
             BUILT_LCZ=args.built_lcz,
-            WRF_V_INFO=wrf_v_info,
+            WRF_V_INFO=WRF_VERSIONS_DICT[args.wrf_version],
         )
 
 
