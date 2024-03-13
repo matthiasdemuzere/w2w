@@ -25,12 +25,25 @@ w2w --help
 
    Sample data used here can be downloaded from the [repository](https://github.com/matthiasdemuzere/w2w/) in the [`sample_data` folder](https://github.com/matthiasdemuzere/w2w/tree/main/sample_data). After clicking on the file you can download it.
 ```sh
-w2w ./sample_data lcz_zaragoza.tif geo_em.d04.nc
+w2w ./sample_data lcz_zaragoza.tif geo_em.d04.nc WRF_VERSION
 ```
+
+with WRF_VERSION being one of (versions will be updated when new WRF releases become available):
+- 'v4.3'
+- 'v4.3.1'
+- 'v4.3.2'
+- 'v4.3.3'
+- 'v4.4'
+- 'v4.4.1'
+- 'v4.4.2'
+- 'v4.5'
+- 'v4.5.1'
+- 'v4.5.2'
+
 
 3. Deploy using your own data:
 ```sh
-w2w INPUT_DIRECTORY YOUR_LCZ.TIF YOUR_GEO_EM.dXX.NC
+w2w INPUT_DIRECTORY YOUR_LCZ.TIF YOUR_GEO_EM.dXX.NC WRF_VERSION
 ```
 Output
 -------
@@ -61,16 +74,18 @@ Requirements
    * Use the [LCZ Generator](https://lcz-generator.rub.de/) to make an LCZ map for your region of interest. In case the geo_em.d0**X**.nc domain is larger than ~ 2.5 x 2.5°, the LCZ Generator will fail. In that case, please contact [Matthias Demuzere](mailto:matthias.demuzere@rub.de) for support.
 
 
+3. Know about the **WRF version** you are using. Initially, LCZ classes were numbered from 30 to 41. Yet from WRF v4.4.2, the LCZ numbers in WRF-urban are changed from 31-41 to 51-61. This in order to avoid overlap with existing NLCD land types. For more info, see [here](https://github.com/wrf-model/WRF/releases/tag/v4.4.2).
+
 Important notes
 -------
 * Your LCZ .tif and geo_em*.dXX.nc files should both live in the INPUT_DIRECTORY.
 * Also, this INPUT_DIRECTORY should be writeable by the user.
-* Also the geo_em.d0[**0 to X**].nc file(s) of the parent domain(s) should be available in the INPUT_DIRECTORY. This is needed because the `w2w.py` routine will check whether `NUM_LAND_CAT` is set to 41 in all these parent domain files. If that is not the case, this will be fixed by writing out adjusted geo_em.d0[**0 to X**]_41.nc files.
+* Also the geo_em.d0[**0 to X**].nc file(s) of the parent domain(s) should be available in the INPUT_DIRECTORY. This is needed because the `w2w.py` routine will check whether `NUM_LAND_CAT` is set to 41 or 61 (depending on your WRF version) in all these parent domain files. If that is not the case, this will be fixed by writing out adjusted geo_em.d0[**0 to X**]_41.nc or geo_em.d0[**0 to X**]_61.nc files.
 * In case you use an LCZ map produced by the LCZ Generator, by default `-lcz_band 1` will be used, which is the best-quality gaussian filtered LCZ map (see [Demuzere et al. (2021)](https://doi.org/10.3389/fenvs.2021.637455) for more info).
-* Once the adjusted **geo_em.dXX.nc files** are created (geo_em.d01_41.nc, ..., geo_em.dXX_NoUrban.nc, geo_em.dXX_LCZ_extent.nc, geo_em.dXX_LCZ_params.nc), make sure to rename them (e.g. rename geo_em.d01_41.nc to geo_em.d01.nc, or geo_em.d04_LCZ_params.nc to geo_em.d04.nc) before using them as input to the metgrid.exe module. See documentation for more info.
+* Once the adjusted **geo_em.dXX.nc files** are created (geo_em.d01_41/61.nc, ..., geo_em.dXX_NoUrban.nc, geo_em.dXX_LCZ_extent.nc, geo_em.dXX_LCZ_params.nc), make sure to rename them (e.g. rename geo_em.d01_41/61.nc to geo_em.d01.nc, or geo_em.d04_LCZ_params.nc to geo_em.d04.nc) before using them as input to the metgrid.exe module. See documentation for more info.
 * It is advised to use this tool with urban parameterization options BEP or BEP+BEM (`sf_urban_physics = 2 or 3`, respectively). In case you use this tool with the SLUCM model (`sf_urban_physics = 1`), make sure your lowest model level is above the highest building height. If not, real.exe will provide the following error message: `ZDC + Z0C + 2m is larger than the 1st WRF level - Stop in subroutine urban - change ZDC and Z0C`.
 * At the end of running `W2W`, a note is displayed that indicates the `nbui_max` value, e.g. for the sample data: `Set nbui_max to 5 during compilation, in order to optimize memory storage`. This is especially relevant for users that work with the BEP or BEP+BEM urban parameterization schemes (`sf_urban_physics = 2 or 3`, respectively). See also `num_urban_nbui` in [WRF's README.namelist](https://github.com/wrf-model/WRF/blob/master/run/README.namelist) for more info.
-* Make sure to set `use_wudapt_lcz=1` (default is 0) and `num_land_cat=41` (default is 21) in WRF's `namelist.input` when using the LCZ-based urban canopy parameters.
+* Make sure to set `use_wudapt_lcz=1` (default is 0) and `num_land_cat=41` or `num_land_cat=61` (depending on WRF version, default is 21) in WRF's `namelist.input` when using the LCZ-based urban canopy parameters.
 * The outputs of this tool have only been tested with the most recent [WRF version 4.3.x](https://github.com/wrf-model/WRF/releases/tag/v4.3). So we advise you to work with this version as well, which is now able to ingest the urban LCZ classes by default.
 * It is possible to specify the number of nearest pixels (NPIX_NLC) to determine the dominant natural landuse in the surroundings of each urban pixel. The most frequent landuse among those pixels is used to replace the urban pixels. The distance used to find the nearest pixels is based on the great circle arc length. For performance reasons, the nearest pixels are searched using a k-d tree algorithm, instead of brute forcing over all possible pixels. Because only land natural pixels are considered to calculate the most frequent land use, we need to filter out water and other urban pixels. Thus, we need to specify the initial number of pixels (NPIX_AREA) that the k-d tree algorithm will select, which will be larger than NPIX_NLC. By default, NPIX_AREA = NPIX_NLC**2 pixels will be selected and the nearest NPIX_NLC (default is 45) pixels that are not water or urban will be drawn from that initial selection. Because it is actually an area around the urban pixel, it is referred to as NPIX_AREA.
 
