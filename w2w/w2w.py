@@ -1187,7 +1187,7 @@ def _adjust_greenfrac_landusef(
     if orig_num_land_cat < 24:
         luf_attrs['description'] = (
             f"Noah-modified {info.WRF_V_INFO['NUM_LAND_CAT']}-category "
-            f'IGBP-MODIS landuse'
+            f"IGBP-MODIS landuse"
         )
     else:
         luf_attrs[
