@@ -28,7 +28,7 @@ w2w --help
 w2w ./sample_data lcz_zaragoza.tif geo_em.d04.nc WRF_VERSION
 ```
 
-with WRF_VERSION being one of (versions will be updated when new WRF releases become available):
+with WRF_VERSION being one of the following (versions will be updated when new WRF releases become available):
 - 'v4.3'
 - 'v4.3.1'
 - 'v4.3.2'
