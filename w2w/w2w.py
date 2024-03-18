@@ -513,6 +513,21 @@ def wrf_remove_urban(
     newluf = luf.values.copy()
     newgreenf = greenf.values.copy()
 
+    # Based on the WRF version, defined areas to be removed:
+    if orig_num_land_cat == 61:
+        luse.values  = np.where((luse>50) & (luse<61), dst_data.ISURBAN,luse)
+        luf[dst_data.ISURBAN-1]=np.sum(luf.values[50:61,:],axis=0)
+        luf[50:61,:]=0
+    elif orig_num_land_cat == 41:
+        luse.values  = np.where((luse>30) & (luse<41), dst_data.ISURBAN,luse)
+        luf[dst_data.ISURBAN-1]=np.sum(luf.values[30:41,:],axis=0)
+        luf[30:41,:]=0
+
+
+
+
+
+
     data_coord = pd.DataFrame(
         {
             'lat': lat.values.ravel(),
@@ -1130,8 +1145,17 @@ def _adjust_greenfrac_landusef(
     # Adjust GREENFRAC and LANDUSEF
     # GREENFRAC is set as average / month from GREENFRAC
     # of original urban pixels
+    
+    #Define pixels that are urban in the original data
+    if orig_num_land_cat == 61:
+        urban_cat_list = [51, 52, 53, 54, 55, 56, 57, 58, 59, 60, urban_cat]
+    elif orig_num_land_cat == 41:
+        urban_cat_list = [31, 32, 33, 34, 35, 36, 37, 38, 39, 40, urban_cat]
+    else:
+        urban_cat_list = [urban_cat]
+    
     wrf_urb = xr.DataArray(
-        np.isin(dst_data_orig['LU_INDEX'][0, :, :].values, [urban_cat]).reshape(
+        np.in1d(dst_data_orig['LU_INDEX'][0, :, :].values, urban_cat_list).reshape(
             dst_data_orig['LU_INDEX'][0, :, :].shape
         ),
         dims=dst_data_orig['LU_INDEX'][0, :, :].sizes,
@@ -1531,17 +1555,30 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
     dst_data_orig = xr.open_dataset(info.dst_file)
     orig_num_land_cat = dst_data_orig.NUM_LAND_CAT
     urban_cat = dst_data_orig.ISURBAN
-    if urban_cat in da.LU_INDEX.values:
+
+    #Define pixels that are urban in the original data
+    if orig_num_land_cat == 61:
+        LCZ_URBAN = [51, 52, 53, 54, 55, 56, 57, 58, 59, 60]
+        urban_cat_list = LCZ_URBAN + [urban_cat]
+    elif orig_num_land_cat == 41:
+        LCZ_URBAN = [31, 32, 33, 34, 35, 36, 37, 38, 39, 40]
+        urban_cat_list = LCZ_URBAN + [urban_cat]
+    else:
+        urban_cat_list = [urban_cat]
+
+    if np.in1d(da['LU_INDEX'][0, :, :].values, urban_cat_list).any():
         print(
             f'{base_text}\n{WARNING} WARNING: Urban land use ' f'still present {ENDC}'
         )
     else:
         print(f'{base_text}{OKGREEN} OK {ENDC}')
+    da.close()
 
     base_text = (
         f'> Check 2: LCZ Urban extent present in '
         f"{info.dst_lcz_extent_file.split('/')[-1]}?"
     )
+
     ifile = info.dst_lcz_extent_file
     da = xr.open_dataset(ifile)
     if not urban_cat in da.LU_INDEX.values:
@@ -1557,6 +1594,7 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
     )
     ifile = info.dst_lcz_params_file
     da = xr.open_dataset(ifile)
+
     if urban_cat in da.LU_INDEX.values:
         print(
             f'{base_text}\n{WARNING} WARNING: Urban extent still '
@@ -1564,7 +1602,7 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
         )
     else:
         LU_values = np.unique(da.LU_INDEX.values.flatten())
-        LCZs = [int(i) for i in list(LU_values[LU_values >= 31] - 30)]
+        LCZs = np.intersect1d(LU_values,LCZ_URBAN).astype(int).tolist()
         print(f'{base_text}{OKGREEN} OK: LCZ Classes ({LCZs}) ' f'present {ENDC}')
 
     base_text = (
@@ -1701,8 +1739,8 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
     )
     da_e = xr.open_dataset(info.dst_lcz_extent_file)
     da_p = xr.open_dataset(info.dst_lcz_params_file)
-    da_e_res = xr.where(da_e.LU_INDEX == urban_cat, 1, 0)
-    da_p_res = xr.where(da_p.LU_INDEX >= 31, 1, 0)
+    da_e_res = xr.where(da_e.LU_INDEX == urban_cat, 1, 0).values.flatten()
+    da_p_res = np.in1d(da_p.LU_INDEX,LCZ_URBAN).astype(int)
 
     if int((da_p_res - da_e_res).sum()) != 0:
         print(
@@ -1715,7 +1753,7 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
     else:
         print(
             f'{base_text}{OKGREEN} OK, urban extent the same '
-            f'({int(da_p_res.sum().values)}) {ENDC}'
+            f'({int(da_p_res.sum())}) {ENDC}'
         )
 
     print('> Cleaning up ... all done!')
