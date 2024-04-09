@@ -510,25 +510,18 @@ def wrf_remove_urban(
 
     # Based on the WRF version, defined areas to be removed:
     if orig_num_land_cat == 61:
-        luse.values  = np.where((luse>50) & (luse<61), dst_data.ISURBAN,luse)
-        luf[dst_data.ISURBAN-1]=np.sum(luf.values[50:61,:],axis=0)
-        luf[50:61,:]=0
+        luse.values = np.where((luse > 50) & (luse < 61), dst_data.ISURBAN, luse)
+        luf[dst_data.ISURBAN - 1] = np.sum(luf.values[50:61, :], axis=0)
+        luf[50:61, :] = 0
     elif orig_num_land_cat == 41:
-        luse.values  = np.where((luse>30) & (luse<41), dst_data.ISURBAN,luse)
-        luf[dst_data.ISURBAN-1]=np.sum(luf.values[30:41,:],axis=0)
-        luf[30:41,:]=0
+        luse.values = np.where((luse > 30) & (luse < 41), dst_data.ISURBAN, luse)
+        luf[dst_data.ISURBAN - 1] = np.sum(luf.values[30:41, :], axis=0)
+        luf[30:41, :] = 0
 
     # New arrays to hold data without urban areas
     newluse = luse.values.copy()
     newluf = luf.values.copy()
     newgreenf = greenf.values.copy()
-
-
-
-
-
-
-
 
     data_coord = pd.DataFrame(
         {
@@ -1147,15 +1140,15 @@ def _adjust_greenfrac_landusef(
     # Adjust GREENFRAC and LANDUSEF
     # GREENFRAC is set as average / month from GREENFRAC
     # of original urban pixels
-    
-    #Define pixels that are urban in the original data
+
+    # Define pixels that are urban in the original data
     if orig_num_land_cat == 61:
         urban_cat_list = [51, 52, 53, 54, 55, 56, 57, 58, 59, 60, urban_cat]
     elif orig_num_land_cat == 41:
         urban_cat_list = [31, 32, 33, 34, 35, 36, 37, 38, 39, 40, urban_cat]
     else:
         urban_cat_list = [urban_cat]
-    
+
     wrf_urb = xr.DataArray(
         np.in1d(dst_data_orig['LU_INDEX'][0, :, :].values, urban_cat_list).reshape(
             dst_data_orig['LU_INDEX'][0, :, :].shape
@@ -1576,7 +1569,7 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
     orig_num_land_cat = dst_data_orig.NUM_LAND_CAT
     urban_cat = dst_data_orig.ISURBAN
 
-    #Define pixels that are urban in the original data
+    # Define pixels that are urban in the original data
     if orig_num_land_cat == 61:
         LCZ_URBAN = [51, 52, 53, 54, 55, 56, 57, 58, 59, 60]
         urban_cat_list = LCZ_URBAN + [urban_cat]
@@ -1625,7 +1618,7 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
         )
     else:
         LU_values = np.unique(da.LU_INDEX.values.flatten())
-        LCZs = np.intersect1d(LU_values,LCZ_URBAN).astype(int).tolist()
+        LCZs = np.intersect1d(LU_values, LCZ_URBAN).astype(int).tolist()
         print(f'{base_text}{OKGREEN} OK: LCZ Classes ({LCZs}) ' f'present {ENDC}')
 
     base_text = (
@@ -1763,7 +1756,12 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
     da_e = xr.open_dataset(info.dst_lcz_extent_file)
     da_p = xr.open_dataset(info.dst_lcz_params_file)
     da_e_res = xr.where(da_e.LU_INDEX == urban_cat, 1, 0).values.flatten()
+<<<<<<< HEAD
     da_p_res = np.in1d(da_p.LU_INDEX,LCZ_URBAN).astype(int)
+=======
+    da_p_res = np.in1d(da_p.LU_INDEX, LCZ_URBAN).astype(int)
+
+>>>>>>> 1840a57 ([pre-commit.ci] auto fixes from pre-commit.com hooks)
     if int((da_p_res - da_e_res).sum()) != 0:
         print(
             f'{base_text}\n {WARNING} WARNING: Different '
