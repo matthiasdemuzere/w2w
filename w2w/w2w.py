@@ -1008,8 +1008,7 @@ def _compute_hi_distribution(
             df_hi.loc[i, :] = count_bins
 
         # Set nans to zero
-        df_hi = df_hi.infer_objects()
-        df_hi = df_hi.fillna(0)
+        df_hi = df_hi.astype("float").fillna(0)
 
     return df_hi
 
