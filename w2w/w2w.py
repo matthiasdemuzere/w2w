@@ -1427,11 +1427,19 @@ def create_lcz_extent_file(info: Info) -> None:
     urban_cat = dst_data_orig.ISURBAN
     orig_luf_description = dst_data_orig.LANDUSEF.description
 
+    #Get LU_INDEX from LCZ extent, which is coming from the LCZ PARAMS file
     lu_index = dst_extent.LU_INDEX.values
-    lu_index[lu_index >= 31] = urban_cat
 
+    #Set LCZs to urban_cat
+
+    if params_num_land_cat == 61:
+        lu_index [lu_index >= 51] = urban_cat
+    elif params_num_land_cat == 41:
+        lu_index [lu_index >= 31] = urban_cat
+        
+    #Set LU_INDEX to urban_cat in dst_extent
     dst_extent.LU_INDEX.values = lu_index
-
+    
     # Remove some unnecesary variables to reduce file size
     dst_extent = dst_extent.drop_vars(['FRC_URB2D', 'URB_PARAM'])
 
