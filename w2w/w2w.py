@@ -1581,8 +1581,10 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
     elif orig_num_land_cat == 41:
         LCZ_URBAN = [31, 32, 33, 34, 35, 36, 37, 38, 39, 40]
         urban_cat_list = LCZ_URBAN + [urban_cat]
-    else:
+    elif orig_num_land_cat == 21:
         urban_cat_list = [urban_cat]
+    else:
+        raise ValueError(f'Number of land categories {orig_num_land_cat} in original file not supported. Only 21, 41 or 61 are supported.')
 
     if np.in1d(da['LU_INDEX'][0, :, :].values, urban_cat_list).any():
         print(
