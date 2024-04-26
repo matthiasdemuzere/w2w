@@ -1457,6 +1457,12 @@ def create_lcz_extent_file(info: Info) -> None:
         ('Time', 'land_cat', 'south_north', 'west_east'),
         luf_values[:, :orig_num_land_cat, :, :],
     )
+
+    # Setting LANDUSEF to 0 for LCZ categories regardless of the original landuse
+    if orig_num_land_cat == 61:
+        dst_extent['LANDUSEF'].values[0, 50:, :] = 0
+    elif orig_num_land_cat == 41:
+        dst_extent['LANDUSEF'].values[0, 30:, :] = 0
     dst_extent['LANDUSEF'].values[0, urban_cat - 1, frc_mask] = 1
     dst_extent['LANDUSEF'] = dst_extent.LANDUSEF.astype('float32')
 
