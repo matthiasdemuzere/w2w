@@ -1761,14 +1761,13 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
     da_p = xr.open_dataset(info.dst_lcz_params_file)
     da_e_res = xr.where(da_e.LU_INDEX == urban_cat, 1, 0).values.flatten()
     da_p_res = np.in1d(da_p.LU_INDEX,LCZ_URBAN).astype(int)
-
     if int((da_p_res - da_e_res).sum()) != 0:
         print(
             f'{base_text}\n {WARNING} WARNING: Different '
             f'# urban pixels (or extent) '
             f'according to LU_INDEX: '
-            f' - extent: {int(da_e_res.sum().values)}'
-            f' - params: {int(da_p_res.sum().values)} {ENDC}'
+            f' - extent: {int(da_e_res.sum())}'
+            f' - params: {int(da_p_res.sum())} {ENDC}'
         )
     else:
         print(
