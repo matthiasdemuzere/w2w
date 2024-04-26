@@ -1189,7 +1189,7 @@ def _adjust_greenfrac_landusef(
 
     # LOOP over LCZ LU_INDEX values, and set to 1 there
     # So e.g. LANDUSE[0,31-1,:,1] = 1, where LU_INDEX = 31 (=LCZ 1)
-    for lu_i in np.arange(31, orig_num_land_cat, 1):
+    for lu_i in np.arange(31, info.WRF_V_INFO['NUM_LAND_CAT'], 1):
         lu_mask = dst_data.LU_INDEX == int(lu_i)
         landusef_new[int(lu_i) - 1, lu_mask[0, :, :]] = 1
         del lu_mask
