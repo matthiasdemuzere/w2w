@@ -1417,11 +1417,15 @@ def create_lcz_extent_file(info: Info) -> None:
     (excluding other LCZ-based info)
     '''
 
+    #We take the LCZ PARAMS file and extract pixels with FRC_URB2D > 0 (some urban fraction)
     dst_params = xr.open_dataset(info.dst_lcz_params_file)
+    params_num_land_cat = dst_params.NUM_LAND_CAT
     frc_mask = dst_params.FRC_URB2D.values[0, :, :] != 0
 
+    #Copy everything from LCZ PARAMS to LCZ EXTENT
     dst_extent = dst_params.copy()
 
+    #Get information from the original geo_em file
     dst_data_orig = xr.open_dataset(info.dst_file)
     orig_num_land_cat = dst_data_orig.NUM_LAND_CAT
     urban_cat = dst_data_orig.ISURBAN
