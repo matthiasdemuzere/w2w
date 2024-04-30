@@ -1003,7 +1003,7 @@ def _compute_hi_distribution(
             df_hi.loc[i, :] = count_bins
 
         # Set nans to zero
-        df_hi = df_hi.astype("float").fillna(0)
+        df_hi = df_hi.astype('float').fillna(0)
 
     return df_hi
 
@@ -1412,33 +1412,33 @@ def create_lcz_extent_file(info: Info) -> None:
     (excluding other LCZ-based info)
     '''
 
-    #We take the LCZ PARAMS file and extract pixels with FRC_URB2D > 0 (some urban fraction)
+    # We take the LCZ PARAMS file and extract pixels with FRC_URB2D > 0 (some urban fraction)
     dst_params = xr.open_dataset(info.dst_lcz_params_file)
     params_num_land_cat = dst_params.NUM_LAND_CAT
     frc_mask = dst_params.FRC_URB2D.values[0, :, :] != 0
 
-    #Copy everything from LCZ PARAMS to LCZ EXTENT
+    # Copy everything from LCZ PARAMS to LCZ EXTENT
     dst_extent = dst_params.copy()
 
-    #Get information from the original geo_em file
+    # Get information from the original geo_em file
     dst_data_orig = xr.open_dataset(info.dst_file)
     orig_num_land_cat = dst_data_orig.NUM_LAND_CAT
     urban_cat = dst_data_orig.ISURBAN
     orig_luf_description = dst_data_orig.LANDUSEF.description
 
-    #Get LU_INDEX from LCZ extent, which is coming from the LCZ PARAMS file
+    # Get LU_INDEX from LCZ extent, which is coming from the LCZ PARAMS file
     lu_index = dst_extent.LU_INDEX.values
 
-    #Set LCZs to urban_cat
+    # Set LCZs to urban_cat
 
     if params_num_land_cat == 61:
-        lu_index [lu_index >= 51] = urban_cat
+        lu_index[lu_index >= 51] = urban_cat
     elif params_num_land_cat == 41:
-        lu_index [lu_index >= 31] = urban_cat
-        
-    #Set LU_INDEX to urban_cat in dst_extent
+        lu_index[lu_index >= 31] = urban_cat
+
+    # Set LU_INDEX to urban_cat in dst_extent
     dst_extent.LU_INDEX.values = lu_index
-    
+
     # Remove some unnecesary variables to reduce file size
     dst_extent = dst_extent.drop_vars(['FRC_URB2D', 'URB_PARAM'])
 
@@ -1580,7 +1580,9 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
         LCZ_URBAN = []
         urban_cat_list = [urban_cat]
     else:
-        raise ValueError(f'Number of land categories {orig_num_land_cat} in original file not supported. Only 21, 41 or 61 are supported.')
+        raise ValueError(
+            f'Number of land categories {orig_num_land_cat} in original file not supported. Only 21, 41 or 61 are supported.'
+        )
 
     if np.in1d(da['LU_INDEX'][0, :, :].values, urban_cat_list).any():
         print(
