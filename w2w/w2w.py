@@ -508,11 +508,6 @@ def wrf_remove_urban(
         else None
     )
 
-    # New arrays to hold data without urban areas
-    newluse = luse.values.copy()
-    newluf = luf.values.copy()
-    newgreenf = greenf.values.copy()
-
     # Based on the WRF version, defined areas to be removed:
     if orig_num_land_cat == 61:
         luse.values  = np.where((luse>50) & (luse<61), dst_data.ISURBAN,luse)
@@ -522,6 +517,13 @@ def wrf_remove_urban(
         luse.values  = np.where((luse>30) & (luse<41), dst_data.ISURBAN,luse)
         luf[dst_data.ISURBAN-1]=np.sum(luf.values[30:41,:],axis=0)
         luf[30:41,:]=0
+
+    # New arrays to hold data without urban areas
+    newluse = luse.values.copy()
+    newluf = luf.values.copy()
+    newgreenf = greenf.values.copy()
+
+
 
 
 
