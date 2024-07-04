@@ -1758,12 +1758,8 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
     da_e = xr.open_dataset(info.dst_lcz_extent_file)
     da_p = xr.open_dataset(info.dst_lcz_params_file)
     da_e_res = xr.where(da_e.LU_INDEX == urban_cat, 1, 0).values.flatten()
-<<<<<<< HEAD
-    da_p_res = np.in1d(da_p.LU_INDEX,LCZ_URBAN).astype(int)
-=======
     da_p_res = np.in1d(da_p.LU_INDEX, LCZ_URBAN).astype(int)
 
->>>>>>> 1840a57 ([pre-commit.ci] auto fixes from pre-commit.com hooks)
     if int((da_p_res - da_e_res).sum()) != 0:
         print(
             f'{base_text}\n {WARNING} WARNING: Different '
