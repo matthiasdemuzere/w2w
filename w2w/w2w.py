@@ -1336,9 +1336,9 @@ def create_lcz_params_file(
         'information in WRF [Computer software]. \n'
         'https://github.com/matthiasdemuzere/w2w'
     )
-    dst_final.attrs[
-        'DESCRIPTION'
-    ] = f'W2W.py tool used to create geo_em*.nc file:\n {gh_ref}'
+    dst_final.attrs['DESCRIPTION'] = (
+        f'W2W.py tool used to create geo_em*.nc file:\n {gh_ref}'
+    )
 
     # Save back to file
     if os.path.exists(info.dst_lcz_params_file):
