@@ -1150,7 +1150,7 @@ def _adjust_greenfrac_landusef(
         urban_cat_list = [urban_cat]
 
     wrf_urb = xr.DataArray(
-        np.in1d(dst_data_orig['LU_INDEX'][0, :, :].values, urban_cat_list).reshape(
+        np.isin(dst_data_orig['LU_INDEX'][0, :, :].values, urban_cat_list).reshape(
             dst_data_orig['LU_INDEX'][0, :, :].shape
         ),
         dims=dst_data_orig['LU_INDEX'][0, :, :].sizes,
@@ -1209,9 +1209,9 @@ def _adjust_greenfrac_landusef(
             f'IGBP-MODIS landuse'
         )
     else:
-        luf_attrs[
-            'description'
-        ] = f"modified {info.WRF_V_INFO['NUM_LAND_CAT']}-category USGS landuse"
+        luf_attrs['description'] = (
+            f"modified {info.WRF_V_INFO['NUM_LAND_CAT']}-category USGS landuse"
+        )
     for key in luf_attrs.keys():
         dst_data['LANDUSEF'].attrs[key] = luf_attrs[key]
 
@@ -1518,13 +1518,13 @@ def expand_land_cat_parents(info: Info) -> None:
                     da['LANDUSEF'] = da.LANDUSEF.astype('float32')
 
                     if orig_num_land_cat < 24:
-                        luf_attrs[
-                            'description'
-                        ] = f"Noah-modified {info.WRF_V_INFO['NUM_LAND_CAT']}-category IGBP-MODIS landuse"
+                        luf_attrs['description'] = (
+                            f"Noah-modified {info.WRF_V_INFO['NUM_LAND_CAT']}-category IGBP-MODIS landuse"
+                        )
                     else:
-                        luf_attrs[
-                            'description'
-                        ] = f"modified {info.WRF_V_INFO['NUM_LAND_CAT']}-category USGS landuse"
+                        luf_attrs['description'] = (
+                            f"modified {info.WRF_V_INFO['NUM_LAND_CAT']}-category USGS landuse"
+                        )
 
                     for key in luf_attrs.keys():
                         da['LANDUSEF'].attrs[key] = luf_attrs[key]
@@ -1584,7 +1584,7 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
             f'Number of land categories {orig_num_land_cat} in original file not supported. Only 21, 41 or 61 are supported.'
         )
 
-    if np.in1d(da['LU_INDEX'][0, :, :].values, urban_cat_list).any():
+    if np.isin(da['LU_INDEX'][0, :, :].values, urban_cat_list).any():
         print(
             f'{base_text}\n{WARNING} WARNING: Urban land use ' f'still present {ENDC}'
         )
@@ -1758,7 +1758,7 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
     da_e = xr.open_dataset(info.dst_lcz_extent_file)
     da_p = xr.open_dataset(info.dst_lcz_params_file)
     da_e_res = xr.where(da_e.LU_INDEX == urban_cat, 1, 0).values.flatten()
-    da_p_res = np.in1d(da_p.LU_INDEX, LCZ_URBAN).astype(int)
+    da_p_res = np.isin(np.asarray(da_p.LU_INDEX).ravel(), LCZ_URBAN).astype(int)
 
     if int((da_p_res - da_e_res).sum()) != 0:
         print(
