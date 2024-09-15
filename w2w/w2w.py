@@ -641,8 +641,10 @@ def _get_wrf_grid_info(info: Info) -> Dict[str, Any]:
     # Grid parameters
     # https://github.com/fmaussion/salem/blob/
     # d3f2e5e340c2af36c84c82a9de6099c90fba12e8/salem/wrftools.py#L734
-    dx, dy = dst_data.DX, dst_data.DY
-    nx, ny = dst_data.dims['west_east'], dst_data.dims['south_north']
+    dx, dy = np.float64(dst_data.DX), np.float64(dst_data.DY)
+    nx, ny = np.float64(dst_data.sizes['west_east']), np.float64(
+        dst_data.sizes['south_north']
+    )
 
     # Down left corner of the domain
     x0 = -(nx - 1) / 2.0 * dx + e
@@ -676,7 +678,7 @@ def _get_lcz_arr(src_data: xr.DataArray, info: Info) -> NDArray[np.int_]:
 
     # Get mask of selected built LCZs
     lcz_urb_mask = xr.DataArray(
-        np.in1d(src_data, info.BUILT_LCZ).reshape(src_data.shape),
+        np.isin(src_data, info.BUILT_LCZ).reshape(src_data.shape),
         dims=src_data.dims,
         coords=src_data.coords,
     )
@@ -846,7 +848,7 @@ def _hgt_resampler(
 
 def _get_truncated_normal_sample(
     lcz_i: int, ucp_table: pd.DataFrame, SAMPLE_SIZE: int = 100000
-) -> NDArray[np.float_]:
+) -> NDArray['np.floating[Any]']:
     '''Helper function to return bounded normal distribution sample'''
 
     # Create instance of a truncated normal distribution
@@ -867,7 +869,7 @@ def _get_truncated_normal_sample(
 
 def _check_hi_values(
     lcz_i: int,
-    hi_sample: NDArray[np.float_],
+    hi_sample: NDArray['np.floating[Any]'],
     ucp_table: pd.DataFrame,
     ERROR_MARGIN: float,
 ) -> None:
@@ -960,6 +962,7 @@ def _compute_hi_distribution(
             df_hi.loc[i, :] = count_bins
 
         # Set nans to zero
+        df_hi = df_hi.infer_objects()
         df_hi = df_hi.fillna(0)
 
     return df_hi
@@ -977,7 +980,7 @@ def _hi_resampler(
     RESAMPLE_TYPE: str,
     ucp_table: pd.DataFrame,
     HI_THRES_MIN: int = 5,
-) -> Tuple[NDArray[np.float_], float]:
+) -> Tuple[NDArray['np.floating[Any]'], float]:
     '''Helper function to resample ucp HI_URB2D_URB2D data to WRF grid'''
 
     # Read gridded LCZ data
@@ -1048,7 +1051,7 @@ def _lcz_resampler(
     info: Info,
     frc_urb2d: xr.DataArray,
     LCZ_NAT_MASK: bool,
-) -> Tuple[NDArray[np.bool_], NDArray[np.float_]]:
+) -> Tuple[NDArray[np.bool_], NDArray['np.floating[Any]']]:
     '''Helper function to resample lcz classes to WRF grid using majority'''
 
     # Read gridded LCZ data
@@ -1098,7 +1101,7 @@ def _adjust_greenfrac_landusef(
     # GREENFRAC is set as average / month from GREENFRAC
     # of original urban pixels
     wrf_urb = xr.DataArray(
-        np.in1d(dst_data_orig['LU_INDEX'][0, :, :].values, [urban_cat]).reshape(
+        np.isin(dst_data_orig['LU_INDEX'][0, :, :].values, [urban_cat]).reshape(
             dst_data_orig['LU_INDEX'][0, :, :].shape
         ),
         dims=dst_data_orig['LU_INDEX'][0, :, :].dims,
@@ -1579,7 +1582,9 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
             'LF_URB2D': {'index': 96, 'range': [0, 5]},
         }
 
-        def _check_range(darr: NDArray[np.float_], exp_range: List[int]) -> int:
+        def _check_range(
+            darr: NDArray['np.floating[Any]'], exp_range: List[int]
+        ) -> int:
             total_len = len(darr)
             sel_len = ((darr >= exp_range[0]) & (darr <= exp_range[1])).sum(axis=0)
 
