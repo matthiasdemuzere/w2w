@@ -36,6 +36,7 @@ from w2w.w2w import expand_land_cat_parents
 from w2w.w2w import Info
 from w2w.w2w import main
 from w2w.w2w import wrf_remove_urban
+from w2w.w2w import WRF_VERSIONS_DICT
 
 
 @pytest.fixture
@@ -50,6 +51,7 @@ def info_mock():
             'dst_lcz_extent_file': '',
             'dst_lcz_params_file': '',
             'BUILT_LCZ': [],
+            'WRF_V_INFO': {},
         }
         args_dict_override = {**args_dict, **info_override}
         return Info(**args_dict_override)  # type: ignore[arg-type]
@@ -68,10 +70,12 @@ def test_create_info_dict():
         wrf_file='wrf_file.nc',
         io_dir='input/directory',
         built_lcz=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        wrf_version='v4.3',
     )
     info = Info.from_argparse(args)
+
     # info is Dict, with 8 keys
-    assert len(info) == 8
+    assert len(info) == 9
 
     # Two files are tifs
     assert info.src_file == 'input/directory/lcz_file.tif'
@@ -82,8 +86,11 @@ def test_create_info_dict():
     assert info.dst_lcz_extent_file == 'input/directory/wrf_file_LCZ_extent.nc'
     assert info.dst_lcz_params_file == 'input/directory/wrf_file_LCZ_params.nc'
 
-    # Last entry is list of built LCZs
+    # Before last entry is list of built LCZs
     assert info.BUILT_LCZ == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+    # Last entry is WRF version settings
+    assert info.WRF_V_INFO == {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41}
 
 
 def test_get_lcz_band_lcz_generator(info_mock, capsys):
@@ -140,7 +147,7 @@ def test_main_lcz_band_arg(arg, exp, capsys, tmpdir):
     ) as m:
         with pytest.raises(SystemExit):
             with tmpdir.as_cwd():
-                main(['input', 'lcz_zaragoza.tif', 'geo_em.d04.nc', *arg])
+                main(['input', 'lcz_zaragoza.tif', 'geo_em.d04.nc', 'v4.3', *arg])
 
     assert m.call_args[1]['LCZ_BAND'] == exp
     out, _ = capsys.readouterr()
@@ -731,6 +738,7 @@ def test_lcz_resampler_lcz_nat_mask_on_off_with_lcz15(
             'dst_file': 'sample_data/geo_em.d04.nc',
             'dst_nu_file': 'testing/geo_em.d04_NoUrban.nc',
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15],
+            'WRF_V_INFO': WRF_VERSIONS_DICT['v4.3'],
         }
     )
 
@@ -758,6 +766,7 @@ def test_add_frc_lu_index_2_wrf(info_mock):
             'dst_file': 'sample_data/geo_em.d04.nc',
             'dst_nu_file': 'testing/geo_em.d04_NoUrban.nc',
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            'WRF_V_INFO': WRF_VERSIONS_DICT['v4.3'],
         }
     )
 
@@ -849,6 +858,7 @@ def test_create_lcz_params_file_attrs_type(
             'dst_nu_file': os.path.join(input_dir, 'geo_em.d04_NoUrban.nc'),
             'dst_lcz_params_file': os.path.join(input_dir, 'geo_em.d04_LCZ_params.tif'),
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            'WRF_V_INFO': WRF_VERSIONS_DICT['v4.3'],
         }
     )
 
@@ -877,7 +887,14 @@ def test_create_lcz_params_file_attrs_type(
     assert nbui_max == 5
 
 
-def test_create_lcz_extent_file(tmpdir, info_mock):
+@pytest.mark.parametrize(
+    ('version', 'num_land_cat'),
+    (
+        ('v4.3', 41),
+        ('v4.5', 61),
+    ),
+)
+def test_create_lcz_extent_file(tmpdir, info_mock, version, num_land_cat):
     info = info_mock(
         {
             'src_file_clean': 'testing/lcz_zaragoza_clean.tif',
@@ -886,6 +903,7 @@ def test_create_lcz_extent_file(tmpdir, info_mock):
             'dst_file': 'sample_data/geo_em.d04.nc',
             'dst_nu_file': 'testing/geo_em.d04_NoUrban.nc',
             'BUILT_LCZ': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            'WRF_V_INFO': WRF_VERSIONS_DICT['v4.3'],
         }
     )
 
@@ -989,6 +1007,7 @@ def test_expand_land_cat_parents_num_land_cat_41(capsys, tmpdir, info_mock):
         {
             'dst_file': os.path.join(input_dir, 'geo_em.d02.nc'),
             'io_dir': 'some_dummy_directory',
+            'WRF_V_INFO': WRF_VERSIONS_DICT['v4.3'],
         }
     )
     expand_land_cat_parents(
@@ -1012,6 +1031,7 @@ def test_expand_land_cat_parents_num_land_cat_not41(capsys, tmpdir, info_mock):
         {
             'dst_file': os.path.join(input_dir, 'geo_em.d02.nc'),
             'io_dir': 'some_dummy_directory',
+            'WRF_V_INFO': WRF_VERSIONS_DICT['v4.3'],
         }
     )
     expand_land_cat_parents(
@@ -1225,7 +1245,7 @@ def test_main_with_example_data(tmpdir):
         shutil.copy(os.path.join('sample_data', f), input_dir)
 
     with tmpdir.as_cwd():
-        main(['input', 'lcz_zaragoza.tif', 'geo_em.d04.nc'])
+        main(['input', 'lcz_zaragoza.tif', 'geo_em.d04.nc', 'v4.3'])
 
         contents = os.listdir(input_dir)
         assert 'geo_em.d04_LCZ_params.nc' in contents
@@ -1247,7 +1267,7 @@ def test_main_shanghai_data(tmpdir):
     shutil.copy(os.path.join('testing', 'Shanghai.tif'), input_dir)
 
     with tmpdir.as_cwd():
-        main(['input', 'Shanghai.tif', 'geo_em.d02.nc'])
+        main(['input', 'Shanghai.tif', 'geo_em.d02.nc', 'v4.3'])
 
         contents = os.listdir(input_dir)
         assert 'geo_em.d02_LCZ_params.nc' in contents
@@ -1269,7 +1289,7 @@ def test_main_default_lcz_ucp(tmpdir):
 
     with tmpdir.as_cwd():
         with mock.patch.object(w2w.w2w, 'checks_and_cleaning') as m:
-            main(['input', 'lcz_zaragoza.tif', 'geo_em.d04.nc'])
+            main(['input', 'lcz_zaragoza.tif', 'geo_em.d04.nc', 'v4.3'])
 
     exp_df = pd.read_csv('w2w/resources/LCZ_UCP_lookup.csv', index_col=0)
     pd.testing.assert_frame_equal(exp_df, m.call_args[1]['ucp_table'])
@@ -1302,6 +1322,7 @@ def test_main_custom_lcz_ucp(ucp, tmpdir):
                     'input',
                     'lcz_zaragoza.tif',
                     'geo_em.d04.nc',
+                    'v4.3',
                     '--lcz-ucp',
                     os.path.basename(ucp),
                 ],

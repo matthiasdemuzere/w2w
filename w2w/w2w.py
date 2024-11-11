@@ -31,13 +31,27 @@ from tqdm.auto import tqdm
 
 np.seterr(divide='ignore', invalid='ignore')
 
-
 if sys.version_info >= (3, 9):  # pragma: >=3.9 cover
     import importlib.metadata as importlib_metadata
     import importlib.resources as importlib_resources
 else:  # pragma: <3.9 cover
     import importlib_metadata
     import importlib_resources
+
+
+# WRF version dict
+WRF_VERSIONS_DICT = {
+    'v4.3': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
+    'v4.3.1': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
+    'v4.3.2': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
+    'v4.3.3': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
+    'v4.4': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
+    'v4.4.1': {'ADD_LCZ_INT': 30, 'NUM_LAND_CAT': 41},
+    'v4.4.2': {'ADD_LCZ_INT': 50, 'NUM_LAND_CAT': 61},
+    'v4.5': {'ADD_LCZ_INT': 50, 'NUM_LAND_CAT': 61},
+    'v4.5.1': {'ADD_LCZ_INT': 50, 'NUM_LAND_CAT': 61},
+    'v4.5.2': {'ADD_LCZ_INT': 50, 'NUM_LAND_CAT': 61},
+}
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
@@ -49,7 +63,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         '- *_NoUrban.nc: Urban replaced by surrounding natural LC\n'
         '- *_LCZ_extent.nc: LCZ urban extent implemented, no LCZ UCPs yet\n'
         '- *_LCZ_params.nc: LCZ urban extent + UPC parameter values\n'
-        '- *_dXX_41.nc: Parent domain files reflecting 41 Land categories',
+        '- *_dXX_41.nc or *_dXX_61.nc: Parent domain files reflecting 41 or 61 Land categories',
         formatter_class=RawTextHelpFormatter,
     )
 
@@ -69,7 +83,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         dest='wrf_file',
         help='WRF geo_em* file name',
     )
-
+    bullet_list = '\n- '
+    parser.add_argument(
+        type=str,
+        dest='wrf_version',
+        help=(
+            f'Expected WRF version numbers:\n- '
+            f'{bullet_list.join(WRF_VERSIONS_DICT.keys())}'
+            f'\nNote: in case you use a version older than v4.3, please specify v4.3\n'
+        ),
+        choices=(WRF_VERSIONS_DICT.keys()),
+        metavar='wrf_version',
+    )
     # Additional arguments
     parser.add_argument(
         '-V',
@@ -197,7 +222,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         info=info,
     )
 
-    print(f'{FBOLD}--> Expanding land categories of parent ' f'domain(s) to 41{FEND}')
+    print(
+        f'{FBOLD}--> Expanding land categories of parent '
+        f"domain(s) to {info.WRF_V_INFO['NUM_LAND_CAT']}{FEND}"
+    )
     expand_land_cat_parents(
         info=info,
     )
@@ -224,6 +252,7 @@ class Info(NamedTuple):
     dst_lcz_extent_file: str
     dst_lcz_params_file: str
     BUILT_LCZ: List[int]
+    WRF_V_INFO: Dict[str, int]
 
     @classmethod
     def from_argparse(cls, args: argparse.Namespace) -> 'Info':
@@ -245,6 +274,7 @@ class Info(NamedTuple):
                 args.io_dir, args.wrf_file.replace('.nc', '_LCZ_params.nc')
             ),
             BUILT_LCZ=args.built_lcz,
+            WRF_V_INFO=WRF_VERSIONS_DICT[args.wrf_version],
         )
 
 
@@ -478,6 +508,16 @@ def wrf_remove_urban(
         else None
     )
 
+    # Based on the WRF version, defined areas to be removed:
+    if orig_num_land_cat == 61:
+        luse.values = np.where((luse > 50) & (luse < 61), dst_data.ISURBAN, luse)
+        luf[dst_data.ISURBAN - 1] = np.sum(luf.values[50:61, :], axis=0)
+        luf[50:61, :] = 0
+    elif orig_num_land_cat == 41:
+        luse.values = np.where((luse > 30) & (luse < 41), dst_data.ISURBAN, luse)
+        luf[dst_data.ISURBAN - 1] = np.sum(luf.values[30:41, :], axis=0)
+        luf[30:41, :] = 0
+
     # New arrays to hold data without urban areas
     newluse = luse.values.copy()
     newluf = luf.values.copy()
@@ -569,6 +609,7 @@ def wrf_remove_urban(
     dst_data.LU_INDEX.values[0, :] = newluse[:]
     dst_data.LANDUSEF.values[0, :] = newluf[:]
     dst_data.GREENFRAC.values[0, :] = newgreenf[:]
+    dst_data.attrs['NUM_LAND_CAT'] = np.intc(21)
 
     # Save to final _lcz_params file
     if os.path.exists(info.dst_nu_file):
@@ -898,11 +939,11 @@ def _check_hi_values(
         ):
             print(
                 f'{WARNING}WARNING: {hi_metric} distribution not in '
-                f'expected range ({ERROR_MARGIN*100}% marging) for LCZ class {lcz_i}: '
+                f'expected range ({ERROR_MARGIN * 100}% marging) for LCZ class {lcz_i}: '
                 f'modelled: {np.round(hi_sample_values, 2)} | '
                 f'expected: ['
-                f'{np.round(ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN),2)} - '
-                f'{np.round(ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN),2)}]{ENDC}'
+                f'{np.round(ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN), 2)} - '
+                f'{np.round(ucp_table[hi_metric].loc[lcz_i] * (1 - ERROR_MARGIN), 2)}]{ENDC}'
             )
 
 
@@ -962,8 +1003,7 @@ def _compute_hi_distribution(
             df_hi.loc[i, :] = count_bins
 
         # Set nans to zero
-        df_hi = df_hi.infer_objects()
-        df_hi = df_hi.fillna(0)
+        df_hi = df_hi.astype('float').fillna(0)
 
     return df_hi
 
@@ -1083,7 +1123,7 @@ def _lcz_resampler(
     frc_mask = frc_urb2d.values[0, :, :] != 0
 
     # Final LU_INDEX = 31 to 41 (included), as LCZ classes.
-    lcz_resampled = lcz_2_wrf[0, frc_mask] + 30
+    lcz_resampled = lcz_2_wrf[0, frc_mask] + info.WRF_V_INFO['ADD_LCZ_INT']
 
     return frc_mask, lcz_resampled
 
@@ -1100,11 +1140,20 @@ def _adjust_greenfrac_landusef(
     # Adjust GREENFRAC and LANDUSEF
     # GREENFRAC is set as average / month from GREENFRAC
     # of original urban pixels
+
+    # Define pixels that are urban in the original data
+    if orig_num_land_cat == 61:
+        urban_cat_list = [51, 52, 53, 54, 55, 56, 57, 58, 59, 60, urban_cat]
+    elif orig_num_land_cat == 41:
+        urban_cat_list = [31, 32, 33, 34, 35, 36, 37, 38, 39, 40, urban_cat]
+    else:
+        urban_cat_list = [urban_cat]
+
     wrf_urb = xr.DataArray(
-        np.isin(dst_data_orig['LU_INDEX'][0, :, :].values, [urban_cat]).reshape(
+        np.isin(dst_data_orig['LU_INDEX'][0, :, :].values, urban_cat_list).reshape(
             dst_data_orig['LU_INDEX'][0, :, :].shape
         ),
-        dims=dst_data_orig['LU_INDEX'][0, :, :].dims,
+        dims=dst_data_orig['LU_INDEX'][0, :, :].sizes,
         coords=dst_data_orig['LU_INDEX'][0, :, :].coords,
     )
     greenfrac_per_month = [
@@ -1116,9 +1165,13 @@ def _adjust_greenfrac_landusef(
         dst_data['GREENFRAC'].values[0, mm, frc_mask] = greenfrac_per_month[mm]
 
     # TODO: For lower resolution domains, this might not be valid?
-    # Create new LANDUSEF with 41 levels instead of 21
+    # Create new LANDUSEF with 41/61 levels instead of 21
     landusef_new = np.zeros(
-        (41, dst_data.LANDUSEF.shape[2], dst_data.LANDUSEF.shape[3])
+        (
+            info.WRF_V_INFO['NUM_LAND_CAT'],
+            dst_data.LANDUSEF.shape[2],
+            dst_data.LANDUSEF.shape[3],
+        )
     )
 
     # Copy values from original file
@@ -1131,7 +1184,7 @@ def _adjust_greenfrac_landusef(
 
     # LOOP over LCZ LU_INDEX values, and set to 1 there
     # So e.g. LANDUSE[0,31-1,:,1] = 1, where LU_INDEX = 31 (=LCZ 1)
-    for lu_i in np.arange(31, 42, 1):
+    for lu_i in np.arange(31, info.WRF_V_INFO['NUM_LAND_CAT'], 1):
         lu_mask = dst_data.LU_INDEX == int(lu_i)
         landusef_new[int(lu_i) - 1, lu_mask[0, :, :]] = 1
         del lu_mask
@@ -1151,9 +1204,14 @@ def _adjust_greenfrac_landusef(
     dst_data['LANDUSEF'] = dst_data.LANDUSEF.astype('float32')
 
     if orig_num_land_cat < 24:
-        luf_attrs['description'] = 'Noah-modified 41-category ' 'IGBP-MODIS landuse'
+        luf_attrs['description'] = (
+            f"Noah-modified {info.WRF_V_INFO['NUM_LAND_CAT']}-category "
+            f'IGBP-MODIS landuse'
+        )
     else:
-        luf_attrs['description'] = 'modified 41-category USGS landuse'
+        luf_attrs['description'] = (
+            f"modified {info.WRF_V_INFO['NUM_LAND_CAT']}-category USGS landuse"
+        )
     for key in luf_attrs.keys():
         dst_data['LANDUSEF'].attrs[key] = luf_attrs[key]
 
@@ -1206,7 +1264,7 @@ def _add_frc_lu_index_2_wrf(
         LCZ_NAT_MASK=LCZ_NAT_MASK,
     )
 
-    # 2) as LU_INDEX = 30 to 41, as LCZ classes.
+    # 2) as LU_INDEX = 30 to 41 or 50 to 61, as LCZ classes.
     dst_data['LU_INDEX'].values[0, frc_mask] = lcz_resampled
 
     # Also adjust GREENFRAC and LANDUSEF
@@ -1322,7 +1380,7 @@ def create_lcz_params_file(
     # Add/Change some additional global attributes,
     # including NBUI_MAX = max. nr. of HI intervals over the grid
     glob_attrs: Dict[str, Union[int, SupportsInt]] = {
-        'NUM_LAND_CAT': 41,
+        'NUM_LAND_CAT': info.WRF_V_INFO['NUM_LAND_CAT'],
         'FLAG_URB_PARAM': 1,
         'NBUI_MAX': np.intc(nbui_max),
     }
@@ -1354,19 +1412,31 @@ def create_lcz_extent_file(info: Info) -> None:
     (excluding other LCZ-based info)
     '''
 
+    # We take the LCZ PARAMS file and extract pixels with FRC_URB2D > 0 (some urban fraction)
     dst_params = xr.open_dataset(info.dst_lcz_params_file)
+    params_num_land_cat = dst_params.NUM_LAND_CAT
     frc_mask = dst_params.FRC_URB2D.values[0, :, :] != 0
 
+    # Copy everything from LCZ PARAMS to LCZ EXTENT
     dst_extent = dst_params.copy()
 
+    # Get information from the original geo_em file
     dst_data_orig = xr.open_dataset(info.dst_file)
     orig_num_land_cat = dst_data_orig.NUM_LAND_CAT
     urban_cat = dst_data_orig.ISURBAN
     orig_luf_description = dst_data_orig.LANDUSEF.description
 
+    # Get LU_INDEX from LCZ extent, which is coming from the LCZ PARAMS file
     lu_index = dst_extent.LU_INDEX.values
-    lu_index[lu_index >= 31] = urban_cat
 
+    # Set LCZs to urban_cat
+
+    if params_num_land_cat == 61:
+        lu_index[lu_index >= 51] = urban_cat
+    elif params_num_land_cat == 41:
+        lu_index[lu_index >= 31] = urban_cat
+
+    # Set LU_INDEX to urban_cat in dst_extent
     dst_extent.LU_INDEX.values = lu_index
 
     # Remove some unnecesary variables to reduce file size
@@ -1382,6 +1452,12 @@ def create_lcz_extent_file(info: Info) -> None:
         ('Time', 'land_cat', 'south_north', 'west_east'),
         luf_values[:, :orig_num_land_cat, :, :],
     )
+
+    # Setting LANDUSEF to 0 for LCZ categories regardless of the original landuse
+    if orig_num_land_cat == 61:
+        dst_extent['LANDUSEF'].values[0, 50:, :] = 0
+    elif orig_num_land_cat == 41:
+        dst_extent['LANDUSEF'].values[0, 30:, :] = 0
     dst_extent['LANDUSEF'].values[0, urban_cat - 1, frc_mask] = 1
     dst_extent['LANDUSEF'] = dst_extent.LANDUSEF.astype('float32')
 
@@ -1414,18 +1490,23 @@ def expand_land_cat_parents(info: Info) -> None:
             da = xr.open_dataset(ifile)
 
             try:
-                if int(da.attrs['NUM_LAND_CAT']) != 41:
+                if int(da.attrs['NUM_LAND_CAT']) != info.WRF_V_INFO['NUM_LAND_CAT']:
                     orig_num_land_cat = da.attrs['NUM_LAND_CAT']
-                    # Set number of land categories to 41
-                    da.attrs['NUM_LAND_CAT'] = np.intc(41)
+                    # Set number of land categories to 41 or 61
+                    da.attrs['NUM_LAND_CAT'] = np.intc(info.WRF_V_INFO['NUM_LAND_CAT'])
 
                     # Create new landusef array with expanded dimensions
                     landusef_new = np.zeros(
-                        (1, 41, da.LANDUSEF.shape[2], da.LANDUSEF.shape[3])
+                        (
+                            1,
+                            info.WRF_V_INFO['NUM_LAND_CAT'],
+                            da.LANDUSEF.shape[2],
+                            da.LANDUSEF.shape[3],
+                        )
                     )
                     landusef_new[:, :orig_num_land_cat, :, :] = da['LANDUSEF'].values
 
-                    # First store orginal attributes, then drop variable
+                    # First store original attributes, then drop variable
                     luf_attrs = da.LANDUSEF.attrs
                     da = da.drop_vars('LANDUSEF')
 
@@ -1438,18 +1519,25 @@ def expand_land_cat_parents(info: Info) -> None:
 
                     if orig_num_land_cat < 24:
                         luf_attrs['description'] = (
-                            'Noah-modified 41-category ' 'IGBP-MODIS landuse'
+                            f"Noah-modified {info.WRF_V_INFO['NUM_LAND_CAT']}-category IGBP-MODIS landuse"
                         )
                     else:
-                        luf_attrs['description'] = 'modified 41-category USGS landuse'
+                        luf_attrs['description'] = (
+                            f"modified {info.WRF_V_INFO['NUM_LAND_CAT']}-category USGS landuse"
+                        )
+
                     for key in luf_attrs.keys():
                         da['LANDUSEF'].attrs[key] = luf_attrs[key]
 
-                    ofile = ifile.replace('.nc', '_41.nc')
+                    ofile = ifile.replace(
+                        '.nc', f"_{info.WRF_V_INFO['NUM_LAND_CAT']}.nc"
+                    )
                     da.to_netcdf(ofile)
 
                 else:
-                    print(f'> Parent domain d{i:02d}.nc already contains 41 LC classes')
+                    print(
+                        f"> Parent domain d{i:02d}.nc already contains {info.WRF_V_INFO['NUM_LAND_CAT']} LC classes"
+                    )
             except Exception:
                 err = traceback.format_exc()
                 print(f'Cannot read NUM_LAND_CAT and LANDUSEF dimensions\n{err}')
@@ -1480,17 +1568,36 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
     dst_data_orig = xr.open_dataset(info.dst_file)
     orig_num_land_cat = dst_data_orig.NUM_LAND_CAT
     urban_cat = dst_data_orig.ISURBAN
-    if urban_cat in da.LU_INDEX.values:
+
+    # Define pixels that are urban in the original data
+    if orig_num_land_cat == 61:
+        LCZ_URBAN = [51, 52, 53, 54, 55, 56, 57, 58, 59, 60]
+        urban_cat_list = LCZ_URBAN + [urban_cat]
+    elif orig_num_land_cat == 41:
+        LCZ_URBAN = [31, 32, 33, 34, 35, 36, 37, 38, 39, 40]
+        urban_cat_list = LCZ_URBAN + [urban_cat]
+    # also accept 20 being w/o lakes
+    elif orig_num_land_cat == 21 or orig_num_land_cat == 20:
+        LCZ_URBAN = []
+        urban_cat_list = [urban_cat]
+    else:
+        raise ValueError(
+            f'Number of land categories {orig_num_land_cat} in original file not supported. Only 21 (20), 41 or 61 are supported.'
+        )
+
+    if np.isin(da['LU_INDEX'][0, :, :].values, urban_cat_list).any():
         print(
             f'{base_text}\n{WARNING} WARNING: Urban land use ' f'still present {ENDC}'
         )
     else:
         print(f'{base_text}{OKGREEN} OK {ENDC}')
+    da.close()
 
     base_text = (
         f'> Check 2: LCZ Urban extent present in '
         f"{info.dst_lcz_extent_file.split('/')[-1]}?"
     )
+
     ifile = info.dst_lcz_extent_file
     da = xr.open_dataset(ifile)
     if not urban_cat in da.LU_INDEX.values:
@@ -1506,6 +1613,7 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
     )
     ifile = info.dst_lcz_params_file
     da = xr.open_dataset(ifile)
+
     if urban_cat in da.LU_INDEX.values:
         print(
             f'{base_text}\n{WARNING} WARNING: Urban extent still '
@@ -1513,7 +1621,7 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
         )
     else:
         LU_values = np.unique(da.LU_INDEX.values.flatten())
-        LCZs = [int(i) for i in list(LU_values[LU_values >= 31] - 30)]
+        LCZs = np.intersect1d(LU_values, LCZ_URBAN).astype(int).tolist()
         print(f'{base_text}{OKGREEN} OK: LCZ Classes ({LCZs}) ' f'present {ENDC}')
 
     base_text = (
@@ -1650,21 +1758,21 @@ def checks_and_cleaning(info: Info, ucp_table: pd.DataFrame, nbui_max: float) ->
     )
     da_e = xr.open_dataset(info.dst_lcz_extent_file)
     da_p = xr.open_dataset(info.dst_lcz_params_file)
-    da_e_res = xr.where(da_e.LU_INDEX == urban_cat, 1, 0)
-    da_p_res = xr.where(da_p.LU_INDEX >= 31, 1, 0)
+    da_e_res = xr.where(da_e.LU_INDEX == urban_cat, 1, 0).values.flatten()
+    da_p_res = np.isin(np.asarray(da_p.LU_INDEX).ravel(), LCZ_URBAN).astype(int)
 
     if int((da_p_res - da_e_res).sum()) != 0:
         print(
             f'{base_text}\n {WARNING} WARNING: Different '
             f'# urban pixels (or extent) '
             f'according to LU_INDEX: '
-            f' - extent: {int(da_e_res.sum().values)}'
-            f' - params: {int(da_p_res.sum().values)} {ENDC}'
+            f' - extent: {int(da_e_res.sum())}'
+            f' - params: {int(da_p_res.sum())} {ENDC}'
         )
     else:
         print(
             f'{base_text}{OKGREEN} OK, urban extent the same '
-            f'({int(da_p_res.sum().values)}) {ENDC}'
+            f'({int(da_p_res.sum())}) {ENDC}'
         )
 
     print('> Cleaning up ... all done!')
